@@ -40,13 +40,15 @@ func repl() {
 	for {
 		fmt.Printf("> ")
 		line, err := rd.ReadString('\n')
-		line = strings.TrimRight(line, "\n")
 		if err != nil {
-			lox.ExitErr(err)
+			if err == io.EOF {
+				lox.Exit(lox.ExitCodeOK)
+			} else {
+				lox.ExitErr(err)
+			}
 		}
-		if line == "" {
-			lox.Exit(lox.ExitCodeOK)
-		}
+
+		line = strings.TrimRight(line, "\n")
 		rd := strings.NewReader(line)
 		err = exec(rd)
 		if err != nil {
@@ -56,10 +58,16 @@ func repl() {
 }
 
 func exec(r io.Reader) error {
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return err
+	// data, err := io.ReadAll(r)
+	// if err != nil {
+	// 	return err
+	// }
+	tokens, errs := lox.Lex(r)
+	for _, err := range errs {
+		fmt.Fprintf(os.Stderr, err.Error())
 	}
-	fmt.Println(string(data))
+	for _, tok := range tokens {
+		fmt.Fprintf(os.Stdout, "%v\n", tok)
+	}
 	return nil
 }
