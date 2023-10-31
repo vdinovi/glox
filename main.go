@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/vdinovi/glox/lox"
@@ -29,7 +30,8 @@ func execFile(path string) {
 	}
 	defer f.Close()
 
-	err = exec(f)
+	rd := bufio.NewReader(f)
+	err = exec(rd, filepath.Clean(path))
 	if err != nil {
 		lox.ExitErr(err)
 	}
@@ -50,24 +52,22 @@ func repl() {
 
 		line = strings.TrimRight(line, "\n")
 		rd := strings.NewReader(line)
-		err = exec(rd)
+		err = exec(rd, "<stdin>")
 		if err != nil {
 			lox.ExitErr(err)
 		}
 	}
 }
 
-func exec(r io.Reader) error {
-	// data, err := io.ReadAll(r)
-	// if err != nil {
-	// 	return err
-	// }
-	tokens, errs := lox.Lex(r)
-	for _, err := range errs {
-		fmt.Fprintf(os.Stderr, err.Error())
+func exec(r io.Reader, fname string) error {
+	lexer := lox.NewLexer(bufio.NewReader(r))
+	lexer.SetFilename(fname)
+	tokens, err := lexer.ScanTokens()
+	if err != nil {
+		return err
 	}
-	for _, tok := range tokens {
-		fmt.Fprintf(os.Stdout, "%v\n", tok)
+	for _, token := range tokens {
+		fmt.Printf("%+v\n", token)
 	}
 	return nil
 }
