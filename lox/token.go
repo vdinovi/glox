@@ -43,6 +43,7 @@ const (
 	True
 	Var
 	While
+	Comment
 	EOF
 )
 
@@ -100,20 +101,7 @@ type Token struct {
 }
 
 var EofToken = Token{Type: EOF}
-var NoneToken = Token{Type: None}
 
 func (t Token) Eof() bool {
 	return t == EofToken
 }
-
-func (t Token) None() bool {
-	return t == NoneToken
-}
-
-// func (t Token) Invalid() bool {
-// 	return t == InvalidToken
-// }
-
-// func (t Token) String() string {
-// 	return fmt.Sprintf("%s(%s)", t.Type.String(), strconv.Quote(t.Lexem))
-// }

@@ -1,6 +1,7 @@
 package lox
 
 import (
+	"fmt"
 	"io"
 	"unicode"
 )
@@ -59,7 +60,7 @@ func (l *Lexer) next() (*Token, error) {
 		Column: column,
 	}
 
-	_, err := l.scan.MatchUntil(isNotWhitespace)
+	_, err := MatchUntil(l.scan, isNotWhitespace)
 	if err != nil {
 		return nil, err
 	}
@@ -69,92 +70,166 @@ func (l *Lexer) next() (*Token, error) {
 		return nil, err
 	}
 
+	err = nil
 	switch ch {
 	case '(', ')', '{', '}', ',', '.', '-', '+', ';', '*':
 		token.Lexem = string(ch)
 		token.Type = TokenTypeFor(token.Lexem)
 	case '!', '=', '<', '>':
-		nextCh, err := l.scan.MatchRune(isEquals)
-		if err != nil && err != io.EOF {
-			return nil, err
-		}
-		if err == io.EOF || nextCh != '=' {
-			token.Lexem = string(ch)
-		} else {
-			token.Lexem = string(ch) + "="
-		}
-		token.Type = TokenTypeFor(token.Lexem)
+		err = l.maybeEquals(&token, string(ch), line, column)
 	case '/':
-		nextCh, err := l.scan.MatchRune(isSlash)
-		if err != nil && err != io.EOF {
-			return nil, err
-		}
-		if err == io.EOF || nextCh != '/' {
-			token.Lexem = string(ch)
-			token.Type = Slash
-		} else {
-			_, err := l.scan.MatchThrough(isNewline)
-			if err != nil {
-				return nil, err
-			}
-			return l.next()
-		}
+		err = l.commentOrSlash(&token, string(ch), line, column)
 	case '"':
-		chars, err := l.scan.MatchThrough(isQuote)
-		if err != nil && err != io.EOF {
-			return nil, err
-		}
-		if err == io.EOF {
-			return nil, &LexerError{
-				Err:    &UnterminatedStringError{},
+		err = l.string(&token, string(ch), line, column)
+	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		err = l.number(&token, string(ch), line, column)
+	default:
+		if isNotLetterOrUnderscore(ch) {
+			err = &LexerError{
+				Err:    &UnexpectedCharacterError{ch},
 				Line:   line,
 				Column: column,
 			}
 		} else {
-			token.Lexem = string(chars[:len(chars)-1])
-			token.Type = String
-		}
-	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		chars, err := l.scan.MatchUntil(isNotDigit)
-		if err != nil && err != io.EOF {
-			return nil, err
-		}
-		token.Lexem = string(ch) + string(chars)
-		token.Type = Number
-		if err != io.EOF {
-			nextCh, err := l.scan.MatchRune(isDot)
-			if err != nil && err != io.EOF {
-				return nil, err
-			}
-			if nextCh == '.' {
-				chars, err := l.scan.MatchUntil(isNotDigit)
-				if err != nil && err != io.EOF {
-					return nil, err
-				}
-				token.Lexem += "." + string(chars)
-				token.Type = Number
-			}
-		}
-	default:
-		chars, err := l.scan.MatchThrough(isNotLetterOrUnderscore)
-		if err != nil && err != io.EOF {
-			return nil, err
-		}
-		token.Lexem = string(ch) + string(chars)
-		if tt := TokenTypeFor(token.Lexem); tt != None {
-			token.Type = tt
-		} else {
-			for _, ch := range token.Lexem {
-				if ch != '_' && !unicode.IsLetter(ch) {
-					return nil, &LexerError{
-						Err:    InvaldIdentifierError{token.Lexem},
-						Line:   line,
-						Column: column,
-					}
-				}
-			}
-			token.Type = Identifier
+			err = l.identifier(&token, string(ch), line, column)
 		}
 	}
+	if err != nil {
+		return nil, err
+	}
 	return &token, nil
+}
+
+func (l *Lexer) maybeEquals(token *Token, lexem string, line, column int) error {
+	nextCh, err := MatchRune(l.scan, isEquals)
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if err == io.EOF || nextCh != '=' {
+		token.Lexem = lexem
+	} else {
+		token.Lexem = lexem + "="
+	}
+	token.Type = TokenTypeFor(token.Lexem)
+	return nil
+}
+
+func (l *Lexer) commentOrSlash(token *Token, lexem string, line, column int) error {
+	nextCh, err := MatchRune(l.scan, isSlash)
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if err == io.EOF || nextCh != '/' {
+		token.Lexem = lexem
+		token.Type = TokenSlash
+	} else {
+		chars, err := MatchUntil(l.scan, isNewline)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		token.Lexem = string(chars)
+		token.Type = TokenComment
+	}
+	return nil
+}
+
+func (l *Lexer) string(token *Token, lexem string, line, column int) error {
+	chars, err := MatchThrough(l.scan, isQuote)
+	if err != nil && err != io.EOF {
+		return err
+	}
+	if err == io.EOF {
+		return &LexerError{
+			Err:    &UnterminatedStringError{},
+			Line:   line,
+			Column: column,
+		}
+	} else {
+		token.Lexem = string(chars[:len(chars)-1])
+		token.Type = TokenString
+	}
+	return nil
+}
+
+func (l *Lexer) number(token *Token, lexem string, line, column int) error {
+	chars, err := MatchUntil(l.scan, isNotDigit)
+	if err != nil && err != io.EOF {
+		return err
+	}
+	token.Lexem = lexem + string(chars)
+	token.Type = TokenNumber
+	if err != io.EOF {
+		nextCh, err := MatchRune(l.scan, isDot)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if nextCh == '.' {
+			chars, err := MatchUntil(l.scan, isNotDigit)
+			if err != nil && err != io.EOF {
+				return err
+			}
+			token.Lexem += "." + string(chars)
+			token.Type = TokenNumber
+		}
+	}
+	return nil
+}
+
+func (l *Lexer) identifier(token *Token, lexem string, line, column int) error {
+	chars, err := MatchUntil(l.scan, isNotLetterOrUnderscore)
+	if err != nil && err != io.EOF {
+		return err
+	}
+	token.Lexem = lexem + string(chars)
+	if tt := TokenTypeFor(token.Lexem); tt != TokenNone {
+		token.Type = tt
+	} else {
+		for _, ch := range token.Lexem {
+			if ch != '_' && !unicode.IsLetter(ch) {
+				return &LexerError{
+					Err:    &InvaldIdentifierError{token.Lexem},
+					Line:   line,
+					Column: column,
+				}
+			}
+		}
+		token.Type = TokenIdentifier
+	}
+	return nil
+}
+
+type LexerError struct {
+	Err    error
+	Line   int
+	Column int
+}
+
+func (e *LexerError) Error() string {
+	return fmt.Sprintf("LexerError at (%d,%d): %s", e.Line, e.Column, e.Err.Error())
+}
+
+func (e *LexerError) Unwrap() error {
+	return e.Err
+}
+
+type UnterminatedStringError struct{}
+
+func (e *UnterminatedStringError) Error() string {
+	return "unterminated string"
+}
+
+type InvaldIdentifierError struct {
+	ID string
+}
+
+func (e *InvaldIdentifierError) Error() string {
+	return fmt.Sprintf("invalid identifier %q", e.ID)
+}
+
+type UnexpectedCharacterError struct {
+	Char rune
+}
+
+func (e *UnexpectedCharacterError) Error() string {
+	return fmt.Sprintf("unexpected character %q", e.Char)
 }

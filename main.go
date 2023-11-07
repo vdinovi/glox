@@ -62,12 +62,12 @@ func repl() {
 func exec(r io.Reader, fname string) error {
 	lexer := lox.NewLexer(bufio.NewReader(r))
 	lexer.SetFilename(fname)
-	tokens, err := lexer.ScanTokens()
+	_, err := lexer.ScanTokens()
 	if err != nil {
 		return err
 	}
-	for _, token := range tokens {
-		fmt.Printf("%+v\n", token)
-	}
+	// for _, token := range tokens {
+	// 	fmt.Printf("%+v\n", token)
+	// }
 	return nil
 }
