@@ -8,9 +8,44 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestLexerExpression(t *testing.T) {
+	input := "(1.23 + (2*3) / -4) + !\"test\" * (false)"
+	want := []Token{
+		{Type: TokenLeftParen, Lexem: "("},
+		{Type: TokenNumber, Lexem: "1.23"},
+		{Type: TokenPlus, Lexem: "+"},
+		{Type: TokenLeftParen, Lexem: "("},
+		{Type: TokenNumber, Lexem: "2"},
+		{Type: TokenStar, Lexem: "*"},
+		{Type: TokenNumber, Lexem: "3"},
+		{Type: TokenRightParen, Lexem: ")"},
+		{Type: TokenSlash, Lexem: "/"},
+		{Type: TokenMinus, Lexem: "-"},
+		{Type: TokenNumber, Lexem: "4"},
+		{Type: TokenRightParen, Lexem: ")"},
+		{Type: TokenPlus, Lexem: "+"},
+		{Type: TokenBang, Lexem: "!"},
+		{Type: TokenString, Lexem: "test"},
+		{Type: TokenStar, Lexem: "*"},
+		{Type: TokenLeftParen, Lexem: "("},
+		{Type: TokenFalse, Lexem: "false"},
+		{Type: TokenRightParen, Lexem: ")"},
+		{Type: TokenEOF, Lexem: ""},
+	}
+	lexer := NewLexer(strings.NewReader(input))
+	got, err := lexer.ScanTokens()
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
+	}
+	if reflect.DeepEqual(got, want) {
+		t.Fatalf("Expected %q to yield tokens %v, but got %v", input, want, got)
+	}
+}
 
 func TestLexerBasicTokens(t *testing.T) {
 	tests := []struct {

@@ -6,7 +6,8 @@ type OperatorType int
 
 //go:generate stringer -type OperatorType -trimprefix=Op
 const (
-	OpPlus OperatorType = iota
+	OpNone OperatorType = iota
+	OpPlus
 	OpMinus
 	OpMultiply
 	OpDivide
@@ -23,6 +24,8 @@ type Operator struct {
 	Type  OperatorType
 	Lexem string
 }
+
+var NoneOp = Operator{Type: OpNone}
 
 func (o Operator) String() string {
 	return fmt.Sprintf("%s(%s)", o.Type, o.Lexem)

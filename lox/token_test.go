@@ -83,20 +83,10 @@ func Test_Token_Operator(t *testing.T) {
 	}
 	for _, test := range tests {
 		token := Token{Type: test.TokenType, Lexem: test.lexem}
-		got, err := token.Operator()
-		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
-			continue
-		}
+		got := token.Operator()
 		want := Operator{Type: test.OperatorType, Lexem: test.lexem}
-		if *got != want {
+		if got != want {
 			t.Errorf("Expected %s to yield %s, but got %s", token.Type, want, got)
 		}
-	}
-
-	token := Token{Type: TokenString}
-	_, err := token.Operator()
-	if err == nil {
-		t.Error("Expected error, but got none")
 	}
 }

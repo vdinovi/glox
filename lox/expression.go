@@ -56,3 +56,9 @@ func (e BoolExpression) String() string {
 		return "false"
 	}
 }
+
+type NilExpression struct{}
+
+func (e NilExpression) String() string {
+	return "nil"
+}

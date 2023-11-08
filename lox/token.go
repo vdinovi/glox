@@ -103,6 +103,7 @@ type Token struct {
 }
 
 var EofToken = Token{Type: TokenEOF}
+var NoneToken = Token{Type: TokenNone}
 
 func (t Token) String() string {
 	return fmt.Sprintf("%s(%s)", t.Type, t.Lexem)
@@ -122,13 +123,13 @@ var operatorTypeMap = map[TokenType]OperatorType{
 	TokenGreaterEqual: OpGreaterEquals,
 }
 
-func (t Token) Operator() (*Operator, error) {
+func (t Token) Operator() Operator {
 	opType, ok := operatorTypeMap[t.Type]
 	if !ok {
-		return nil, fmt.Errorf("no operator found for token type %q", t.Type)
+		return NoneOp
 	}
-	return &Operator{
+	return Operator{
 		Type:  opType,
 		Lexem: t.Lexem,
-	}, nil
+	}
 }
