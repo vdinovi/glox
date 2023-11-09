@@ -73,7 +73,6 @@ func Test_Token_Operator(t *testing.T) {
 		{TokenMinus, "-", OpMinus},
 		{TokenStar, "*", OpMultiply},
 		{TokenSlash, "/", OpDivide},
-		{TokenEqual, "=", OpEquals},
 		{TokenEqualEqual, "==", OpEqualEquals},
 		{TokenBangEqual, "!=", OpNotEquals},
 		{TokenLess, "<", OpLess},

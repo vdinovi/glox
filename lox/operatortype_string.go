@@ -12,18 +12,17 @@ func _() {
 	_ = x[OpMinus-1]
 	_ = x[OpMultiply-2]
 	_ = x[OpDivide-3]
-	_ = x[OpEquals-4]
-	_ = x[OpEqualEquals-5]
-	_ = x[OpNotEquals-6]
-	_ = x[OpLess-7]
-	_ = x[OpLessEquals-8]
-	_ = x[OpGreater-9]
-	_ = x[OpGreaterEquals-10]
+	_ = x[OpEqualEquals-4]
+	_ = x[OpNotEquals-5]
+	_ = x[OpLess-6]
+	_ = x[OpLessEquals-7]
+	_ = x[OpGreater-8]
+	_ = x[OpGreaterEquals-9]
 }
 
-const _OperatorType_name = "PlusMinusMultiplyDivideEqualsEqualEqualsNotEqualsLessLessEqualsGreaterGreaterEquals"
+const _OperatorType_name = "PlusMinusMultiplyDivideEqualEqualsNotEqualsLessLessEqualsGreaterGreaterEquals"
 
-var _OperatorType_index = [...]uint8{0, 4, 9, 17, 23, 29, 40, 49, 53, 63, 70, 83}
+var _OperatorType_index = [...]uint8{0, 4, 9, 17, 23, 34, 43, 47, 57, 64, 77}
 
 func (i OperatorType) String() string {
 	if i < 0 || i >= OperatorType(len(_OperatorType_index)-1) {

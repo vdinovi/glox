@@ -17,6 +17,7 @@ const usagef = `Usage: %s [file...]
 `
 
 func main() {
+	verbose := flag.Bool("verbose", false, "emit logging to stderr")
 	displayTokens := flag.Bool("tokens", true, "display tokens")
 	displayAST := flag.Bool("ast", true, "display ast")
 	flag.Usage = func() {
@@ -27,15 +28,15 @@ func main() {
 
 	fmt.Println(flag.NArg())
 	if flag.NArg() == 0 {
-		repl(*displayTokens, *displayAST)
+		repl(*verbose, *displayTokens, *displayAST)
 	} else {
 		for _, path := range os.Args[1:] {
-			execFile(filepath.Clean(path), *displayTokens, *displayAST)
+			execFile(filepath.Clean(path), *verbose, *displayTokens, *displayAST)
 		}
 	}
 }
 
-func execFile(path string, displayTokens, displayAST bool) {
+func execFile(path string, verbose, displayTokens, displayAST bool) {
 	f, err := os.Open(path)
 	if err != nil {
 		lox.ExitErr(err)
@@ -43,13 +44,13 @@ func execFile(path string, displayTokens, displayAST bool) {
 	defer f.Close()
 
 	rd := bufio.NewReader(f)
-	err = exec(rd, displayTokens, displayAST)
+	err = exec(rd, verbose, displayTokens, displayAST)
 	if err != nil {
 		lox.ExitErr(err)
 	}
 }
 
-func repl(displayTokens, displayAST bool) {
+func repl(verbose, displayTokens, displayAST bool) {
 	rd := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Printf("> ")
@@ -64,14 +65,14 @@ func repl(displayTokens, displayAST bool) {
 
 		line = strings.TrimRight(line, "\n")
 		rd := strings.NewReader(line)
-		err = exec(rd, displayTokens, displayAST)
+		err = exec(rd, verbose, displayTokens, displayAST)
 		if err != nil {
 			lox.ExitErr(err)
 		}
 	}
 }
 
-func exec(r io.Reader, displayTokens, displayAST bool) error {
+func exec(r io.Reader, _, displayTokens, displayAST bool) error {
 	lexer, err := lox.NewLexer(bufio.NewReader(r))
 	if err != nil {
 		return err
@@ -102,5 +103,14 @@ func exec(r io.Reader, displayTokens, displayAST bool) error {
 	}
 	fmt.Println("=== Type ===")
 	fmt.Println(t)
+
+	runtime := lox.Runtime{}
+	result, _, err := runtime.Evaluate(expr)
+	if err != nil {
+		return err
+	}
+	fmt.Println("=== Eval ===")
+	fmt.Println(result)
+
 	return nil
 }

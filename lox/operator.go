@@ -10,7 +10,6 @@ const (
 	OpMinus
 	OpMultiply
 	OpDivide
-	OpEquals
 	OpEqualEquals
 	OpNotEquals
 	OpLess

@@ -9,10 +9,10 @@ func TestExpression(t *testing.T) {
 		op: Operator{Type: OpMultiply, Lexem: "*"},
 		left: UnaryExpression{
 			op:    Operator{Type: OpMinus, Lexem: "-"},
-			right: NumberExpression(123),
+			right: NumericExpression(123),
 		},
 		right: GroupingExpression{
-			expr: NumberExpression(45.67),
+			expr: NumericExpression(45.67),
 		},
 	}
 
@@ -24,8 +24,8 @@ func TestExpression(t *testing.T) {
 }
 
 func Test_Expression_String(t *testing.T) {
-	one := NumberExpression(1)
-	two := NumberExpression(2)
+	one := NumericExpression(1)
+	two := NumericExpression(2)
 	asdf := StringExpression("asdf")
 	yes := BooleanExpression(true)
 	minus := Operator{Type: OpMinus, Lexem: "-"}

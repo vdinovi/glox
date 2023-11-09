@@ -10,7 +10,6 @@ var operators = []Operator{
 	{Type: OpMinus, Lexem: "-"},
 	{Type: OpMultiply, Lexem: "*"},
 	{Type: OpDivide, Lexem: "/"},
-	{Type: OpEquals, Lexem: "="},
 	{Type: OpEqualEquals, Lexem: "=="},
 	{Type: OpNotEquals, Lexem: "!="},
 	{Type: OpLess, Lexem: "<"},

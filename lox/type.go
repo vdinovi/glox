@@ -12,6 +12,10 @@ const (
 	TypeBoolean
 )
 
+type Typed interface {
+	Type() (Type, error)
+}
+
 type TypeError struct {
 	Expression
 	Err error

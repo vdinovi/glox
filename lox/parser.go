@@ -159,7 +159,7 @@ func (p *Parser) literal() (Expression, error) {
 				},
 			}
 		}
-		return NumberExpression(n), nil
+		return NumericExpression(n), nil
 	} else if token, ok := p.scan.match(TokenString); ok {
 		return StringExpression(token.Lexem), nil
 	} else if _, ok := p.scan.match(TokenTrue); ok {

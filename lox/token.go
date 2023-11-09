@@ -114,7 +114,6 @@ var operatorTypeMap = map[TokenType]OperatorType{
 	TokenMinus:        OpMinus,
 	TokenStar:         OpMultiply,
 	TokenSlash:        OpDivide,
-	TokenEqual:        OpEquals,
 	TokenEqualEqual:   OpEqualEquals,
 	TokenBangEqual:    OpNotEquals,
 	TokenLess:         OpLess,
