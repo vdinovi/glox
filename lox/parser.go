@@ -149,9 +149,9 @@ func (p *Parser) literal() (Expression, error) {
 	} else if p.scan.match(TokenString) {
 		return StringExpression(p.scan.previous().Lexem), nil
 	} else if p.scan.match(TokenTrue) {
-		return BoolExpression(true), nil
+		return BooleanExpression(true), nil
 	} else if p.scan.match(TokenFalse) {
-		return BoolExpression(false), nil
+		return BooleanExpression(false), nil
 	} else if p.scan.match(TokenNil) {
 		return NilExpression{}, nil
 	}

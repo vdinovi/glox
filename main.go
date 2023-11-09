@@ -95,5 +95,12 @@ func exec(r io.Reader, displayTokens, displayAST bool) error {
 		fmt.Println("=== AST ===")
 		fmt.Println(expr.String())
 	}
+
+	t, err := expr.Type()
+	if err != nil {
+		return err
+	}
+	fmt.Println("=== Type ===")
+	fmt.Println(t)
 	return nil
 }

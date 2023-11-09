@@ -27,7 +27,7 @@ func Test_Expression_String(t *testing.T) {
 	one := NumberExpression(1)
 	two := NumberExpression(2)
 	asdf := StringExpression("asdf")
-	yes := BoolExpression(true)
+	yes := BooleanExpression(true)
 	minus := Operator{Type: OpMinus, Lexem: "-"}
 	plus := Operator{Type: OpPlus, Lexem: "+"}
 	multiply := Operator{Type: OpMultiply, Lexem: "*"}
