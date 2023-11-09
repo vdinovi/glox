@@ -34,7 +34,7 @@ func (l *Lexer) Scan() ([]Token, error) {
 	return tokens, nil
 }
 
-type matchFunc func(rune) bool
+type runeMatchFunc func(rune) bool
 
 func isRune(want rune) func(rune) bool {
 	return func(r rune) bool {
@@ -208,7 +208,7 @@ func (s *runeScanner) advance() (rune, error) {
 	return rune, nil
 }
 
-func (s *runeScanner) match(fn matchFunc) (rune, bool, error) {
+func (s *runeScanner) match(fn runeMatchFunc) (rune, bool, error) {
 	r, err := s.peek()
 	if err != nil {
 		return -1, false, err
@@ -222,7 +222,7 @@ func (s *runeScanner) match(fn matchFunc) (rune, bool, error) {
 	return r, false, nil
 }
 
-func (s *runeScanner) through(fn matchFunc) ([]rune, error) {
+func (s *runeScanner) through(fn runeMatchFunc) ([]rune, error) {
 	runes := []rune{}
 	for {
 		r, err := s.peek()
@@ -242,7 +242,7 @@ func (s *runeScanner) through(fn matchFunc) ([]rune, error) {
 	}
 }
 
-func (s *runeScanner) until(fn matchFunc) ([]rune, error) {
+func (s *runeScanner) until(fn runeMatchFunc) ([]rune, error) {
 	runes := []rune{}
 	for {
 		r, err := s.peek()

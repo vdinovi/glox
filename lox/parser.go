@@ -27,10 +27,13 @@ func (p *Parser) equality() (Expression, error) {
 	expr, err := p.comparison()
 	if err != nil {
 		return nil, err
-
 	}
-	for p.scan.match(TokenBang, TokenBangEqual) {
-		op, err := p.scan.previous().Operator()
+	for {
+		token, ok := p.scan.match(TokenBangEqual, TokenEqualEqual)
+		if !ok {
+			break
+		}
+		op, err := token.Operator()
 		if err != nil {
 			return nil, ParseError{Err: err}
 		}
@@ -48,8 +51,12 @@ func (p *Parser) comparison() (Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	for p.scan.match(TokenGreater, TokenGreaterEqual, TokenLess, TokenLessEqual) {
-		op, err := p.scan.previous().Operator()
+	for {
+		token, ok := p.scan.match(TokenGreater, TokenGreaterEqual, TokenLess, TokenLessEqual)
+		if !ok {
+			break
+		}
+		op, err := token.Operator()
 		if err != nil {
 			return nil, ParseError{Err: err}
 		}
@@ -67,8 +74,12 @@ func (p *Parser) term() (Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	for p.scan.match(TokenPlus, TokenMinus) {
-		op, err := p.scan.previous().Operator()
+	for {
+		token, ok := p.scan.match(TokenPlus, TokenMinus)
+		if !ok {
+			break
+		}
+		op, err := token.Operator()
 		if err != nil {
 			return nil, ParseError{Err: err}
 		}
@@ -86,8 +97,12 @@ func (p *Parser) factor() (Expression, error) {
 	if err != nil {
 		return nil, err
 	}
-	for p.scan.match(TokenSlash, TokenStar) {
-		op, err := p.scan.previous().Operator()
+	for {
+		token, ok := p.scan.match(TokenSlash, TokenStar)
+		if !ok {
+			break
+		}
+		op, err := token.Operator()
 		if err != nil {
 			return nil, ParseError{Err: err}
 		}
@@ -101,8 +116,8 @@ func (p *Parser) factor() (Expression, error) {
 }
 
 func (p *Parser) unary() (Expression, error) {
-	if p.scan.match(TokenBang, TokenMinus) {
-		op, err := p.scan.previous().Operator()
+	if token, ok := p.scan.match(TokenBang, TokenMinus); ok {
+		op, err := token.Operator()
 		if err != nil {
 			return nil, ParseError{Err: err}
 		}
@@ -134,40 +149,38 @@ func (p *Parser) primary() (Expression, error) {
 }
 
 func (p *Parser) literal() (Expression, error) {
-	if p.scan.match(TokenNumber) {
-		numberToken := p.scan.previous()
-		n, err := strconv.ParseFloat(p.scan.previous().Lexem, 64)
+	if token, ok := p.scan.match(TokenNumber); ok {
+		n, err := strconv.ParseFloat(token.Lexem, 64)
 		if err != nil {
 			return nil, ParseError{
 				Err: NumberConversionError{
-					Token: numberToken,
+					Token: *token,
 					Err:   err,
 				},
 			}
 		}
 		return NumberExpression(n), nil
-	} else if p.scan.match(TokenString) {
-		return StringExpression(p.scan.previous().Lexem), nil
-	} else if p.scan.match(TokenTrue) {
+	} else if token, ok := p.scan.match(TokenString); ok {
+		return StringExpression(token.Lexem), nil
+	} else if _, ok := p.scan.match(TokenTrue); ok {
 		return BooleanExpression(true), nil
-	} else if p.scan.match(TokenFalse) {
+	} else if _, ok := p.scan.match(TokenFalse); ok {
 		return BooleanExpression(false), nil
-	} else if p.scan.match(TokenNil) {
+	} else if _, ok := p.scan.match(TokenNil); ok {
 		return NilExpression{}, nil
 	}
 	return nil, nil
 }
 
 func (p *Parser) grouping() (Expression, error) {
-	if p.scan.match(TokenLeftParen) {
-		leftParenToken := p.scan.previous()
+	if token, ok := p.scan.match(TokenLeftParen); ok {
 		expr, err := p.expression()
 		if err != nil {
 			return nil, err
 		}
-		if !p.scan.match(TokenRightParen) {
+		if _, ok := p.scan.match(TokenRightParen); !ok {
 			return nil, ParseError{
-				Err: UnmatchedTokenError{leftParenToken},
+				Err: UnmatchedTokenError{*token},
 			}
 		}
 		return GroupingExpression{expr: expr}, nil
@@ -191,29 +204,22 @@ func (s *tokenScanner) peek() Token {
 	return s.tokens[s.offset]
 }
 
-func (s *tokenScanner) previous() Token {
-	if s.offset == 0 {
-		return NoneToken
-	}
-	return s.tokens[s.offset-1]
-}
-
 func (s *tokenScanner) advance() Token {
 	if s.done() {
 		return EofToken
 	}
 	s.offset += 1
-	return s.previous()
+	return s.tokens[s.offset-1]
 }
 
-func (s *tokenScanner) match(ts ...TokenType) bool {
+func (s *tokenScanner) match(ts ...TokenType) (*Token, bool) {
 	for _, t := range ts {
 		if s.check(t) {
-			s.advance()
-			return true
+			token := s.advance()
+			return &token, true
 		}
 	}
-	return false
+	return nil, false
 }
 
 func (s *tokenScanner) check(t TokenType) bool {
@@ -223,6 +229,15 @@ func (s *tokenScanner) check(t TokenType) bool {
 	token := s.peek()
 	return token.Type == t
 }
+
+// func (s *tokenScanner) expect(t TokenType, message string) error {
+// 	if s.check(t) {
+// 		s.advance()
+// 		return nil
+// 	}
+// 	//next := s.peek()
+// 	return nil
+// }
 
 type ParseError struct {
 	Err error

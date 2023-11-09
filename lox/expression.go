@@ -43,7 +43,7 @@ func (e UnaryExpression) Type() (Type, error) {
 	}
 	return -1, TypeError{
 		Expression: e,
-		Err:        fmt.Errorf("can't apply unary operator %s to type %s", e.op),
+		Err:        fmt.Errorf("can't apply unary operator %s to type %s", e.op, rightType),
 	}
 }
 
