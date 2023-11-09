@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/vdinovi/glox/lox"
 )
 
@@ -17,26 +19,32 @@ const usagef = `Usage: %s [file...]
 `
 
 func main() {
-	verbose := flag.Bool("verbose", false, "emit logging to stderr")
-	displayTokens := flag.Bool("tokens", true, "display tokens")
-	displayAST := flag.Bool("ast", true, "display ast")
+	debug := flag.Bool("debug", false, "debug logging")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), usagef, os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+
+	if *debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
 	fmt.Println(flag.NArg())
 	if flag.NArg() == 0 {
-		repl(*verbose, *displayTokens, *displayAST)
+		repl()
 	} else {
-		for _, path := range os.Args[1:] {
-			execFile(filepath.Clean(path), *verbose, *displayTokens, *displayAST)
+		for _, path := range flag.Args() {
+			execFile(filepath.Clean(path))
 		}
 	}
 }
 
-func execFile(path string, verbose, displayTokens, displayAST bool) {
+func execFile(path string) {
+	log.Debug().Msgf("(main) executing %s", path)
 	f, err := os.Open(path)
 	if err != nil {
 		lox.ExitErr(err)
@@ -44,13 +52,13 @@ func execFile(path string, verbose, displayTokens, displayAST bool) {
 	defer f.Close()
 
 	rd := bufio.NewReader(f)
-	err = exec(rd, verbose, displayTokens, displayAST)
+	err = exec(rd)
 	if err != nil {
 		lox.ExitErr(err)
 	}
 }
 
-func repl(verbose, displayTokens, displayAST bool) {
+func repl() {
 	rd := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Printf("> ")
@@ -65,14 +73,14 @@ func repl(verbose, displayTokens, displayAST bool) {
 
 		line = strings.TrimRight(line, "\n")
 		rd := strings.NewReader(line)
-		err = exec(rd, verbose, displayTokens, displayAST)
+		err = exec(rd)
 		if err != nil {
 			lox.ExitErr(err)
 		}
 	}
 }
 
-func exec(r io.Reader, _, displayTokens, displayAST bool) error {
+func exec(r io.Reader) error {
 	lexer, err := lox.NewLexer(bufio.NewReader(r))
 	if err != nil {
 		return err
@@ -81,36 +89,20 @@ func exec(r io.Reader, _, displayTokens, displayAST bool) error {
 	if err != nil {
 		return err
 	}
-	if displayTokens {
-		fmt.Println("=== Tokens ===")
-		for _, token := range tokens {
-			fmt.Printf("%+v\n", token)
-		}
-	}
 	parser := lox.NewParser(tokens)
 	expr, err := parser.Parse()
 	if err != nil {
 		return err
 	}
-	if displayAST {
-		fmt.Println("=== AST ===")
-		fmt.Println(expr.String())
-	}
-
-	t, err := expr.Type()
+	_, err = lox.TypeCheck(expr)
 	if err != nil {
 		return err
 	}
-	fmt.Println("=== Type ===")
-	fmt.Println(t)
-
 	runtime := lox.Runtime{}
 	result, _, err := runtime.Evaluate(expr)
 	if err != nil {
 		return err
 	}
-	fmt.Println("=== Eval ===")
 	fmt.Println(result)
-
 	return nil
 }

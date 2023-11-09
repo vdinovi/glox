@@ -1,6 +1,10 @@
 package lox
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/rs/zerolog/log"
+)
 
 //go:generate stringer -type Type  -trimprefix=Type
 type Type int
@@ -14,6 +18,17 @@ const (
 
 type Typed interface {
 	Type() (Type, error)
+}
+
+func TypeCheck(expr Expression) (Type, error) {
+	log.Debug().Msgf("(typecheck) type checking expression %s", expr)
+	t, err := expr.Type()
+	if err != nil {
+		log.Error().Msgf("(typecheck) error: %s", err)
+		return -1, err
+	}
+	log.Debug().Msgf("(typecheck) yielded type %s", t)
+	return t, err
 }
 
 type TypeError struct {

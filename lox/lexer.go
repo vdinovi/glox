@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"unicode"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Lexer struct {
@@ -19,18 +21,23 @@ func NewLexer(rd io.RuneReader) (*Lexer, error) {
 }
 
 func (l *Lexer) Scan() ([]Token, error) {
+	log.Debug().Msgf("(lexer) scanning %d runes", len(l.scan.runes))
 	tokens := []Token{}
 	for {
 		token, err := l.next()
 		if err == nil {
+			log.Debug().Msgf("(lexer) token: %s", token)
 			tokens = append(tokens, token)
 		} else if err == io.EOF {
+			log.Debug().Msgf("(lexer) reached EOF")
 			tokens = append(tokens, EofToken)
 			break
 		} else {
+			log.Error().Msgf("(lexer) error: %s", err)
 			return nil, err
 		}
 	}
+	log.Debug().Msgf("(lexer) produced %d tokens", len(tokens))
 	return tokens, nil
 }
 

@@ -2,6 +2,8 @@ package lox
 
 import (
 	"fmt"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Evaluable interface {
@@ -36,7 +38,9 @@ func (e UnaryExpression) Type() (Type, error) {
 				Err:        fmt.Errorf("can't apply %s to %s", e.op, rightType),
 			}
 		}
-		return TypeNumeric, nil
+		t := TypeNumeric
+		log.Debug().Msgf("(typecheck) %s has type %s", e, t)
+		return t, nil
 	}
 	return -1, TypeError{e, fmt.Errorf("can't apply unary operator %s to type %s", e.op, rightType)}
 }
@@ -48,7 +52,9 @@ func (e UnaryExpression) Evaluate() (Value, Type, error) {
 	}
 	switch typ {
 	case TypeNumeric:
-		return e.evalUnaryNumeric(e.op, val)
+		res, t, err := e.evalUnaryNumeric(e.op, val)
+		log.Debug().Msgf("(runtime) %s evaluated to %s", e, res)
+		return res, t, err
 	}
 	return nil, -1, RuntimeError{Err: InvalidOperation(e.op, val)}
 }
@@ -94,21 +100,31 @@ func (e BinaryExpression) Type() (Type, error) {
 	case TypeNumeric:
 		switch e.op.Type {
 		case OpPlus, OpMinus, OpMultiply, OpDivide:
-			return TypeNumeric, nil
+			t := TypeNumeric
+			log.Debug().Msgf("(typecheck) %s has type %s", e, t)
+			return t, nil
 		case OpEqualEquals, OpNotEquals, OpLess, OpLessEquals, OpGreater, OpGreaterEquals:
-			return TypeBoolean, nil
+			t := TypeBoolean
+			log.Debug().Msgf("(typecheck) %s has type %s", e, t)
+			return t, nil
 		}
 	case TypeString:
 		switch e.op.Type {
 		case OpPlus:
-			return TypeString, nil
+			t := TypeString
+			log.Debug().Msgf("(typecheck) %s has type %s", e, t)
+			return t, nil
 		case OpEqualEquals, OpNotEquals:
-			return TypeBoolean, nil
+			t := TypeBoolean
+			log.Debug().Msgf("(typecheck) %s has type %s", e, t)
+			return t, nil
 		}
 	case TypeBoolean:
 		switch e.op.Type {
 		case OpEqualEquals, OpNotEquals:
-			return TypeBoolean, nil
+			t := TypeBoolean
+			log.Debug().Msgf("(typecheck) %s has type %s", e, t)
+			return t, nil
 		}
 	}
 	return -1, TypeError{
@@ -131,11 +147,17 @@ func (e BinaryExpression) Evaluate() (Value, Type, error) {
 	}
 	switch leftType {
 	case TypeString:
-		return e.evalBinaryString(e.op, leftVal, rightVal)
+		res, t, err := e.evalBinaryString(e.op, leftVal, rightVal)
+		log.Debug().Msgf("(runtime) %s evaluated to %s", e, res)
+		return res, t, err
 	case TypeNumeric:
-		return e.evalBinaryNumeric(e.op, leftVal, rightVal)
+		res, t, err := e.evalBinaryNumeric(e.op, leftVal, rightVal)
+		log.Debug().Msgf("(runtime) %s evaluated to %s", e, res)
+		return res, t, err
 	case TypeBoolean:
-		return e.evalBinaryBoolean(e.op, leftVal, rightVal)
+		res, t, err := e.evalBinaryBoolean(e.op, leftVal, rightVal)
+		log.Debug().Msgf("(runtime) %s evaluated to %s", e, res)
+		return res, t, err
 	}
 	return nil, -1, RuntimeError{Err: InvalidOperation(e.op, leftVal, rightVal)}
 }
@@ -210,11 +232,17 @@ func (e GroupingExpression) String() string {
 }
 
 func (e GroupingExpression) Type() (Type, error) {
-	return e.expr.Type()
+	t, err := e.expr.Type()
+	if err == nil {
+		log.Debug().Msgf("(typecheck) %s has type %s", e, t)
+	}
+	return t, err
 }
 
 func (e GroupingExpression) Evaluate() (Value, Type, error) {
-	return e.expr.Evaluate()
+	res, t, err := e.expr.Evaluate()
+	log.Debug().Msgf("(runtime) %s evaluated to %s", e, res)
+	return res, t, err
 }
 
 type LiteralExpression interface {

@@ -3,6 +3,8 @@ package lox
 import (
 	"fmt"
 	"strconv"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Parser struct {
@@ -16,7 +18,14 @@ func NewParser(tokens []Token) Parser {
 }
 
 func (p *Parser) Parse() (Expression, error) {
-	return p.expression()
+	log.Debug().Msgf("(parser) scanning %d tokens", len(p.scan.tokens))
+	expr, err := p.expression()
+	if err != nil {
+		log.Error().Msgf("(parser) error: %s", err)
+		return nil, err
+	}
+	log.Debug().Msgf("(parser) produced expression %s", expr)
+	return expr, err
 }
 
 func (p *Parser) expression() (Expression, error) {
@@ -37,6 +46,7 @@ func (p *Parser) equality() (Expression, error) {
 		if err != nil {
 			return nil, ParseError{Err: err}
 		}
+		log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.comparison()
 		if err != nil {
 			return nil, err
@@ -60,6 +70,7 @@ func (p *Parser) comparison() (Expression, error) {
 		if err != nil {
 			return nil, ParseError{Err: err}
 		}
+		log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.term()
 		if err != nil {
 			return nil, err
@@ -83,6 +94,7 @@ func (p *Parser) term() (Expression, error) {
 		if err != nil {
 			return nil, ParseError{Err: err}
 		}
+		log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.factor()
 		if err != nil {
 			return nil, err
@@ -106,6 +118,7 @@ func (p *Parser) factor() (Expression, error) {
 		if err != nil {
 			return nil, ParseError{Err: err}
 		}
+		log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.unary()
 		if err != nil {
 			return nil, err
@@ -121,6 +134,7 @@ func (p *Parser) unary() (Expression, error) {
 		if err != nil {
 			return nil, ParseError{Err: err}
 		}
+		log.Debug().Msgf("(parser) %s ...", op)
 		right, err := p.unary()
 		if err != nil {
 			return nil, err
@@ -150,6 +164,7 @@ func (p *Parser) primary() (Expression, error) {
 
 func (p *Parser) literal() (Expression, error) {
 	if token, ok := p.scan.match(TokenNumber); ok {
+		log.Debug().Msgf("(parser) number(%s)", token.Lexem)
 		n, err := strconv.ParseFloat(token.Lexem, 64)
 		if err != nil {
 			return nil, ParseError{
@@ -161,12 +176,16 @@ func (p *Parser) literal() (Expression, error) {
 		}
 		return NumericExpression(n), nil
 	} else if token, ok := p.scan.match(TokenString); ok {
+		log.Debug().Msgf("(parser) \"%s\"", token.Lexem)
 		return StringExpression(token.Lexem), nil
 	} else if _, ok := p.scan.match(TokenTrue); ok {
+		log.Debug().Msg("(parser) true")
 		return BooleanExpression(true), nil
 	} else if _, ok := p.scan.match(TokenFalse); ok {
+		log.Debug().Msg("(parser) false")
 		return BooleanExpression(false), nil
 	} else if _, ok := p.scan.match(TokenNil); ok {
+		log.Debug().Msg("(parser) nil")
 		return NilExpression{}, nil
 	}
 	return nil, nil
@@ -174,6 +193,7 @@ func (p *Parser) literal() (Expression, error) {
 
 func (p *Parser) grouping() (Expression, error) {
 	if token, ok := p.scan.match(TokenLeftParen); ok {
+		log.Debug().Msg("(parser) ( ... )")
 		expr, err := p.expression()
 		if err != nil {
 			return nil, err
@@ -229,15 +249,6 @@ func (s *tokenScanner) check(t TokenType) bool {
 	token := s.peek()
 	return token.Type == t
 }
-
-// func (s *tokenScanner) expect(t TokenType, message string) error {
-// 	if s.check(t) {
-// 		s.advance()
-// 		return nil
-// 	}
-// 	//next := s.peek()
-// 	return nil
-// }
 
 type ParseError struct {
 	Err error
