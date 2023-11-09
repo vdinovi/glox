@@ -103,32 +103,18 @@ func (s *tokenScanner) done() bool {
 	return s.offset == len(s.tokens)
 }
 
-func (s *tokenScanner) match(ts ...TokenType) bool {
-	for _, t := range ts {
-		if s.check(t) {
-			s.advance()
-			return true
-		}
-	}
-	return false
-}
-
-func (s *tokenScanner) previous() Token {
+func (s *tokenScanner) peek() Token {
 	if s.done() {
 		return EofToken
 	}
+	return s.tokens[s.offset]
+}
+
+func (s *tokenScanner) previous() Token {
 	if s.offset == 0 {
 		return NoneToken
 	}
 	return s.tokens[s.offset-1]
-}
-
-func (s *tokenScanner) check(t TokenType) bool {
-	if s.done() {
-		return false
-	}
-	token := s.peek()
-	return token.Type == t
 }
 
 func (s *tokenScanner) advance() Token {
@@ -139,9 +125,20 @@ func (s *tokenScanner) advance() Token {
 	return s.previous()
 }
 
-func (s *tokenScanner) peek() Token {
-	if s.done() {
-		return EofToken
+func (s *tokenScanner) match(ts ...TokenType) bool {
+	for _, t := range ts {
+		if s.check(t) {
+			s.advance()
+			return true
+		}
 	}
-	return s.tokens[s.offset]
+	return false
+}
+
+func (s *tokenScanner) check(t TokenType) bool {
+	if s.done() {
+		return false
+	}
+	token := s.peek()
+	return token.Type == t
 }

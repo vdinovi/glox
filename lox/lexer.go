@@ -7,26 +7,23 @@ import (
 )
 
 type Lexer struct {
-	scan  Scanner
-	fname string
+	scan runeScanner
 }
 
-func NewLexer(rd io.RuneReader) *Lexer {
-	return &Lexer{
-		scan: NewScanner(rd),
+func NewLexer(rd io.RuneReader) (*Lexer, error) {
+	scanner := runeScanner{}
+	if err := scanner.fill(rd); err != nil {
+		return nil, err
 	}
+	return &Lexer{scan: scanner}, nil
 }
 
-func (l *Lexer) SetFilename(fname string) {
-	l.fname = fname
-}
-
-func (l *Lexer) ScanTokens() ([]Token, error) {
+func (l *Lexer) Scan() ([]Token, error) {
 	tokens := []Token{}
 	for {
 		token, err := l.next()
 		if err == nil {
-			tokens = append(tokens, *token)
+			tokens = append(tokens, token)
 		} else if err == io.EOF {
 			tokens = append(tokens, EofToken)
 			break
@@ -37,165 +34,138 @@ func (l *Lexer) ScanTokens() ([]Token, error) {
 	return tokens, nil
 }
 
-var isNewline = IsChar('\n')
-var isQuote = IsChar('"')
-var isDot = IsChar('.')
-var isEquals = IsChar('=')
-var isSlash = IsChar('/')
+type matchFunc func(rune) bool
 
-var isNotDigit = func(ch rune) bool {
-	return !unicode.IsDigit(ch)
-}
-var isNotWhitespace = func(ch rune) bool {
-	return !unicode.IsSpace(ch)
-}
-var isNotLetterOrUnderscore = func(ch rune) bool {
-	return ch != '_' && !unicode.IsLetter(ch)
+func isRune(want rune) func(rune) bool {
+	return func(r rune) bool {
+		return r == want
+	}
 }
 
-func (l *Lexer) next() (*Token, error) {
-	line, column := l.scan.Position()
-	token := Token{
-		Line:   line,
-		Column: column,
+var isNewline = isRune('\n')
+var isQuote = isRune('"')
+var isDot = isRune('.')
+var isEquals = isRune('=')
+var isSlash = isRune('/')
+
+var isNotDigit = func(r rune) bool {
+	return !unicode.IsDigit(r)
+}
+
+var isNotWhitespace = func(r rune) bool {
+	return !unicode.IsSpace(r)
+}
+
+var isNotLetterOrUnderscore = func(r rune) bool {
+	return r != '_' && !unicode.IsLetter(r)
+}
+
+func (l *Lexer) next() (Token, error) {
+	line, column := l.scan.position()
+	token := Token{Line: line, Column: column}
+
+	if _, err := l.scan.until(isNotWhitespace); err != nil {
+		return NoneToken, err
 	}
 
-	_, err := MatchUntil(l.scan, isNotWhitespace)
+	next, err := l.scan.advance()
 	if err != nil {
-		return nil, err
+		return NoneToken, err
 	}
 
-	ch, err := l.scan.Next()
-	if err != nil {
-		return nil, err
-	}
-
-	err = nil
-	switch ch {
+	switch next {
 	case '(', ')', '{', '}', ',', '.', '-', '+', ';', '*':
-		token.Lexem = string(ch)
-		token.Type = TokenTypeFor(token.Lexem)
+		token.Lexem = string(next)
 	case '!', '=', '<', '>':
-		err = l.maybeEquals(&token, string(ch), line, column)
+		eq, ok, err := l.scan.match(isEquals)
+		if err != nil && err != io.EOF {
+			return NoneToken, err
+		}
+		if !ok || err == io.EOF {
+			token.Lexem = string(next)
+		} else {
+			token.Lexem = string(next) + string(eq)
+		}
 	case '/':
-		err = l.commentOrSlash(&token, string(ch), line, column)
+		_, ok, err := l.scan.match(isSlash)
+		if err != nil && err != io.EOF {
+			return NoneToken, err
+		}
+		if !ok || err == io.EOF {
+			token.Type = TokenSlash
+			token.Lexem = string(next)
+		} else {
+			runes, err := l.scan.until(isNewline)
+			if err != nil && err != io.EOF {
+				return NoneToken, err
+			}
+			token.Type = TokenComment
+			token.Lexem = string(runes)
+		}
 	case '"':
-		err = l.string(&token, string(ch), line, column)
+		runes, err := l.scan.through(isQuote)
+		if err != nil && err != io.EOF {
+			return NoneToken, err
+		}
+		if err == io.EOF {
+			return NoneToken, &LexerError{
+				Err:    &UnterminatedStringError{},
+				Line:   line,
+				Column: column,
+			}
+		}
+		token.Type = TokenString
+		token.Lexem = string(runes)
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		err = l.number(&token, string(ch), line, column)
+		integral, err := l.scan.until(isNotDigit)
+		if err != nil && err != io.EOF {
+			return NoneToken, err
+		}
+		if err == io.EOF {
+			token.Type = TokenNumber
+			token.Lexem = string(next) + string(integral)
+		} else {
+			dec, ok, err := l.scan.match(isDot)
+			if err != nil && err != io.EOF {
+				return NoneToken, err
+			}
+			if !ok || err == io.EOF {
+				token.Type = TokenNumber
+				token.Lexem = string(next) + string(integral)
+			} else {
+				fractional, err := l.scan.until(isNotDigit)
+				if err != nil && err != io.EOF {
+					return NoneToken, err
+				}
+				token.Type = TokenNumber
+				token.Lexem = string(next) + string(integral) + string(dec) + string(fractional)
+			}
+		}
 	default:
-		if isNotLetterOrUnderscore(ch) {
-			err = &LexerError{
-				Err:    &UnexpectedCharacterError{ch},
+		if isNotLetterOrUnderscore(next) {
+			return NoneToken, &LexerError{
+				Err:    &UnexpectedCharacterError{next},
 				Line:   line,
 				Column: column,
 			}
 		} else {
-			err = l.identifier(&token, string(ch), line, column)
-		}
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &token, nil
-}
-
-func (l *Lexer) maybeEquals(token *Token, lexem string, line, column int) error {
-	nextCh, err := MatchRune(l.scan, isEquals)
-	if err != nil && err != io.EOF {
-		return err
-	}
-	if err == io.EOF || nextCh != '=' {
-		token.Lexem = lexem
-	} else {
-		token.Lexem = lexem + "="
-	}
-	token.Type = TokenTypeFor(token.Lexem)
-	return nil
-}
-
-func (l *Lexer) commentOrSlash(token *Token, lexem string, line, column int) error {
-	nextCh, err := MatchRune(l.scan, isSlash)
-	if err != nil && err != io.EOF {
-		return err
-	}
-	if err == io.EOF || nextCh != '/' {
-		token.Lexem = lexem
-		token.Type = TokenSlash
-	} else {
-		chars, err := MatchUntil(l.scan, isNewline)
-		if err != nil && err != io.EOF {
-			return err
-		}
-		token.Lexem = string(chars)
-		token.Type = TokenComment
-	}
-	return nil
-}
-
-func (l *Lexer) string(token *Token, lexem string, line, column int) error {
-	chars, err := MatchThrough(l.scan, isQuote)
-	if err != nil && err != io.EOF {
-		return err
-	}
-	if err == io.EOF {
-		return &LexerError{
-			Err:    &UnterminatedStringError{},
-			Line:   line,
-			Column: column,
-		}
-	} else {
-		token.Lexem = string(chars[:len(chars)-1])
-		token.Type = TokenString
-	}
-	return nil
-}
-
-func (l *Lexer) number(token *Token, lexem string, line, column int) error {
-	chars, err := MatchUntil(l.scan, isNotDigit)
-	if err != nil && err != io.EOF {
-		return err
-	}
-	token.Lexem = lexem + string(chars)
-	token.Type = TokenNumber
-	if err != io.EOF {
-		nextCh, err := MatchRune(l.scan, isDot)
-		if err != nil && err != io.EOF {
-			return err
-		}
-		if nextCh == '.' {
-			chars, err := MatchUntil(l.scan, isNotDigit)
+			runes, err := l.scan.until(isNotLetterOrUnderscore)
 			if err != nil && err != io.EOF {
-				return err
+				return NoneToken, err
 			}
-			token.Lexem += "." + string(chars)
-			token.Type = TokenNumber
+			lexem := string(next) + string(runes)
+			if t := TokenTypeFor(lexem); t != TokenNone {
+				token.Type = t
+			} else {
+				token.Type = TokenIdentifier
+			}
+			token.Lexem = lexem
 		}
 	}
-	return nil
-}
-
-func (l *Lexer) identifier(token *Token, lexem string, line, column int) error {
-	chars, err := MatchUntil(l.scan, isNotLetterOrUnderscore)
-	if err != nil && err != io.EOF {
-		return err
+	if token.Type == TokenNone {
+		token.Type = TokenTypeFor(token.Lexem)
 	}
-	token.Lexem = lexem + string(chars)
-	if tt := TokenTypeFor(token.Lexem); tt != TokenNone {
-		token.Type = tt
-	} else {
-		for _, ch := range token.Lexem {
-			if ch != '_' && !unicode.IsLetter(ch) {
-				return &LexerError{
-					Err:    &InvaldIdentifierError{token.Lexem},
-					Line:   line,
-					Column: column,
-				}
-			}
-		}
-		token.Type = TokenIdentifier
-	}
-	return nil
+	return token, nil
 }
 
 type LexerError struct {
@@ -218,14 +188,6 @@ func (e *UnterminatedStringError) Error() string {
 	return "unterminated string"
 }
 
-type InvaldIdentifierError struct {
-	ID string
-}
-
-func (e *InvaldIdentifierError) Error() string {
-	return fmt.Sprintf("invalid identifier %q", e.ID)
-}
-
 type UnexpectedCharacterError struct {
 	Char rune
 }
@@ -234,141 +196,97 @@ func (e *UnexpectedCharacterError) Error() string {
 	return fmt.Sprintf("unexpected character %q", e.Char)
 }
 
-type MatchFunc func(rune) bool
-
-func IsChar(delim rune) func(rune) bool {
-	return func(ch rune) bool {
-		return ch == delim
-	}
-}
-
-func HasChar(delims ...rune) func(rune) bool {
-	set := make(map[rune]struct{})
-	for _, d := range delims {
-		set[d] = struct{}{}
-	}
-	return func(ch rune) bool {
-		_, ok := set[ch]
-		return ok
-	}
-}
-
-func NotChar(delims ...rune) func(rune) bool {
-	set := make(map[rune]struct{})
-	for _, d := range delims {
-		set[d] = struct{}{}
-	}
-	return func(ch rune) bool {
-		_, ok := set[ch]
-		return !ok
-	}
-}
-
-type Scanner interface {
-	Next() (rune, error)
-	Peek(int) ([]rune, error)
-	Position() (int, int)
-	Advance(int) error
-}
-
-func NewScanner(rd io.RuneReader) Scanner {
-	sc := stringScanner{}
-	for {
-		ch, _, err := rd.ReadRune()
-		if err != nil {
-			break
-		}
-		sc.chars = append(sc.chars, ch)
-	}
-	return &sc
-}
-
-func MatchRune(s Scanner, mf MatchFunc) (rune, error) {
-	chars, err := s.Peek(1)
-	if err != nil {
-		return -1, err
-	}
-	ch := chars[0]
-	if mf(ch) {
-		if err := s.Advance(1); err != nil {
-			return ch, err
-		}
-	}
-	return ch, nil
-}
-
-func MatchUntil(s Scanner, mf MatchFunc) ([]rune, error) {
-	chars := []rune{}
-	for {
-		if next, err := s.Peek(1); err != nil {
-			return chars, err
-		} else if mf(next[0]) {
-			return chars, nil
-		} else {
-			if ch, err := s.Next(); err != nil {
-				return chars, err
-			} else {
-				chars = append(chars, ch)
-			}
-		}
-	}
-}
-
-func MatchThrough(s Scanner, mf MatchFunc) ([]rune, error) {
-	chars, err := MatchUntil(s, mf)
-	if err != nil {
-		return chars, err
-	}
-	next, err := s.Next()
-	if err != nil {
-		return chars, err
-	}
-	return append(chars, next), nil
-}
-
-type stringScanner struct {
-	chars  []rune
+// TODO: replace with a bufio-based scanner
+type runeScanner struct {
+	runes  []rune
 	offset int
 	line   int
 	column int
 }
 
-func (s *stringScanner) Next() (rune, error) {
-	if s.offset >= len(s.chars) {
+func (s *runeScanner) fill(rd io.RuneReader) error {
+	for {
+		r, _, err := rd.ReadRune()
+		if err == io.EOF {
+			return nil
+		} else if err != nil {
+			return err
+		}
+		s.runes = append(s.runes, r)
+	}
+}
+
+func (s *runeScanner) done() bool {
+	return s.offset == len(s.runes)
+}
+
+func (s *runeScanner) peek() (rune, error) {
+	if s.done() {
 		return -1, io.EOF
 	}
-	ch := s.chars[s.offset]
-	if err := s.Advance(1); err != nil {
-		return ch, err
-	}
-	return ch, nil
+	return s.runes[s.offset], nil
 }
 
-func (s *stringScanner) Peek(size int) ([]rune, error) {
-	from, to := s.offset, s.offset+size
-	if to > len(s.chars) {
-		return nil, io.EOF
+func (s *runeScanner) advance() (rune, error) {
+	if s.done() {
+		return -1, io.EOF
 	}
-	return s.chars[from:to], nil
+	rune := s.runes[s.offset]
+	s.offset += 1
+	return rune, nil
 }
 
-func (s *stringScanner) Position() (int, int) {
-	return s.line + 1, s.column + 1
-}
-
-func (s *stringScanner) Advance(size int) error {
-	from, to := s.offset, s.offset+size
-	if to > len(s.chars) {
-		return io.EOF
+func (s *runeScanner) match(fn matchFunc) (rune, bool, error) {
+	r, err := s.peek()
+	if err != nil {
+		return -1, false, err
 	}
-	for _, ch := range s.chars[from:to] {
-		s.column += 1
-		switch ch {
-		case '\n':
-			s.line += 1
-			s.column = 0
+	if fn(r) {
+		if _, err = s.advance(); err != nil {
+			return -1, false, err
 		}
+		return r, true, nil
 	}
-	s.offset += size
-	return nil
+	return r, false, nil
+}
+
+func (s *runeScanner) through(fn matchFunc) ([]rune, error) {
+	runes := []rune{}
+	for {
+		r, err := s.peek()
+		if err != nil {
+			return runes, err
+		}
+		if fn(r) {
+			if _, err = s.advance(); err != nil {
+				return runes, err
+			}
+			return runes, nil
+		}
+		if _, err = s.advance(); err != nil {
+			return runes, err
+		}
+		runes = append(runes, r)
+	}
+}
+
+func (s *runeScanner) until(fn matchFunc) ([]rune, error) {
+	runes := []rune{}
+	for {
+		r, err := s.peek()
+		if err != nil {
+			return runes, err
+		}
+		if fn(r) {
+			return runes, nil
+		}
+		if _, err = s.advance(); err != nil {
+			return runes, err
+		}
+		runes = append(runes, r)
+	}
+}
+
+func (s *runeScanner) position() (int, int) {
+	return s.line + 1, s.column + 1
 }

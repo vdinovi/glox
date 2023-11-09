@@ -60,9 +60,11 @@ func repl() {
 }
 
 func exec(r io.Reader, fname string) error {
-	lexer := lox.NewLexer(bufio.NewReader(r))
-	lexer.SetFilename(fname)
-	tokens, err := lexer.ScanTokens()
+	lexer, err := lox.NewLexer(bufio.NewReader(r))
+	if err != nil {
+		return err
+	}
+	tokens, err := lexer.Scan()
 	if err != nil {
 		return err
 	}
