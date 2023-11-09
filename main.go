@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -11,19 +12,30 @@ import (
 	"github.com/vdinovi/glox/lox"
 )
 
-const usage = `Usage: glox [file]`
+const usagef = `Usage: %s [file...]
+       starts a repl if no files are provided.
+`
 
 func main() {
-	if len(os.Args) > 2 {
-		lox.Exitln(lox.ExitCodeErr, usage)
-	} else if len(os.Args) > 1 {
-		execFile(os.Args[1])
+	displayTokens := flag.Bool("tokens", true, "display tokens")
+	displayAST := flag.Bool("ast", true, "display ast")
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), usagef, os.Args[0])
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+
+	fmt.Println(flag.NArg())
+	if flag.NArg() == 0 {
+		repl(*displayTokens, *displayAST)
 	} else {
-		repl()
+		for _, path := range os.Args[1:] {
+			execFile(filepath.Clean(path), *displayTokens, *displayAST)
+		}
 	}
 }
 
-func execFile(path string) {
+func execFile(path string, displayTokens, displayAST bool) {
 	f, err := os.Open(path)
 	if err != nil {
 		lox.ExitErr(err)
@@ -31,13 +43,13 @@ func execFile(path string) {
 	defer f.Close()
 
 	rd := bufio.NewReader(f)
-	err = exec(rd, filepath.Clean(path))
+	err = exec(rd, displayTokens, displayAST)
 	if err != nil {
 		lox.ExitErr(err)
 	}
 }
 
-func repl() {
+func repl(displayTokens, displayAST bool) {
 	rd := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Printf("> ")
@@ -52,14 +64,14 @@ func repl() {
 
 		line = strings.TrimRight(line, "\n")
 		rd := strings.NewReader(line)
-		err = exec(rd, "<stdin>")
+		err = exec(rd, displayTokens, displayAST)
 		if err != nil {
 			lox.ExitErr(err)
 		}
 	}
 }
 
-func exec(r io.Reader, fname string) error {
+func exec(r io.Reader, displayTokens, displayAST bool) error {
 	lexer, err := lox.NewLexer(bufio.NewReader(r))
 	if err != nil {
 		return err
@@ -68,14 +80,20 @@ func exec(r io.Reader, fname string) error {
 	if err != nil {
 		return err
 	}
-	for _, token := range tokens {
-		fmt.Printf("%+v\n", token)
+	if displayTokens {
+		fmt.Println("=== Tokens ===")
+		for _, token := range tokens {
+			fmt.Printf("%+v\n", token)
+		}
 	}
 	parser := lox.NewParser(tokens)
 	expr, err := parser.Parse()
 	if err != nil {
 		return err
 	}
-	fmt.Println(expr.String())
+	if displayAST {
+		fmt.Println("=== AST ===")
+		fmt.Println(expr.String())
+	}
 	return nil
 }

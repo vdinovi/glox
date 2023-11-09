@@ -148,7 +148,7 @@ func TestLexerIgnore(t *testing.T) {
 }
 
 func TestUnterminatedString(t *testing.T) {
-	var lexerError *LexerError
+	var LexError *LexError
 	var unterminatedStringError *UnterminatedStringError
 
 	tests := []string{
@@ -165,7 +165,7 @@ func TestUnterminatedString(t *testing.T) {
 			t.Error("Expected error but got none")
 			continue
 		}
-		if !errors.As(err, &lexerError) {
+		if !errors.As(err, &LexError) {
 			t.Errorf("Unexpected error: %s", err)
 			continue
 		}
@@ -177,7 +177,7 @@ func TestUnterminatedString(t *testing.T) {
 }
 
 func TestUnexpectedCharacter(t *testing.T) {
-	var lexerError *LexerError
+	var LexError *LexError
 	var unexpectedCharacterError *UnexpectedCharacterError
 	tests := []string{
 		"?",
@@ -195,12 +195,12 @@ func TestUnexpectedCharacter(t *testing.T) {
 			t.Error("Expected error but got none")
 			continue
 		}
-		if !errors.As(err, &lexerError) {
+		if !errors.As(err, &LexError) {
 			t.Errorf("Unexpected error %s", err)
 			continue
 		}
 		if !errors.As(err, &unexpectedCharacterError) {
-			t.Errorf("Unexpected error %s", err.Error())
+			t.Errorf("Unexpected error %s", err)
 			continue
 		}
 		if unexpectedCharacterError.Char != '?' {
@@ -208,84 +208,3 @@ func TestUnexpectedCharacter(t *testing.T) {
 		}
 	}
 }
-
-// var update bool
-
-// func init() {
-// 	flag.BoolVar(&update, "update", false, "update")
-// }
-
-// func TestMain(m *testing.M) {
-// 	flag.Parse()
-// 	os.Exit(m.Run())
-// }
-
-// func TestLexerAll(t *testing.T) {
-// 	t.Skip("Broken atm")
-// 	if testing.Short() {
-// 		t.Skip("skipping integration test")
-// 	}
-// 	matches, err := filepath.Glob("../test/**/*.lox")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	var tests map[string]struct {
-// 		Tokens []Token
-// 		Error  error
-// 	}
-// 	data, err := os.ReadFile("./lexer_test/TestLexerAll.json")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	if err := json.Unmarshal(data, &tests); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	for _, path := range matches {
-// 		test := tests[path]
-// 		err := func() error {
-// 			t.Helper()
-// 			file, err := os.Open(path)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			defer file.Close()
-// 			lexer := NewLexer(bufio.NewReader(file))
-// 			lexer.SetFilename(filepath.Base(path))
-// 			tokens, err := lexer.ScanTokens()
-// 			if update {
-// 				tests[path] = struct {
-// 					Tokens []Token
-// 					Error  error
-// 				}{
-// 					Tokens: tokens,
-// 					Error:  err,
-// 				}
-// 				test = tests[path]
-// 			}
-// 			if err != test.Error {
-// 				t.Errorf("(%s) unexpected error %s", path, err.Error())
-// 			}
-// 			for i, token := range tokens {
-// 				if expected := test.Tokens[i]; token != expected {
-// 					t.Errorf("(%s) expected token %v, got %v", path, expected, token)
-// 					break
-// 				}
-// 			}
-// 			return nil
-// 		}()
-// 		if err != nil {
-// 			t.Error(err)
-// 		}
-// 	}
-
-// 	if update {
-// 		data, err := json.Marshal(tests)
-// 		if err != nil {
-// 			t.Fatal(err)
-// 		}
-// 		if err := os.WriteFile("./lexer_test/TestLexerAll.json", data, 0644); err != nil {
-// 			t.Fatal(err)
-// 		}
-// 	}
-// }

@@ -54,7 +54,7 @@ func Test_TokenTypeFor(t *testing.T) {
 
 func Test_Token_String(t *testing.T) {
 	for _, token := range tokens {
-		want := fmt.Sprintf("%s(%s)", token.Type, token.Lexem)
+		want := fmt.Sprintf("%s(%q)", token.Type, token.Lexem)
 		got := token.String()
 		if got != want {
 			t.Errorf("Expected %s to yield %s, but got %s", token.Type, want, got)
@@ -83,10 +83,15 @@ func Test_Token_Operator(t *testing.T) {
 	}
 	for _, test := range tests {
 		token := Token{Type: test.TokenType, Lexem: test.lexem}
-		got := token.Operator()
+		got, err := token.Operator()
+		if err != nil {
+			t.Errorf("Unexpected error: %s", err)
+			continue
+		}
+
 		want := Operator{Type: test.OperatorType, Lexem: test.lexem}
-		if got != want {
-			t.Errorf("Expected %s to yield %s, but got %s", token.Type, want, got)
+		if *got != want {
+			t.Errorf("Expected %s to yield %s, but got %s", token.Type, want, *got)
 		}
 	}
 }

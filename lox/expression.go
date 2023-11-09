@@ -35,17 +35,25 @@ func (e GroupingExpression) String() string {
 	return fmt.Sprintf("(group %s)", e.expr)
 }
 
+type LiteralExpression interface {
+	literal()
+}
+
 type StringExpression string
 
 func (e StringExpression) String() string {
 	return string(e)
 }
 
+func (e StringExpression) literal() {}
+
 type NumberExpression float64
 
 func (e NumberExpression) String() string {
 	return fmt.Sprint(float64(e))
 }
+
+func (e NumberExpression) literal() {}
 
 type BoolExpression bool
 
@@ -57,8 +65,12 @@ func (e BoolExpression) String() string {
 	}
 }
 
+func (e BoolExpression) literal() {}
+
 type NilExpression struct{}
 
 func (e NilExpression) String() string {
 	return "nil"
 }
+
+func (e NilExpression) literal() {}

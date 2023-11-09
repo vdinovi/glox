@@ -108,7 +108,7 @@ func (l *Lexer) next() (Token, error) {
 			return NoneToken, err
 		}
 		if err == io.EOF {
-			return NoneToken, &LexerError{
+			return NoneToken, &LexError{
 				Err:    &UnterminatedStringError{},
 				Line:   line,
 				Column: column,
@@ -143,7 +143,7 @@ func (l *Lexer) next() (Token, error) {
 		}
 	default:
 		if isNotLetterOrUnderscore(next) {
-			return NoneToken, &LexerError{
+			return NoneToken, &LexError{
 				Err:    &UnexpectedCharacterError{next},
 				Line:   line,
 				Column: column,
@@ -166,34 +166,6 @@ func (l *Lexer) next() (Token, error) {
 		token.Type = TokenTypeFor(token.Lexem)
 	}
 	return token, nil
-}
-
-type LexerError struct {
-	Err    error
-	Line   int
-	Column int
-}
-
-func (e *LexerError) Error() string {
-	return fmt.Sprintf("LexerError at (%d,%d): %s", e.Line, e.Column, e.Err.Error())
-}
-
-func (e *LexerError) Unwrap() error {
-	return e.Err
-}
-
-type UnterminatedStringError struct{}
-
-func (e *UnterminatedStringError) Error() string {
-	return "unterminated string"
-}
-
-type UnexpectedCharacterError struct {
-	Char rune
-}
-
-func (e *UnexpectedCharacterError) Error() string {
-	return fmt.Sprintf("unexpected character %q", e.Char)
 }
 
 // TODO: replace with a bufio-based scanner
@@ -289,4 +261,32 @@ func (s *runeScanner) until(fn matchFunc) ([]rune, error) {
 
 func (s *runeScanner) position() (int, int) {
 	return s.line + 1, s.column + 1
+}
+
+type LexError struct {
+	Err    error
+	Line   int
+	Column int
+}
+
+func (e *LexError) Error() string {
+	return fmt.Sprintf("LexError at (%d, %d): %s", e.Line, e.Column, e.Err)
+}
+
+func (e *LexError) Unwrap() error {
+	return e.Err
+}
+
+type UnterminatedStringError struct{}
+
+func (e *UnterminatedStringError) Error() string {
+	return "unterminated string"
+}
+
+type UnexpectedCharacterError struct {
+	Char rune
+}
+
+func (e *UnexpectedCharacterError) Error() string {
+	return fmt.Sprintf("unexpected character %q", e.Char)
 }
