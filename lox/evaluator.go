@@ -1,8 +1,6 @@
 package lox
 
 import (
-	"fmt"
-
 	"github.com/rs/zerolog/log"
 )
 
@@ -21,69 +19,73 @@ func NewEvaluationContext() *EvaluationContext {
 	}
 }
 
-func (ctx *EvaluationContext) EvaluateUnaryExpression(e UnaryExpression) (Value, error) {
-	var err error
-	var right Value
-	var typ Type
-	if typ, err = ctx.symbols.TypeCheckUnaryExpression(e); err != nil {
-		return nil, err
+func (ctx *EvaluationContext) EvaluateUnaryExpression(e UnaryExpression) (Value, Type, error) {
+	rightType, typ, err := ctx.symbols.TypeCheckUnaryExpression(e)
+	if err != nil {
+		return nil, ErrType, err
 	}
-	if right, err = e.right.Evaluate(ctx); err != nil {
-		return nil, err
+	rightVal, err := e.right.Evaluate(ctx)
+	if err != nil {
+		return nil, ErrType, err
 	}
 	var val Value
-	switch typ {
+	switch rightType {
 	case TypeNumeric:
-		val, err = ctx.evalUnaryNumeric(e.op.Type, right)
+		val, err = ctx.evalUnaryNumeric(e.op.Type, rightVal)
 	default:
-		err = ExecutorError{fmt.Errorf("unary expression does not support type %s", typ)}
+		// Handled by prior type check
+		panic("unreachable")
 	}
 	if err == nil {
 		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
-		return nil, err
+		return nil, ErrType, err
 	}
 	log.Debug().Msgf("(evaluator) binary expr %s evaluates to %s", e, val)
-	return val, err
+	return val, typ, err
 
 }
 
-func (ctx *EvaluationContext) EvaluateBinaryExpression(e BinaryExpression) (Value, error) {
-	var err error
-	var left, right Value
-	var typ Type
-	if typ, err = ctx.symbols.TypeCheckBinaryExpression(e); err != nil {
-		return nil, err
+func (ctx *EvaluationContext) EvaluateBinaryExpression(e BinaryExpression) (Value, Type, error) {
+	leftType, _, typ, err := ctx.symbols.TypeCheckBinaryExpression(e)
+	if err != nil {
+		return nil, ErrType, err
 	}
-	if left, right, err = ctx.evalBinaryOperands(e.left, e.right); err != nil {
-		return nil, err
+	leftVal, rightVal, err := ctx.evalBinaryOperands(e.left, e.right)
+	if err != nil {
+		return nil, ErrType, err
 	}
 	var val Value
-	switch typ {
+	switch leftType {
 	case TypeString:
-		val, err = ctx.evalBinaryString(e.op.Type, left, right)
+		val, err = ctx.evalBinaryString(e.op.Type, leftVal, rightVal)
 	case TypeNumeric:
-		val, err = ctx.evalBinaryNumeric(e.op.Type, left, right)
+		val, err = ctx.evalBinaryNumeric(e.op.Type, leftVal, rightVal)
 	case TypeBoolean:
-		val, err = ctx.evalBinaryBoolean(e.op.Type, left, right)
+		val, err = ctx.evalBinaryBoolean(e.op.Type, leftVal, rightVal)
 	default:
-		err = ExecutorError{fmt.Errorf("binary expression does not support type %s", typ)}
+		// Handled by prior type check
+		panic("unreachable")
 	}
 	if err != nil {
 		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
-		return nil, err
+		return nil, ErrType, err
 	}
 	log.Debug().Msgf("(evaluator) binary expr %s evaluates to %s", e, val)
-	return val, err
+	return val, typ, err
 }
 
-func (ctx *EvaluationContext) EvaluateGroupingExpression(e GroupingExpression) (Value, error) {
+func (ctx *EvaluationContext) EvaluateGroupingExpression(e GroupingExpression) (Value, Type, error) {
+	_, typ, err := ctx.symbols.TypeCheckGroupingExpression(e)
+	if err != nil {
+		return nil, ErrType, err
+	}
 	val, err := e.expr.Evaluate(ctx)
 	if err != nil {
 		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
-		return nil, err
+		return nil, ErrType, err
 	}
 	log.Debug().Msgf("(evaluator) grouping expr %s evaluates to %s", e, val)
-	return val, nil
+	return val, typ, nil
 }
 
 func (ctx *EvaluationContext) EvaluateStringExpression(e StringExpression) (Value, error) {
@@ -105,13 +107,15 @@ func (ctx *EvaluationContext) EvaluateNilExpression(e NilExpression) (Value, err
 func (ctx *EvaluationContext) evalUnaryNumeric(op OperatorType, right Value) (Value, error) {
 	n, ok := right.Unwrap().(float64)
 	if ok {
-		return nil, ExecutorError{DowncastError{right, "float64"}}
+		// TODO: feed line and column
+		return nil, NewRuntimeError(NewDowncastError(right, "float64"), 0, 0)
 	}
 	switch op {
-	case OpMinus:
+	case OpSubtract:
 		return ValueNumeric(-n), nil
 	default:
-		return nil, ExecutorError{TypeError{fmt.Errorf("%s can't be applied to value %s", op, right)}}
+		// Handled by prior type check
+		panic("unreachable")
 	}
 }
 
@@ -131,20 +135,23 @@ func (ctx *EvaluationContext) evalBinaryString(op OperatorType, left, right Valu
 	var ok bool
 	var l, r string
 	if l, ok = left.Unwrap().(string); !ok {
-		return nil, ExecutorError{DowncastError{left, "string"}}
+		// TODO: feed line and column
+		return nil, NewRuntimeError(NewDowncastError(left, "string"), 0, 0)
 	}
 	if r, ok = right.Unwrap().(string); !ok {
-		return nil, ExecutorError{DowncastError{right, "string"}}
+		// TODO: feed line and column
+		return nil, NewRuntimeError(NewDowncastError(right, "string"), 0, 0)
 	}
 	switch op {
-	case OpPlus:
+	case OpAdd:
 		return ValueString(l + r), nil
-	case OpEqualEquals:
+	case OpEqualTo:
 		return ValueBoolean(l == r), nil
-	case OpNotEquals:
+	case OpNotEqualTo:
 		return ValueBoolean(l != r), nil
 	default:
-		return nil, ExecutorError{TypeError{fmt.Errorf("%s can't be applied to values %s and %s", op, left, right)}}
+		// Handled by prior type check
+		panic("unreachable")
 	}
 }
 
@@ -152,34 +159,37 @@ func (ctx *EvaluationContext) evalBinaryNumeric(op OperatorType, left, right Val
 	var ok bool
 	var l, r float64
 	if l, ok = left.Unwrap().(float64); !ok {
-		return nil, ExecutorError{DowncastError{left, "float64"}}
+		// TODO: feed line and column
+		return nil, NewRuntimeError(NewDowncastError(left, "string"), 0, 0)
 	}
 	if r, ok = right.Unwrap().(float64); !ok {
-		return nil, ExecutorError{DowncastError{right, "float64"}}
+		// TODO: feed line and column
+		return nil, NewRuntimeError(NewDowncastError(right, "string"), 0, 0)
 	}
 	switch op {
-	case OpPlus:
+	case OpAdd:
 		return ValueNumeric(l + r), nil
-	case OpMinus:
+	case OpSubtract:
 		return ValueNumeric(l - r), nil
 	case OpMultiply:
 		return ValueNumeric(l * r), nil
 	case OpDivide:
 		return ValueNumeric(l / r), nil
-	case OpEqualEquals:
+	case OpEqualTo:
 		return ValueBoolean(l == r), nil
-	case OpNotEquals:
+	case OpNotEqualTo:
 		return ValueBoolean(l != r), nil
-	case OpLess:
+	case OpLessThan:
 		return ValueBoolean(l < r), nil
-	case OpLessEquals:
+	case OpLessThanOrEqualTo:
 		return ValueBoolean(l <= r), nil
-	case OpGreater:
+	case OpGreaterThan:
 		return ValueBoolean(l > r), nil
-	case OpGreaterEquals:
+	case OpGreaterThanOrEqualTo:
 		return ValueBoolean(l >= r), nil
 	default:
-		return nil, ExecutorError{TypeError{fmt.Errorf("%s can't be applied to values %s and %s", op, left, right)}}
+		// Handed by prior type check
+		panic("unreachable")
 	}
 }
 
@@ -187,17 +197,20 @@ func (ctx *EvaluationContext) evalBinaryBoolean(op OperatorType, left, right Val
 	var ok bool
 	var l, r bool
 	if l, ok = left.Unwrap().(bool); !ok {
-		return nil, ExecutorError{DowncastError{left, "bool"}}
+		// TODO: feed line and column
+		return nil, NewRuntimeError(NewDowncastError(left, "bool"), 0, 0)
 	}
 	if r, ok = right.Unwrap().(bool); !ok {
-		return nil, ExecutorError{DowncastError{right, "bool"}}
+		// TODO: feed line and column
+		return nil, NewRuntimeError(NewDowncastError(right, "bool"), 0, 0)
 	}
 	switch op {
-	case OpEqualEquals:
+	case OpEqualTo:
 		return ValueBoolean(l == r), nil
-	case OpNotEquals:
+	case OpNotEqualTo:
 		return ValueBoolean(l != r), nil
 	default:
-		return nil, ExecutorError{TypeError{fmt.Errorf("%s can't be applied to values %s and %s", op, left, right)}}
+		// Handed by prior type check
+		panic("unreachable")
 	}
 }

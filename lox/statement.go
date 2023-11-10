@@ -43,3 +43,21 @@ func (s PrintStatement) Execute(e *Executor) error {
 func (s PrintStatement) String() string {
 	return fmt.Sprintf("print %s ;", s.expr)
 }
+
+// TODO
+type DeclarationStatement struct {
+	name string
+	expr Expression
+}
+
+func (d DeclarationStatement) TypeCheck(Symbols) error {
+	return nil
+}
+
+func (d DeclarationStatement) Execute(*Executor) error {
+	return nil
+}
+
+func (d DeclarationStatement) String() string {
+	return ""
+}

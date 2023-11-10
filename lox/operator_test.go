@@ -10,12 +10,12 @@ package lox
 // 	{Type: OpMinus, Lexem: "-"},
 // 	{Type: OpMultiply, Lexem: "*"},
 // 	{Type: OpDivide, Lexem: "/"},
-// 	{Type: OpEqualEquals, Lexem: "=="},
-// 	{Type: OpNotEquals, Lexem: "!="},
-// 	{Type: OpLess, Lexem: "<"},
-// 	{Type: OpLessEquals, Lexem: "<="},
-// 	{Type: OpGreater, Lexem: ">"},
-// 	{Type: OpGreaterEquals, Lexem: ">="},
+// 	{Type: OpEqualTo, Lexem: "=="},
+// 	{Type: OpNotEqualTo, Lexem: "!="},
+// 	{Type: OpLessThan, Lexem: "<"},
+// 	{Type: OpLessThanOrEqualTo, Lexem: "<="},
+// 	{Type: OpGreaterThan, Lexem: ">"},
+// 	{Type: OpGreaterThanOrEqualTo, Lexem: ">="},
 // }
 
 // func Test_Operator_String(t *testing.T) {

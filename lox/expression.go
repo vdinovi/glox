@@ -24,11 +24,13 @@ func (e UnaryExpression) String() string {
 }
 
 func (e UnaryExpression) Type(syms Symbols) (Type, error) {
-	return syms.TypeCheckUnaryExpression(e)
+	_, typ, err := syms.TypeCheckUnaryExpression(e)
+	return typ, err
 }
 
 func (e UnaryExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
-	return ctx.EvaluateUnaryExpression(e)
+	val, _, err := ctx.EvaluateUnaryExpression(e)
+	return val, err
 }
 
 type BinaryExpression struct {
@@ -42,11 +44,13 @@ func (e BinaryExpression) String() string {
 }
 
 func (e BinaryExpression) Type(syms Symbols) (Type, error) {
-	return syms.TypeCheckBinaryExpression(e)
+	_, _, typ, err := syms.TypeCheckBinaryExpression(e)
+	return typ, err
 }
 
 func (e BinaryExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
-	return ctx.EvaluateBinaryExpression(e)
+	val, _, err := ctx.EvaluateBinaryExpression(e)
+	return val, err
 }
 
 type GroupingExpression struct {
@@ -58,11 +62,13 @@ func (e GroupingExpression) String() string {
 }
 
 func (e GroupingExpression) Type(syms Symbols) (Type, error) {
-	return syms.TypeCheckGroupingExpression(e)
+	_, typ, err := syms.TypeCheckGroupingExpression(e)
+	return typ, err
 }
 
 func (e GroupingExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
-	return ctx.EvaluateGroupingExpression(e)
+	val, _, err := ctx.EvaluateGroupingExpression(e)
+	return val, err
 }
 
 type LiteralExpression interface {

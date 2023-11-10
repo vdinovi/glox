@@ -1,9 +1,5 @@
 package lox
 
-import (
-	"fmt"
-)
-
 //go:generate stringer -type Type  -trimprefix=Type
 type Type int
 
@@ -19,28 +15,20 @@ type Typed interface {
 	Type(Symbols) (Type, error)
 }
 
-type TypeError struct {
-	Err error
-}
-
-func (e TypeError) Error() string {
-	return fmt.Sprintf("Type Error: %s", e.Err)
-}
-
-func (e TypeError) Unwrap() error {
-	return e.Err
-}
-
-type TypeMismatchError struct {
-	Types []Type
-}
-
-func (e TypeMismatchError) Error() string {
-	return fmt.Sprintf("types do not match %v", e.Types)
-}
-
-func TypeMismatch(types ...Type) TypeMismatchError {
-	return TypeMismatchError{
-		Types: types,
-	}
-}
+// func typeFor(v any) Type {
+// 	if v == nil {
+// 		return TypeNil
+// 	}
+// 	if t, ok := v.(Type); ok {
+// 		return t
+// 	}
+// 	switch v.(type) {
+// 	case float64:
+// 		return TypeNumeric
+// 	case string:
+// 		return TypeString
+// 	case bool:
+// 		return TypeBoolean
+// 	}
+// 	return ErrType
+// }

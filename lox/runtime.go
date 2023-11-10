@@ -18,15 +18,8 @@ func NewRuntime(printer io.Writer) *Runtime {
 func (r *Runtime) Print(s string) error {
 	_, err := fmt.Println(s)
 	if err != nil {
-		return RuntimeError{err}
+		// TODO: feed line and column
+		return NewRuntimeError(err, 0, 0)
 	}
 	return nil
-}
-
-type RuntimeError struct {
-	Err error
-}
-
-func (e RuntimeError) Error() string {
-	return fmt.Sprintf("Runtime Error: %s", e.Err)
 }

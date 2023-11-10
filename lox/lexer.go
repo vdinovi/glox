@@ -1,7 +1,6 @@
 package lox
 
 import (
-	"fmt"
 	"io"
 	"unicode"
 
@@ -27,10 +26,10 @@ func (l *Lexer) Scan() ([]Token, error) {
 		token, err := l.next()
 		if err == nil {
 			log.Debug().Msgf("(lexer) token: %s", token)
-			tokens = append(tokens, token)
+			tokens = append(tokens, *token)
 		} else if err == io.EOF {
 			log.Debug().Msgf("(lexer) reached EOF")
-			tokens = append(tokens, EofToken)
+			tokens = append(tokens, eofToken)
 			break
 		} else {
 			log.Error().Msgf("(lexer) error: %s", err)
@@ -67,17 +66,16 @@ var isNotLetterOrUnderscore = func(r rune) bool {
 	return r != '_' && !unicode.IsLetter(r)
 }
 
-func (l *Lexer) next() (Token, error) {
-	line, column := l.scan.position()
-	token := Token{Line: line, Column: column}
-
+func (l *Lexer) next() (*Token, error) {
 	if _, err := l.scan.until(isNotWhitespace); err != nil {
-		return NoneToken, err
+		return nil, err
 	}
 
+	line, column := l.scan.position()
+	token := Token{Line: line, Column: column}
 	next, err := l.scan.advance()
 	if err != nil {
-		return NoneToken, err
+		return nil, err
 	}
 
 	switch next {
@@ -86,7 +84,7 @@ func (l *Lexer) next() (Token, error) {
 	case '!', '=', '<', '>':
 		eq, ok, err := l.scan.match(isEquals)
 		if err != nil && err != io.EOF {
-			return NoneToken, err
+			return nil, err
 		}
 		if !ok || err == io.EOF {
 			token.Lexem = string(next)
@@ -96,7 +94,7 @@ func (l *Lexer) next() (Token, error) {
 	case '/':
 		_, ok, err := l.scan.match(isSlash)
 		if err != nil && err != io.EOF {
-			return NoneToken, err
+			return nil, err
 		}
 		if !ok || err == io.EOF {
 			token.Type = TokenSlash
@@ -104,7 +102,7 @@ func (l *Lexer) next() (Token, error) {
 		} else {
 			runes, err := l.scan.until(isNewline)
 			if err != nil && err != io.EOF {
-				return NoneToken, err
+				return nil, err
 			}
 			token.Type = TokenComment
 			token.Lexem = string(runes)
@@ -112,21 +110,17 @@ func (l *Lexer) next() (Token, error) {
 	case '"':
 		runes, err := l.scan.through(isQuote)
 		if err != nil && err != io.EOF {
-			return NoneToken, err
+			return nil, err
 		}
 		if err == io.EOF {
-			return NoneToken, &LexError{
-				Err:    &UnterminatedStringError{},
-				Line:   line,
-				Column: column,
-			}
+			return nil, NewSyntaxError(NewUnterminatedStringError(), line, column)
 		}
 		token.Type = TokenString
 		token.Lexem = string(runes)
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		integral, err := l.scan.until(isNotDigit)
 		if err != nil && err != io.EOF {
-			return NoneToken, err
+			return nil, err
 		}
 		if err == io.EOF {
 			token.Type = TokenNumber
@@ -134,7 +128,7 @@ func (l *Lexer) next() (Token, error) {
 		} else {
 			dec, ok, err := l.scan.match(isDot)
 			if err != nil && err != io.EOF {
-				return NoneToken, err
+				return nil, err
 			}
 			if !ok || err == io.EOF {
 				token.Type = TokenNumber
@@ -142,7 +136,7 @@ func (l *Lexer) next() (Token, error) {
 			} else {
 				fractional, err := l.scan.until(isNotDigit)
 				if err != nil && err != io.EOF {
-					return NoneToken, err
+					return nil, err
 				}
 				token.Type = TokenNumber
 				token.Lexem = string(next) + string(integral) + string(dec) + string(fractional)
@@ -150,18 +144,16 @@ func (l *Lexer) next() (Token, error) {
 		}
 	default:
 		if isNotLetterOrUnderscore(next) {
-			return NoneToken, &LexError{
-				Err:    &UnexpectedCharacterError{next},
-				Line:   line,
-				Column: column,
-			}
+			return nil, NewSyntaxError(
+				NewUnexpectedCharacterError("a letter or underscore character", next), line, column,
+			)
 		} else {
 			runes, err := l.scan.until(isNotLetterOrUnderscore)
 			if err != nil && err != io.EOF {
-				return NoneToken, err
+				return nil, err
 			}
 			lexem := string(next) + string(runes)
-			if t := TokenTypeFor(lexem); t != TokenNone {
+			if t := tokenTypeFor(lexem); t != ErrToken {
 				token.Type = t
 			} else {
 				token.Type = TokenIdentifier
@@ -169,10 +161,10 @@ func (l *Lexer) next() (Token, error) {
 			token.Lexem = lexem
 		}
 	}
-	if token.Type == TokenNone {
-		token.Type = TokenTypeFor(token.Lexem)
+	if token.Type == ErrToken {
+		token.Type = tokenTypeFor(token.Lexem)
 	}
-	return token, nil
+	return &token, nil
 }
 
 // TODO: replace with a bufio-based scanner
@@ -268,32 +260,4 @@ func (s *runeScanner) until(fn runeMatchFunc) ([]rune, error) {
 
 func (s *runeScanner) position() (int, int) {
 	return s.line + 1, s.column + 1
-}
-
-type LexError struct {
-	Err    error
-	Line   int
-	Column int
-}
-
-func (e *LexError) Error() string {
-	return fmt.Sprintf("LexError at (%d, %d): %s", e.Line, e.Column, e.Err)
-}
-
-func (e *LexError) Unwrap() error {
-	return e.Err
-}
-
-type UnterminatedStringError struct{}
-
-func (e *UnterminatedStringError) Error() string {
-	return "unterminated string"
-}
-
-type UnexpectedCharacterError struct {
-	Char rune
-}
-
-func (e *UnexpectedCharacterError) Error() string {
-	return fmt.Sprintf("unexpected character %q", e.Char)
 }

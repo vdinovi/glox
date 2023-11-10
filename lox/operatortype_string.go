@@ -8,21 +8,22 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[OpPlus-0]
-	_ = x[OpMinus-1]
-	_ = x[OpMultiply-2]
-	_ = x[OpDivide-3]
-	_ = x[OpEqualEquals-4]
-	_ = x[OpNotEquals-5]
-	_ = x[OpLess-6]
-	_ = x[OpLessEquals-7]
-	_ = x[OpGreater-8]
-	_ = x[OpGreaterEquals-9]
+	_ = x[ErrOp-0]
+	_ = x[OpAdd-1]
+	_ = x[OpSubtract-2]
+	_ = x[OpMultiply-3]
+	_ = x[OpDivide-4]
+	_ = x[OpEqualTo-5]
+	_ = x[OpNotEqualTo-6]
+	_ = x[OpLessThan-7]
+	_ = x[OpLessThanOrEqualTo-8]
+	_ = x[OpGreaterThan-9]
+	_ = x[OpGreaterThanOrEqualTo-10]
 }
 
-const _OperatorType_name = "PlusMinusMultiplyDivideEqualEqualsNotEqualsLessLessEqualsGreaterGreaterEquals"
+const _OperatorType_name = "ErrOpAddSubtractMultiplyDivideEqualToNotEqualToLessThanLessThanOrEqualToGreaterThanGreaterThanOrEqualTo"
 
-var _OperatorType_index = [...]uint8{0, 4, 9, 17, 23, 34, 43, 47, 57, 64, 77}
+var _OperatorType_index = [...]uint8{0, 5, 8, 16, 24, 30, 37, 47, 55, 72, 83, 103}
 
 func (i OperatorType) String() string {
 	if i < 0 || i >= OperatorType(len(_OperatorType_index)-1) {

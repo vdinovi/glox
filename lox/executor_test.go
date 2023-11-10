@@ -9,7 +9,7 @@ func TestExecutor(t *testing.T) {
 	expr := BinaryExpression{
 		op: Operator{Type: OpMultiply, Lexem: "*"},
 		left: UnaryExpression{
-			op:    Operator{Type: OpMinus, Lexem: "-"},
+			op:    Operator{Type: OpSubtract, Lexem: "-"},
 			right: NumericExpression(123),
 		},
 		right: GroupingExpression{

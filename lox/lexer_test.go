@@ -110,8 +110,8 @@ func TestLexerBasicTokens(t *testing.T) {
 			if token := tokens[0]; token != test.token {
 				t.Fatalf("Expected %q to yield token %+v, got %+v ", test.text, test.token, token)
 			}
-			if token := tokens[1]; token != EofToken {
-				t.Errorf("Expected %q to yield implicit token %+v, got %+v ", test.text, EofToken, token)
+			if token := tokens[1]; token != eofToken {
+				t.Errorf("Expected %q to yield implicit token %+v, got %+v ", test.text, eofToken, token)
 			}
 		})
 	}
@@ -141,14 +141,14 @@ func TestLexerIgnore(t *testing.T) {
 			t.Errorf("Expected %q to yield %d tokens but got %d", test.text, 1, len(tokens))
 			continue
 		}
-		if token := tokens[0]; token != EofToken {
-			t.Errorf("Expected %q to yield implicit token %+v but got %+v ", test.text, EofToken, token)
+		if token := tokens[0]; token != eofToken {
+			t.Errorf("Expected %q to yield implicit token %+v but got %+v ", test.text, eofToken, token)
 		}
 	}
 }
 
 func TestUnterminatedString(t *testing.T) {
-	var LexError *LexError
+	var SyntaxError *SyntaxError
 	var unterminatedStringError *UnterminatedStringError
 
 	tests := []string{
@@ -165,11 +165,10 @@ func TestUnterminatedString(t *testing.T) {
 			t.Error("Expected error but got none")
 			continue
 		}
-		if !errors.As(err, &LexError) {
+		if !errors.As(err, &SyntaxError) {
 			t.Errorf("Unexpected error: %s", err)
 			continue
 		}
-
 		if !errors.As(err, &unterminatedStringError) {
 			t.Errorf("Unexpected error: %s", err)
 		}
@@ -177,15 +176,17 @@ func TestUnterminatedString(t *testing.T) {
 }
 
 func TestUnexpectedCharacter(t *testing.T) {
-	var LexError *LexError
+	var syntaxError *SyntaxError
 	var unexpectedCharacterError *UnexpectedCharacterError
-	tests := []string{
-		"?",
-		"foo?",
+	tests := []struct {
+		text string
+	}{
+		{"?"},
+		{"foo?"},
 	}
 
-	for _, text := range tests {
-		lexer, err := NewLexer(strings.NewReader(text))
+	for _, test := range tests {
+		lexer, err := NewLexer(strings.NewReader(test.text))
 		if err != nil {
 			t.Errorf("Unexpected error %s", err)
 			continue
@@ -195,7 +196,7 @@ func TestUnexpectedCharacter(t *testing.T) {
 			t.Error("Expected error but got none")
 			continue
 		}
-		if !errors.As(err, &LexError) {
+		if !errors.As(err, &syntaxError) {
 			t.Errorf("Unexpected error %s", err)
 			continue
 		}
@@ -203,8 +204,8 @@ func TestUnexpectedCharacter(t *testing.T) {
 			t.Errorf("Unexpected error %s", err)
 			continue
 		}
-		if unexpectedCharacterError.Char != '?' {
-			t.Errorf("Expected char %c, got %c", unexpectedCharacterError.Char, '?')
+		if unexpectedCharacterError.Actual != '?' {
+			t.Errorf("Expected %c, got %c", unexpectedCharacterError.Actual, '?')
 		}
 	}
 }

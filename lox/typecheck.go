@@ -1,8 +1,6 @@
 package lox
 
 import (
-	"fmt"
-
 	"github.com/rs/zerolog/log"
 )
 
@@ -36,37 +34,36 @@ func (syms Symbols) TypeCheckExpressionStatement(s ExpressionStatement) error {
 	return nil
 }
 
-func (syms Symbols) TypeCheckUnaryExpression(e UnaryExpression) (Type, error) {
-	var err error
-	var typ Type
-	if typ, err = e.right.Type(syms); err != nil {
-		return ErrType, err
+func (syms Symbols) TypeCheckUnaryExpression(e UnaryExpression) (right, result Type, err error) {
+	right, err = e.right.Type(syms)
+	if err != nil {
+		return ErrType, ErrType, err
 	}
-	switch typ {
+	switch right {
 	case TypeNumeric:
-		typ, err = syms.typeCheckUnaryNumeric(e.op.Type, typ)
+		result, err = syms.typeCheckUnaryNumeric(e.op.Type, right)
 	default:
-		err = TypeError{fmt.Errorf("%s can't be applied to type %s", e.op.Type, typ)}
+		// TODO: feed line and column
+		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, right), 0, 0)
 	}
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
-		return ErrType, err
+		return ErrType, ErrType, err
 	}
-	log.Debug().Msgf("(typechecker) %q => %s", e, typ)
-	return typ, nil
+	log.Debug().Msgf("(typechecker) %q => %s", e, result)
+	return right, result, nil
 }
 
-func (syms Symbols) TypeCheckBinaryExpression(e BinaryExpression) (Type, error) {
-	var err error
-	var left, right Type
+func (syms Symbols) TypeCheckBinaryExpression(e BinaryExpression) (left, right, result Type, err error) {
 	if left, err = e.left.Type(syms); err != nil {
-		return ErrType, err
+		return ErrType, ErrType, ErrType, err
 	}
 	if right, err = e.right.Type(syms); err != nil {
-		return ErrType, err
+		return ErrType, ErrType, ErrType, err
 	}
 	if left != right {
-		return ErrType, TypeError{TypeMismatch(left, right)}
+		// TODO: feed line and column
+		return ErrType, ErrType, ErrType, NewTypeError(NewTypeMismatchError(left, right), 0, 0)
 	}
 	var typ Type
 	switch left {
@@ -77,24 +74,25 @@ func (syms Symbols) TypeCheckBinaryExpression(e BinaryExpression) (Type, error) 
 	case TypeBoolean:
 		typ, err = syms.typeCheckBinaryBoolean(e.op.Type, left, right)
 	default:
-		err = TypeError{fmt.Errorf("%s can't be applied to types %s and %s", e.op.Type, left, right)}
+		// TODO: feed line and column
+		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, left, right), 0, 0)
 	}
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
-		return ErrType, err
+		return ErrType, ErrType, ErrType, err
 	}
 	log.Debug().Msgf("(typechecker) %q => %s", e, typ)
-	return typ, err
+	return left, right, typ, err
 }
 
-func (syms Symbols) TypeCheckGroupingExpression(e GroupingExpression) (Type, error) {
-	typ, err := e.expr.Type(syms)
+func (syms Symbols) TypeCheckGroupingExpression(e GroupingExpression) (inner, result Type, err error) {
+	inner, err = e.expr.Type(syms)
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
-		return ErrType, err
+		return ErrType, ErrType, err
 	}
-	log.Debug().Msgf("(typechecker) %q => %s", e, typ)
-	return typ, err
+	log.Debug().Msgf("(typechecker) %q => %s", e, result)
+	return inner, result, err
 }
 
 func (syms Symbols) TypeCheckStringExpression(e StringExpression) (Type, error) {
@@ -113,42 +111,46 @@ func (syms Symbols) TypeCheckNilExpression(e NilExpression) (Type, error) {
 	return TypeNil, nil
 }
 
-func (syms Symbols) typeCheckUnaryNumeric(op OperatorType, typ Type) (Type, error) {
-	switch op {
-	case OpMinus:
+func (syms Symbols) typeCheckUnaryNumeric(opType OperatorType, typ Type) (Type, error) {
+	switch opType {
+	case OpAdd:
 		return TypeNumeric, nil
 	default:
-		return ErrType, TypeError{fmt.Errorf("%s can't be applied to type %s", op, typ)}
+		// TODO: feed line and column
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(opType, typ), 0, 0)
 	}
 }
 
-func (syms Symbols) typeCheckBinaryNumeric(op OperatorType, left, right Type) (Type, error) {
-	switch op {
-	case OpPlus, OpMinus, OpMultiply, OpDivide:
+func (syms Symbols) typeCheckBinaryNumeric(opType OperatorType, left, right Type) (Type, error) {
+	switch opType {
+	case OpAdd, OpSubtract, OpMultiply, OpDivide:
 		return TypeNumeric, nil
-	case OpEqualEquals, OpNotEquals, OpLess, OpLessEquals, OpGreater, OpGreaterEquals:
+	case OpEqualTo, OpNotEqualTo, OpLessThan, OpLessThanOrEqualTo, OpGreaterThan, OpGreaterThanOrEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, TypeError{fmt.Errorf("%s can't be applied to types %s and %s", op, left, right)}
+		// TODO: feed line and column
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(opType, left, right), 0, 0)
 	}
 }
 
-func (syms Symbols) typeCheckBinaryString(op OperatorType, left, right Type) (Type, error) {
-	switch op {
-	case OpPlus:
+func (syms Symbols) typeCheckBinaryString(opType OperatorType, left, right Type) (Type, error) {
+	switch opType {
+	case OpAdd:
 		return TypeString, nil
-	case OpEqualEquals, OpNotEquals:
+	case OpEqualTo, OpNotEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, TypeError{fmt.Errorf("%s can't be applied to types %s and %s", op, left, right)}
+		// TODO: feed line and column
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(opType, left, right), 0, 0)
 	}
 }
 
-func (syms Symbols) typeCheckBinaryBoolean(op OperatorType, left, right Type) (Type, error) {
-	switch op {
-	case OpEqualEquals, OpNotEquals:
+func (syms Symbols) typeCheckBinaryBoolean(opType OperatorType, left, right Type) (Type, error) {
+	switch opType {
+	case OpEqualTo, OpNotEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, TypeError{fmt.Errorf("%s can't be applied to types %s and %s", op, left, right)}
+		// TODO: feed line and column
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(opType, left, right), 0, 0)
 	}
 }

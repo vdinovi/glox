@@ -1,7 +1,6 @@
 package lox
 
 import (
-	"fmt"
 	"io"
 
 	"github.com/rs/zerolog/log"
@@ -25,27 +24,6 @@ func (e *Executor) Execute(stmt Statement) error {
 
 func (e *Executor) Print(val Value) error {
 	return e.runtime.Print(val.String())
-}
-
-type ExecutorError struct {
-	Err error
-}
-
-func (e ExecutorError) Error() string {
-	return fmt.Sprintf("Executor Error: %s", e.Err)
-}
-
-func (e ExecutorError) Unwrap() error {
-	return e.Err
-}
-
-type DowncastError struct {
-	Value
-	To string
-}
-
-func (e DowncastError) Error() string {
-	return fmt.Sprintf("failed to cast %s to %s", e.Value, e.To)
 }
 
 func (x *Executor) ExecuteExpressionStatement(s ExpressionStatement) error {

@@ -1,7 +1,6 @@
 package lox
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/rs/zerolog/log"
@@ -21,7 +20,8 @@ func (p *Parser) Parse() ([]Statement, error) {
 	log.Debug().Msgf("(parser) scanning %d tokens", len(p.scan.tokens))
 	stmts := []Statement{}
 	for !p.done() {
-		stmt, err := p.statement()
+		p.skipComments()
+		stmt, err := p.declaration()
 		if err != nil {
 			log.Error().Msgf("(parser) error: %s", err)
 			return nil, err
@@ -37,10 +37,44 @@ func (p *Parser) done() bool {
 	return eof
 }
 
+func (p *Parser) declaration() (Statement, error) {
+	if _, ok := p.scan.match(TokenVar); ok {
+		return p.varDeclaration()
+	}
+	return p.statement()
+}
+
+func (p *Parser) varDeclaration() (Statement, error) {
+	var name string
+	if token, ok := p.scan.match(TokenIdentifier); ok {
+		name = token.Lexem
+	} else {
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenIdentifier.String(), token), token.Line, token.Column,
+		)
+	}
+
+	var init Expression = NilExpression{}
+	if _, ok := p.scan.match(TokenEqual); ok {
+		var err error
+		init, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if token, ok := p.scan.match(TokenSemicolon); !ok {
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Line, token.Column,
+		)
+	}
+
+	return DeclarationStatement{name: name, expr: init}, nil
+}
+
 func (p *Parser) statement() (Statement, error) {
-	p.skipComments()
 	if token, ok := p.scan.match(TokenPrint); ok {
-		log.Debug().Msgf("(parser) %s ... ;", *token)
+		log.Debug().Msgf("(parser) %s ... ;", token)
 		return p.printStatement()
 	}
 	return p.expressionStatement()
@@ -51,11 +85,13 @@ func (p *Parser) printStatement() (Statement, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if token, ok := p.scan.match(TokenSemicolon); !ok {
-		return nil, ParseError{
-			Err: UnexpectedTokenError{Expected: TokenSemicolon, Actual: *token},
-		}
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Line, token.Column,
+		)
 	}
+
 	p.skipComments()
 	return PrintStatement{expr: expr}, nil
 }
@@ -67,9 +103,9 @@ func (p *Parser) expressionStatement() (Statement, error) {
 		return nil, err
 	}
 	if token, ok := p.scan.match(TokenSemicolon); !ok {
-		return nil, ParseError{
-			Err: UnexpectedTokenError{Expected: TokenSemicolon, Actual: *token},
-		}
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Line, token.Column,
+		)
 	}
 	p.skipComments()
 	return ExpressionStatement{expr: expr}, nil
@@ -91,14 +127,15 @@ func (p *Parser) equality() (Expression, error) {
 		}
 		op, err := token.Operator()
 		if err != nil {
-			return nil, ParseError{Err: err}
+			// TODO: should this be a syntax error?
+			return nil, err
 		}
 		log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.comparison()
 		if err != nil {
 			return nil, err
 		}
-		expr = BinaryExpression{op: *op, left: expr, right: right}
+		expr = BinaryExpression{op: op, left: expr, right: right}
 	}
 	return expr, nil
 }
@@ -115,14 +152,15 @@ func (p *Parser) comparison() (Expression, error) {
 		}
 		op, err := token.Operator()
 		if err != nil {
-			return nil, ParseError{Err: err}
+			// TODO: should this be a syntax error?
+			return nil, err
 		}
 		log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.term()
 		if err != nil {
 			return nil, err
 		}
-		expr = BinaryExpression{op: *op, left: expr, right: right}
+		expr = BinaryExpression{op: op, left: expr, right: right}
 	}
 	return expr, nil
 }
@@ -139,14 +177,15 @@ func (p *Parser) term() (Expression, error) {
 		}
 		op, err := token.Operator()
 		if err != nil {
-			return nil, ParseError{Err: err}
+			// TODO: should this be a syntax error?
+			return nil, err
 		}
 		log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.factor()
 		if err != nil {
 			return nil, err
 		}
-		expr = BinaryExpression{op: *op, left: expr, right: right}
+		expr = BinaryExpression{op: op, left: expr, right: right}
 	}
 	return expr, nil
 }
@@ -163,14 +202,15 @@ func (p *Parser) factor() (Expression, error) {
 		}
 		op, err := token.Operator()
 		if err != nil {
-			return nil, ParseError{Err: err}
+			// TODO: should this be a syntax error?
+			return nil, err
 		}
 		log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.unary()
 		if err != nil {
 			return nil, err
 		}
-		expr = BinaryExpression{op: *op, left: expr, right: right}
+		expr = BinaryExpression{op: op, left: expr, right: right}
 	}
 	return expr, nil
 }
@@ -179,14 +219,15 @@ func (p *Parser) unary() (Expression, error) {
 	if token, ok := p.scan.match(TokenBang, TokenMinus); ok {
 		op, err := token.Operator()
 		if err != nil {
-			return nil, ParseError{Err: err}
+			// TODO: should this be a syntax error?
+			return nil, err
 		}
 		log.Debug().Msgf("(parser) %s ...", op)
 		right, err := p.unary()
 		if err != nil {
 			return nil, err
 		}
-		return UnaryExpression{op: *op, right: right}, nil
+		return UnaryExpression{op: op, right: right}, nil
 	}
 	return p.primary()
 }
@@ -204,9 +245,8 @@ func (p *Parser) primary() (Expression, error) {
 		return expr, nil
 	}
 
-	return nil, &ParseError{
-		Err: MissingTerminalError{},
-	}
+	token := p.scan.peek()
+	return nil, NewSyntaxError(NewMissingTerminalError(token), token.Line, token.Column)
 }
 
 func (p *Parser) literal() (Expression, error) {
@@ -214,12 +254,7 @@ func (p *Parser) literal() (Expression, error) {
 		log.Debug().Msgf("(parser) terminal: %s", token)
 		n, err := strconv.ParseFloat(token.Lexem, 64)
 		if err != nil {
-			return nil, ParseError{
-				Err: NumberConversionError{
-					Token: *token,
-					Err:   err,
-				},
-			}
+			return nil, NewSyntaxError(NewNumberConversionError(err, token), token.Line, token.Column)
 		}
 		return NumericExpression(n), nil
 	} else if token, ok := p.scan.match(TokenString); ok {
@@ -234,7 +269,11 @@ func (p *Parser) literal() (Expression, error) {
 	} else if token, ok := p.scan.match(TokenNil); ok {
 		log.Debug().Msgf("(parser) terminal: %s", token)
 		return NilExpression{}, nil
+	} else if token, ok := p.scan.match(TokenIdentifier); ok {
+		log.Debug().Msgf("(parser) terminal: %s", token)
+		return NilExpression{}, nil
 	}
+
 	return nil, nil
 }
 
@@ -256,9 +295,9 @@ func (p *Parser) grouping() (Expression, error) {
 			return nil, err
 		}
 		if _, ok := p.scan.match(TokenRightParen); !ok {
-			return nil, ParseError{
-				Err: UnmatchedTokenError{*token},
-			}
+			return nil, NewSyntaxError(
+				NewUnexpectedTokenError(TokenRightParen.String(), token), token.Line, token.Column,
+			)
 		}
 		return GroupingExpression{expr: expr}, nil
 	}
@@ -276,74 +315,26 @@ func (s *tokenScanner) done() bool {
 
 func (s *tokenScanner) peek() Token {
 	if s.done() {
-		return EofToken
+		return eofToken
 	}
 	return s.tokens[s.offset]
 }
 
 func (s *tokenScanner) advance() Token {
 	if s.done() {
-		return EofToken
+		return eofToken
 	}
 	s.offset += 1
 	return s.tokens[s.offset-1]
 }
 
-func (s *tokenScanner) match(ts ...TokenType) (*Token, bool) {
+func (s *tokenScanner) match(ts ...TokenType) (Token, bool) {
 	token := s.peek()
 	for _, t := range ts {
 		if token.Type == t {
 			token = s.advance()
-			return &token, true
+			return token, true
 		}
 	}
-	return &token, false
-}
-
-type ParseError struct {
-	Err error
-}
-
-func (e ParseError) Error() string {
-	return fmt.Sprintf("ParseError: %s", e.Err)
-}
-
-func (e ParseError) Unwrap() error {
-	return e.Err
-}
-
-type UnmatchedTokenError struct {
-	Token
-}
-
-func (e UnmatchedTokenError) Error() string {
-	return fmt.Sprintf("unmatched %s at (%d, %d)", e.Token, e.Token.Line, e.Token.Column)
-}
-
-type MissingTerminalError struct{}
-
-func (e MissingTerminalError) Error() string {
-	return "missing terminal"
-}
-
-type NumberConversionError struct {
-	Token
-	Err error
-}
-
-func (e NumberConversionError) Error() string {
-	return fmt.Sprintf("cannot convert number %q at (%d, %d): %s", e.Token.Lexem, e.Token.Line, e.Token.Column, e.Err)
-}
-
-func (e NumberConversionError) Unwrap() error {
-	return e.Err
-}
-
-type UnexpectedTokenError struct {
-	Expected TokenType
-	Actual   Token
-}
-
-func (e UnexpectedTokenError) Error() string {
-	return fmt.Sprintf("expected %s token but got %s", e.Expected, e.Actual)
+	return token, false
 }

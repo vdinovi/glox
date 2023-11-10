@@ -53,15 +53,15 @@ func Test_Parse_UnmatchedParen(t *testing.T) {
 	expr, err := parser.Parse()
 	_ = expr
 	if err == nil {
-		t.Fatal("Expected ParseError but got none")
+		t.Fatal("Expected SyntaxError but got none")
 	}
-	var parseErr ParseError
-	if !errors.As(err, &parseErr) {
-		t.Fatalf("Expected ParseError but got %v", err)
+	var syntaxErr SyntaxError
+	if !errors.As(err, &syntaxErr) {
+		t.Fatalf("Expected SyntaxError but got %v", err)
 	}
 	var utErr UnmatchedTokenError
 	if !errors.As(err, &utErr) {
-		t.Fatal("Expected ParseError to wrap UnmatchedTokenError but did not")
+		t.Fatal("Expected SyntaxError to wrap UnmatchedTokenError but did not")
 	}
 	if utErr.Token.Type != TokenLeftParen {
 		t.Fatalf("Expected UnmatchedTokenError to be for %s but got %s", TokenLeftParen, utErr.Token.Type)
