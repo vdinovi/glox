@@ -17,15 +17,62 @@ func NewParser(tokens []Token) Parser {
 	}
 }
 
-func (p *Parser) Parse() (Expression, error) {
+func (p *Parser) Parse() ([]Statement, error) {
 	log.Debug().Msgf("(parser) scanning %d tokens", len(p.scan.tokens))
+	stmts := []Statement{}
+	for !p.done() {
+		stmt, err := p.statement()
+		if err != nil {
+			log.Error().Msgf("(parser) error: %s", err)
+			return nil, err
+		}
+		log.Debug().Msgf("(parser) produced statement: %s", stmt)
+		stmts = append(stmts, stmt)
+	}
+	return stmts, nil
+}
+
+func (p *Parser) done() bool {
+	_, eof := p.scan.match(TokenEOF)
+	return eof
+}
+
+func (p *Parser) statement() (Statement, error) {
+	p.skipComments()
+	if token, ok := p.scan.match(TokenPrint); ok {
+		log.Debug().Msgf("(parser) %s ... ;", *token)
+		return p.printStatement()
+	}
+	return p.expressionStatement()
+}
+
+func (p *Parser) printStatement() (Statement, error) {
 	expr, err := p.expression()
 	if err != nil {
-		log.Error().Msgf("(parser) error: %s", err)
 		return nil, err
 	}
-	log.Debug().Msgf("(parser) produced expression %s", expr)
-	return expr, err
+	if token, ok := p.scan.match(TokenSemicolon); !ok {
+		return nil, ParseError{
+			Err: UnexpectedTokenError{Expected: TokenSemicolon, Actual: *token},
+		}
+	}
+	p.skipComments()
+	return PrintStatement{expr: expr}, nil
+}
+
+func (p *Parser) expressionStatement() (Statement, error) {
+	log.Debug().Msg("(parser) ... ;")
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if token, ok := p.scan.match(TokenSemicolon); !ok {
+		return nil, ParseError{
+			Err: UnexpectedTokenError{Expected: TokenSemicolon, Actual: *token},
+		}
+	}
+	p.skipComments()
+	return ExpressionStatement{expr: expr}, nil
 }
 
 func (p *Parser) expression() (Expression, error) {
@@ -164,7 +211,7 @@ func (p *Parser) primary() (Expression, error) {
 
 func (p *Parser) literal() (Expression, error) {
 	if token, ok := p.scan.match(TokenNumber); ok {
-		log.Debug().Msgf("(parser) number(%s)", token.Lexem)
+		log.Debug().Msgf("(parser) terminal: %s", token)
 		n, err := strconv.ParseFloat(token.Lexem, 64)
 		if err != nil {
 			return nil, ParseError{
@@ -176,19 +223,29 @@ func (p *Parser) literal() (Expression, error) {
 		}
 		return NumericExpression(n), nil
 	} else if token, ok := p.scan.match(TokenString); ok {
-		log.Debug().Msgf("(parser) \"%s\"", token.Lexem)
+		log.Debug().Msgf("(parser) terminal: %s", token)
 		return StringExpression(token.Lexem), nil
-	} else if _, ok := p.scan.match(TokenTrue); ok {
-		log.Debug().Msg("(parser) true")
+	} else if token, ok := p.scan.match(TokenTrue); ok {
+		log.Debug().Msgf("(parser) terminal: %s", token)
 		return BooleanExpression(true), nil
-	} else if _, ok := p.scan.match(TokenFalse); ok {
-		log.Debug().Msg("(parser) false")
+	} else if token, ok := p.scan.match(TokenFalse); ok {
+		log.Debug().Msgf("(parser) terminal: %s", token)
 		return BooleanExpression(false), nil
-	} else if _, ok := p.scan.match(TokenNil); ok {
-		log.Debug().Msg("(parser) nil")
+	} else if token, ok := p.scan.match(TokenNil); ok {
+		log.Debug().Msgf("(parser) terminal: %s", token)
 		return NilExpression{}, nil
 	}
 	return nil, nil
+}
+
+func (p *Parser) skipComments() {
+	for {
+		if token, ok := p.scan.match(TokenComment); ok {
+			log.Debug().Msgf("(parser) skip: %s", token)
+			continue
+		}
+		break
+	}
 }
 
 func (p *Parser) grouping() (Expression, error) {
@@ -233,21 +290,14 @@ func (s *tokenScanner) advance() Token {
 }
 
 func (s *tokenScanner) match(ts ...TokenType) (*Token, bool) {
+	token := s.peek()
 	for _, t := range ts {
-		if s.check(t) {
-			token := s.advance()
+		if token.Type == t {
+			token = s.advance()
 			return &token, true
 		}
 	}
-	return nil, false
-}
-
-func (s *tokenScanner) check(t TokenType) bool {
-	if s.done() {
-		return false
-	}
-	token := s.peek()
-	return token.Type == t
+	return &token, false
 }
 
 type ParseError struct {
@@ -287,4 +337,13 @@ func (e NumberConversionError) Error() string {
 
 func (e NumberConversionError) Unwrap() error {
 	return e.Err
+}
+
+type UnexpectedTokenError struct {
+	Expected TokenType
+	Actual   Token
+}
+
+func (e UnexpectedTokenError) Error() string {
+	return fmt.Sprintf("expected %s token but got %s", e.Expected, e.Actual)
 }

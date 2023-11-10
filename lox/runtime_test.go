@@ -16,11 +16,9 @@ func TestRuntime(t *testing.T) {
 			expr: NumericExpression(45.67),
 		},
 	}
-	val, typ, err := rt.Evaluate(expr)
+	stmt := ExpressionStatement{expr: expr}
+	err := rt.Execute(stmt)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	_ = val
-	_ = typ
-
 }

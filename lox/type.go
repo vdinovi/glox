@@ -20,15 +20,16 @@ type Typed interface {
 	Type() (Type, error)
 }
 
-func TypeCheck(expr Expression) (Type, error) {
-	log.Debug().Msgf("(typecheck) type checking expression %s", expr)
-	t, err := expr.Type()
-	if err != nil {
-		log.Error().Msgf("(typecheck) error: %s", err)
-		return -1, err
+func TypeCheck(stmts []Statement) error {
+	for _, stmt := range stmts {
+		log.Debug().Msgf("(typecheck) type checking statement: %s", stmt)
+		err := stmt.TypeCheck()
+		if err != nil {
+			log.Error().Msgf("(typecheck) error: %s", err)
+			return err
+		}
 	}
-	log.Debug().Msgf("(typecheck) yielded type %s", t)
-	return t, err
+	return nil
 }
 
 type TypeError struct {

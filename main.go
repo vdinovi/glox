@@ -90,19 +90,21 @@ func exec(r io.Reader) error {
 		return err
 	}
 	parser := lox.NewParser(tokens)
-	expr, err := parser.Parse()
+	stmts, err := parser.Parse()
 	if err != nil {
 		return err
 	}
-	_, err = lox.TypeCheck(expr)
+	err = lox.TypeCheck(stmts)
 	if err != nil {
 		return err
+
 	}
 	runtime := lox.Runtime{}
-	result, _, err := runtime.Evaluate(expr)
-	if err != nil {
-		return err
+	for _, stmt := range stmts {
+		err := runtime.Execute(stmt)
+		if err != nil {
+			return err
+		}
 	}
-	fmt.Println(result)
 	return nil
 }

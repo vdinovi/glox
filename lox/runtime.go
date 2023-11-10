@@ -4,8 +4,8 @@ import "fmt"
 
 type Runtime struct{}
 
-func (r *Runtime) Evaluate(expr Expression) (Value, Type, error) {
-	return expr.Evaluate()
+func (r *Runtime) Execute(stmt Statement) error {
+	return stmt.Execute()
 }
 
 type RuntimeError struct {
