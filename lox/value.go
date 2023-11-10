@@ -14,7 +14,7 @@ type Value interface {
 type ValueString string
 
 func (v ValueString) String() string {
-	return string(v)
+	return fmt.Sprintf("Value(%q)", string(v))
 }
 
 func (ValueString) Type(Symbols) (Type, error) {
@@ -32,7 +32,7 @@ func (v ValueString) Truthy() bool {
 type ValueNumeric float64
 
 func (v ValueNumeric) String() string {
-	return fmt.Sprint(float64(v))
+	return fmt.Sprintf("Value(%.3f)", float64(v))
 }
 
 func (e ValueNumeric) Type(Symbols) (Type, error) {
@@ -55,9 +55,9 @@ var False = ValueBoolean(false)
 
 func (v ValueBoolean) String() string {
 	if bool(v) {
-		return "true"
+		return "Value(true)"
 	}
-	return "false"
+	return "Value(false)"
 }
 
 func (e ValueBoolean) Type(Symbols) (Type, error) {
@@ -77,7 +77,7 @@ type ValueNil struct{}
 var Nil = ValueNil(struct{}{})
 
 func (v ValueNil) String() string {
-	return "nil"
+	return "Value(nil)"
 }
 
 func (e ValueNil) Type(Symbols) (Type, error) {
@@ -85,7 +85,7 @@ func (e ValueNil) Type(Symbols) (Type, error) {
 }
 
 func (v ValueNil) Unwrap() any {
-	return nil
+	return struct{}{}
 }
 
 func (v ValueNil) Truthy() bool {
