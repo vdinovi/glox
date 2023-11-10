@@ -16,7 +16,7 @@ const (
 )
 
 type Typed interface {
-	Type() (Type, error)
+	Type(Symbols) (Type, error)
 }
 
 type TypeError struct {

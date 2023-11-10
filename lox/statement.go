@@ -4,8 +4,10 @@ import (
 	"fmt"
 )
 
+type Program []Statement
+
 type Statement interface {
-	TypeCheck() error
+	TypeCheck(Symbols) error
 	Execute(*Executor) error
 	fmt.Stringer
 }
@@ -14,8 +16,8 @@ type ExpressionStatement struct {
 	expr Expression
 }
 
-func (s ExpressionStatement) TypeCheck() error {
-	return TypeCheckExpressionStatement(s)
+func (s ExpressionStatement) TypeCheck(syms Symbols) error {
+	return syms.TypeCheckExpressionStatement(s)
 }
 
 func (s ExpressionStatement) Execute(e *Executor) error {
@@ -30,8 +32,8 @@ type PrintStatement struct {
 	expr Expression
 }
 
-func (s PrintStatement) TypeCheck() error {
-	return TypeCheckPrintStatement(s)
+func (s PrintStatement) TypeCheck(syms Symbols) error {
+	return syms.TypeCheckPrintStatement(s)
 }
 
 func (s PrintStatement) Execute(e *Executor) error {

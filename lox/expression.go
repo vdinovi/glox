@@ -5,7 +5,7 @@ import (
 )
 
 type Evaluable interface {
-	Evaluate() (Value, error)
+	Evaluate(*EvaluationContext) (Value, error)
 }
 
 type Expression interface {
@@ -23,12 +23,12 @@ func (e UnaryExpression) String() string {
 	return fmt.Sprintf("(%s %s)", e.op.Lexem, e.right)
 }
 
-func (e UnaryExpression) Type() (Type, error) {
-	return TypeCheckUnaryExpression(e)
+func (e UnaryExpression) Type(syms Symbols) (Type, error) {
+	return syms.TypeCheckUnaryExpression(e)
 }
 
-func (e UnaryExpression) Evaluate() (Value, error) {
-	return EvaluateUnaryExpression(e)
+func (e UnaryExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+	return ctx.EvaluateUnaryExpression(e)
 }
 
 type BinaryExpression struct {
@@ -41,12 +41,12 @@ func (e BinaryExpression) String() string {
 	return fmt.Sprintf("(%s %s %s)", e.op.Lexem, e.left, e.right)
 }
 
-func (e BinaryExpression) Type() (Type, error) {
-	return TypeCheckBinaryExpression(e)
+func (e BinaryExpression) Type(syms Symbols) (Type, error) {
+	return syms.TypeCheckBinaryExpression(e)
 }
 
-func (e BinaryExpression) Evaluate() (Value, error) {
-	return EvaluateBinaryExpression(e)
+func (e BinaryExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+	return ctx.EvaluateBinaryExpression(e)
 }
 
 type GroupingExpression struct {
@@ -57,12 +57,12 @@ func (e GroupingExpression) String() string {
 	return fmt.Sprintf("(group %s)", e.expr)
 }
 
-func (e GroupingExpression) Type() (Type, error) {
-	return TypeCheckGroupingExpression(e)
+func (e GroupingExpression) Type(syms Symbols) (Type, error) {
+	return syms.TypeCheckGroupingExpression(e)
 }
 
-func (e GroupingExpression) Evaluate() (Value, error) {
-	return EvaluateGroupingExpression(e)
+func (e GroupingExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+	return ctx.EvaluateGroupingExpression(e)
 }
 
 type LiteralExpression interface {
@@ -77,12 +77,12 @@ func (e StringExpression) String() string {
 	return string(e)
 }
 
-func (e StringExpression) Type() (Type, error) {
-	return TypeCheckStringExpression(e)
+func (e StringExpression) Type(syms Symbols) (Type, error) {
+	return syms.TypeCheckStringExpression(e)
 }
 
-func (e StringExpression) Evaluate() (Value, error) {
-	return EvaluateStringExpression(e)
+func (e StringExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+	return ctx.EvaluateStringExpression(e)
 }
 
 type NumericExpression float64
@@ -93,12 +93,12 @@ func (e NumericExpression) String() string {
 	return fmt.Sprint(float64(e))
 }
 
-func (e NumericExpression) Type() (Type, error) {
-	return TypeCheckNumericExpression(e)
+func (e NumericExpression) Type(syms Symbols) (Type, error) {
+	return syms.TypeCheckNumericExpression(e)
 }
 
-func (e NumericExpression) Evaluate() (Value, error) {
-	return EvaluateNumericExpression(e)
+func (e NumericExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+	return ctx.EvaluateNumericExpression(e)
 }
 
 type BooleanExpression bool
@@ -112,11 +112,11 @@ func (e BooleanExpression) String() string {
 	return "(false)"
 }
 
-func (e BooleanExpression) Type() (Type, error) {
-	return TypeCheckBooleanExpression(e)
+func (e BooleanExpression) Type(syms Symbols) (Type, error) {
+	return syms.TypeCheckBooleanExpression(e)
 }
-func (e BooleanExpression) Evaluate() (Value, error) {
-	return EvaluateBooleanExpression(e)
+func (e BooleanExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+	return ctx.EvaluateBooleanExpression(e)
 }
 
 type NilExpression struct{}
@@ -127,9 +127,9 @@ func (e NilExpression) String() string {
 	return "(nil)"
 }
 
-func (e NilExpression) Type() (Type, error) {
-	return TypeCheckNilExpression(e)
+func (e NilExpression) Type(syms Symbols) (Type, error) {
+	return syms.TypeCheckNilExpression(e)
 }
-func (e NilExpression) Evaluate() (Value, error) {
-	return EvaluateNilExpression(e)
+func (e NilExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+	return ctx.EvaluateNilExpression(e)
 }
