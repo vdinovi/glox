@@ -1,6 +1,8 @@
 package lox
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Value interface {
 	Typed
@@ -9,76 +11,114 @@ type Value interface {
 	Truthy() bool
 }
 
-type StringValue string
+type ValueString string
 
-func (v StringValue) String() string {
+func (v ValueString) String() string {
 	return string(v)
 }
 
-func (StringValue) Type() (Type, error) {
+func (ValueString) Type() (Type, error) {
 	return TypeString, nil
 }
 
-func (v StringValue) Unwrap() any {
+func (v ValueString) Unwrap() any {
 	return string(v)
 }
 
-func (v StringValue) Truthy() bool {
+func (v ValueString) Truthy() bool {
 	return true
 }
 
-type NumericValue float64
+func TypeCheckStringExpression(e StringExpression) (Type, error) {
+	return TypeString, nil
+}
 
-func (v NumericValue) String() string {
+func EvaluateStringExpression(e StringExpression) (Value, error) {
+	return ValueString(e), nil
+}
+
+type ValueNumeric float64
+
+func (v ValueNumeric) String() string {
 	return fmt.Sprint(float64(v))
 }
-func (e NumericValue) Type() (Type, error) {
+func (e ValueNumeric) Type() (Type, error) {
 	return TypeNumeric, nil
 }
 
-func (v NumericValue) Unwrap() any {
+func (v ValueNumeric) Unwrap() any {
 	return float64(v)
 }
 
-func (v NumericValue) Truthy() bool {
+func (v ValueNumeric) Truthy() bool {
 	return true
 }
 
-type BooleanValue bool
+func TypeCheckNumericExpression(NumericExpression) (Type, error) {
+	return TypeNumeric, nil
+}
 
-func (v BooleanValue) String() string {
+func EvaluateNumericExpression(e NumericExpression) (Value, error) {
+	return ValueNumeric(e), nil
+}
+
+type ValueBoolean bool
+
+var True = ValueBoolean(true)
+
+var False = ValueBoolean(false)
+
+func (v ValueBoolean) String() string {
 	if bool(v) {
 		return "true"
 	}
 	return "false"
 }
 
-func (e BooleanValue) Type() (Type, error) {
+func (e ValueBoolean) Type() (Type, error) {
 	return TypeBoolean, nil
 }
 
-func (v BooleanValue) Unwrap() any {
+func (v ValueBoolean) Unwrap() any {
 	return bool(v)
 }
 
-func (v BooleanValue) Truthy() bool {
+func (v ValueBoolean) Truthy() bool {
 	return bool(v)
 }
 
-type NilValue struct{}
+func TypeCheckBooleanExpression(BooleanExpression) (Type, error) {
+	return TypeBoolean, nil
+}
 
-func (v NilValue) String() string {
+func EvaluateBooleanExpression(e BooleanExpression) (Value, error) {
+	return ValueBoolean(e), nil
+}
+
+type ValueNil struct{}
+
+var Nil = ValueNil(struct{}{})
+
+func (v ValueNil) String() string {
 	return "nil"
 }
 
-func (e NilValue) Type() (Type, error) {
+func (e ValueNil) Type() (Type, error) {
 	return TypeNil, nil
 }
 
-func (v NilValue) Unwrap() any {
+func (v ValueNil) Unwrap() any {
 	return nil
 }
 
-func (v NilValue) Truthy() bool {
+func (v ValueNil) Truthy() bool {
 	return false
+}
+
+func TypeCheckNilExpression(e NilExpression) (Type, error) {
+	return TypeNil, nil
+}
+
+func EvaluateNilExpression(e NilExpression) (Value, error) {
+	return Nil, nil
 }

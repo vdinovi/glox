@@ -1,11 +1,20 @@
 package lox
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
-type Runtime struct{}
+type Runtime struct {
+	printer io.Writer
+}
 
-func (r *Runtime) Execute(stmt Statement) error {
-	return stmt.Execute()
+func (r *Runtime) Print(s string) error {
+	_, err := fmt.Println(s)
+	if err != nil {
+		return RuntimeError{err}
+	}
+	return nil
 }
 
 type RuntimeError struct {
@@ -13,22 +22,5 @@ type RuntimeError struct {
 }
 
 func (e RuntimeError) Error() string {
-	return fmt.Sprintf("RuntimeError: %s", e.Err)
-}
-
-func (e RuntimeError) Unwrap() error {
-	return e.Err
-}
-
-type InvalidOperationErr struct {
-	Operator
-	Values []Value
-}
-
-func (e InvalidOperationErr) Error() string {
-	return fmt.Sprintf("can't apply operator %s to values %v", e.Operator, e.Values)
-}
-
-func InvalidOperation(op Operator, vs ...Value) InvalidOperationErr {
-	return InvalidOperationErr{Operator: op, Values: vs}
+	return fmt.Sprintf("Runtime Error: %s", e.Err)
 }

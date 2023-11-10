@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func TestRuntime(t *testing.T) {
-	rt := Runtime{}
+func TestExecutor(t *testing.T) {
+	rt := Executor{}
 	expr := BinaryExpression{
 		op: Operator{Type: OpMultiply, Lexem: "*"},
 		left: UnaryExpression{

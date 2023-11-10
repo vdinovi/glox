@@ -33,7 +33,6 @@ func main() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	fmt.Println(flag.NArg())
 	if flag.NArg() == 0 {
 		repl()
 	} else {
@@ -51,14 +50,16 @@ func execFile(path string) {
 	}
 	defer f.Close()
 
+	x := lox.NewExecutor(os.Stdout)
 	rd := bufio.NewReader(f)
-	err = exec(rd)
+	err = exec(x, rd)
 	if err != nil {
 		lox.ExitErr(err)
 	}
 }
 
 func repl() {
+	x := lox.NewExecutor(os.Stdout)
 	rd := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Printf("> ")
@@ -73,14 +74,14 @@ func repl() {
 
 		line = strings.TrimRight(line, "\n")
 		rd := strings.NewReader(line)
-		err = exec(rd)
+		err = exec(x, rd)
 		if err != nil {
 			lox.ExitErr(err)
 		}
 	}
 }
 
-func exec(r io.Reader) error {
+func exec(x *lox.Executor, r io.Reader) error {
 	lexer, err := lox.NewLexer(bufio.NewReader(r))
 	if err != nil {
 		return err
@@ -94,14 +95,8 @@ func exec(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	err = lox.TypeCheck(stmts)
-	if err != nil {
-		return err
-
-	}
-	runtime := lox.Runtime{}
 	for _, stmt := range stmts {
-		err := runtime.Execute(stmt)
+		err := x.Execute(stmt)
 		if err != nil {
 			return err
 		}
