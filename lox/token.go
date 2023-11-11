@@ -54,10 +54,10 @@ const (
 
 // Represents a valid syntax token
 type Token struct {
-	Type   TokenType // type of token
-	Lexem  string    // associated string
-	Line   int       // originating line
-	Column int       // originating column
+	Type   TokenType `json:"Type"`   // type of token
+	Lexem  string    `json:"Lexem"`  // associated string
+	Line   int       `json:"Line"`   // originating line
+	Column int       `json:"Column"` // originating column
 }
 
 func (t Token) String() string {
