@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/vdinovi/glox/lox"
 )
@@ -26,11 +25,10 @@ func main() {
 	}
 	flag.Parse()
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-
+	lox.SetConsoleLogOutput(os.Stderr)
+	lox.SetLogLevel("info")
 	if *debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		lox.SetLogLevel("debug")
 	}
 
 	if flag.NArg() == 0 {
