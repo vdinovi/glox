@@ -41,10 +41,9 @@ func (syms Symbols) TypeCheckUnaryExpression(e UnaryExpression) (right, result T
 	}
 	switch right {
 	case TypeNumeric:
-		result, err = syms.typeCheckUnaryNumeric(e.op.Type, right)
+		result, err = syms.typeCheckUnaryNumeric(e.op, right)
 	default:
-		// TODO: feed line and column
-		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, right), 0, 0)
+		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, right), e.op.Line, e.op.Column)
 	}
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
@@ -62,20 +61,18 @@ func (syms Symbols) TypeCheckBinaryExpression(e BinaryExpression) (left, right, 
 		return ErrType, ErrType, ErrType, err
 	}
 	if left != right {
-		// TODO: feed line and column
-		return ErrType, ErrType, ErrType, NewTypeError(NewTypeMismatchError(left, right), 0, 0)
+		return ErrType, ErrType, ErrType, NewTypeError(NewTypeMismatchError(left, right), e.op.Line, e.op.Column)
 	}
 	var typ Type
 	switch left {
 	case TypeNumeric:
-		typ, err = syms.typeCheckBinaryNumeric(e.op.Type, left, right)
+		typ, err = syms.typeCheckBinaryNumeric(e.op, left, right)
 	case TypeString:
-		typ, err = syms.typeCheckBinaryString(e.op.Type, left, right)
+		typ, err = syms.typeCheckBinaryString(e.op, left, right)
 	case TypeBoolean:
-		typ, err = syms.typeCheckBinaryBoolean(e.op.Type, left, right)
+		typ, err = syms.typeCheckBinaryBoolean(e.op, left, right)
 	default:
-		// TODO: feed line and column
-		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, left, right), 0, 0)
+		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, left, right), e.op.Line, e.op.Column)
 	}
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
@@ -111,46 +108,42 @@ func (syms Symbols) TypeCheckNilExpression(e NilExpression) (Type, error) {
 	return TypeNil, nil
 }
 
-func (syms Symbols) typeCheckUnaryNumeric(opType OperatorType, typ Type) (Type, error) {
-	switch opType {
+func (syms Symbols) typeCheckUnaryNumeric(op Operator, typ Type) (Type, error) {
+	switch op.Type {
 	case OpAdd:
 		return TypeNumeric, nil
 	default:
-		// TODO: feed line and column
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(opType, typ), 0, 0)
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, typ), op.Line, op.Column)
 	}
 }
 
-func (syms Symbols) typeCheckBinaryNumeric(opType OperatorType, left, right Type) (Type, error) {
-	switch opType {
+func (syms Symbols) typeCheckBinaryNumeric(op Operator, left, right Type) (Type, error) {
+	switch op.Type {
 	case OpAdd, OpSubtract, OpMultiply, OpDivide:
 		return TypeNumeric, nil
 	case OpEqualTo, OpNotEqualTo, OpLessThan, OpLessThanOrEqualTo, OpGreaterThan, OpGreaterThanOrEqualTo:
 		return TypeBoolean, nil
 	default:
-		// TODO: feed line and column
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(opType, left, right), 0, 0)
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), op.Line, op.Column)
 	}
 }
 
-func (syms Symbols) typeCheckBinaryString(opType OperatorType, left, right Type) (Type, error) {
-	switch opType {
+func (syms Symbols) typeCheckBinaryString(op Operator, left, right Type) (Type, error) {
+	switch op.Type {
 	case OpAdd:
 		return TypeString, nil
 	case OpEqualTo, OpNotEqualTo:
 		return TypeBoolean, nil
 	default:
-		// TODO: feed line and column
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(opType, left, right), 0, 0)
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), op.Line, op.Column)
 	}
 }
 
-func (syms Symbols) typeCheckBinaryBoolean(opType OperatorType, left, right Type) (Type, error) {
-	switch opType {
+func (syms Symbols) typeCheckBinaryBoolean(op Operator, left, right Type) (Type, error) {
+	switch op.Type {
 	case OpEqualTo, OpNotEqualTo:
 		return TypeBoolean, nil
 	default:
-		// TODO: feed line and column
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(opType, left, right), 0, 0)
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), op.Line, op.Column)
 	}
 }

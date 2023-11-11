@@ -44,7 +44,6 @@ func (s PrintStatement) String() string {
 	return fmt.Sprintf("print %s ;", s.expr)
 }
 
-// TODO
 type DeclarationStatement struct {
 	name string
 	expr Expression

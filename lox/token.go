@@ -68,7 +68,7 @@ func (t Token) String() string {
 // If there is no associated operator, returns the error NoOperatorForTokenError
 func (t Token) Operator() (Operator, error) {
 	var err error
-	op := Operator{Type: ErrOp, Lexem: t.Lexem}
+	op := Operator{Type: ErrOp, Lexem: t.Lexem, Line: t.Line, Column: t.Column}
 	switch t.Type {
 	case TokenPlus:
 		op.Type = OpAdd

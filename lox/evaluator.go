@@ -31,7 +31,7 @@ func (ctx *EvaluationContext) EvaluateUnaryExpression(e UnaryExpression) (Value,
 	var val Value
 	switch rightType {
 	case TypeNumeric:
-		val, err = ctx.evalUnaryNumeric(e.op.Type, rightVal)
+		val, err = ctx.evalUnaryNumeric(e.op, rightVal)
 	default:
 		unreachable("prevented by prior type check")
 	}
@@ -56,11 +56,11 @@ func (ctx *EvaluationContext) EvaluateBinaryExpression(e BinaryExpression) (Valu
 	var val Value
 	switch leftType {
 	case TypeString:
-		val, err = ctx.evalBinaryString(e.op.Type, leftVal, rightVal)
+		val, err = ctx.evalBinaryString(e.op, leftVal, rightVal)
 	case TypeNumeric:
-		val, err = ctx.evalBinaryNumeric(e.op.Type, leftVal, rightVal)
+		val, err = ctx.evalBinaryNumeric(e.op, leftVal, rightVal)
 	case TypeBoolean:
-		val, err = ctx.evalBinaryBoolean(e.op.Type, leftVal, rightVal)
+		val, err = ctx.evalBinaryBoolean(e.op, leftVal, rightVal)
 	default:
 		unreachable("prevented by prior type check")
 	}
@@ -102,18 +102,17 @@ func (ctx *EvaluationContext) EvaluateNilExpression(e NilExpression) (Value, err
 	return Nil, nil
 }
 
-func (ctx *EvaluationContext) evalUnaryNumeric(op OperatorType, right Value) (Value, error) {
+func (ctx *EvaluationContext) evalUnaryNumeric(op Operator, right Value) (Value, error) {
 	n, ok := right.Unwrap().(float64)
 	if ok {
-		// TODO: feed line and column
-		return nil, NewRuntimeError(NewDowncastError(right, "float64"), 0, 0)
+		return nil, NewRuntimeError(NewDowncastError(right, "float64"), op.Line, op.Column)
 	}
-	switch op {
+	switch op.Type {
 	case OpSubtract:
 		return ValueNumeric(-n), nil
-	default:
-		unreachable("prevented by prior type check")
 	}
+	unreachable("prevented by prior type check")
+	return nil, nil
 }
 
 func (ctx *EvaluationContext) evalBinaryOperands(left, right Expression) (Value, Value, error) {
@@ -128,41 +127,37 @@ func (ctx *EvaluationContext) evalBinaryOperands(left, right Expression) (Value,
 	return lv, rv, nil
 }
 
-func (ctx *EvaluationContext) evalBinaryString(op OperatorType, left, right Value) (Value, error) {
+func (ctx *EvaluationContext) evalBinaryString(op Operator, left, right Value) (Value, error) {
 	var ok bool
 	var l, r string
 	if l, ok = left.Unwrap().(string); !ok {
-		// TODO: feed line and column
-		return nil, NewRuntimeError(NewDowncastError(left, "string"), 0, 0)
+		return nil, NewRuntimeError(NewDowncastError(left, "string"), op.Line, op.Column)
 	}
 	if r, ok = right.Unwrap().(string); !ok {
-		// TODO: feed line and column
-		return nil, NewRuntimeError(NewDowncastError(right, "string"), 0, 0)
+		return nil, NewRuntimeError(NewDowncastError(right, "string"), op.Line, op.Column)
 	}
-	switch op {
+	switch op.Type {
 	case OpAdd:
 		return ValueString(l + r), nil
 	case OpEqualTo:
 		return ValueBoolean(l == r), nil
 	case OpNotEqualTo:
 		return ValueBoolean(l != r), nil
-	default:
-		unreachable("prevented by prior type check")
 	}
+	unreachable("prevented by prior type check")
+	return nil, nil
 }
 
-func (ctx *EvaluationContext) evalBinaryNumeric(op OperatorType, left, right Value) (Value, error) {
+func (ctx *EvaluationContext) evalBinaryNumeric(op Operator, left, right Value) (Value, error) {
 	var ok bool
 	var l, r float64
 	if l, ok = left.Unwrap().(float64); !ok {
-		// TODO: feed line and column
-		return nil, NewRuntimeError(NewDowncastError(left, "string"), 0, 0)
+		return nil, NewRuntimeError(NewDowncastError(left, "string"), op.Line, op.Column)
 	}
 	if r, ok = right.Unwrap().(float64); !ok {
-		// TODO: feed line and column
-		return nil, NewRuntimeError(NewDowncastError(right, "string"), 0, 0)
+		return nil, NewRuntimeError(NewDowncastError(right, "string"), op.Line, op.Column)
 	}
-	switch op {
+	switch op.Type {
 	case OpAdd:
 		return ValueNumeric(l + r), nil
 	case OpSubtract:
@@ -184,29 +179,27 @@ func (ctx *EvaluationContext) evalBinaryNumeric(op OperatorType, left, right Val
 	case OpGreaterThanOrEqualTo:
 		return ValueBoolean(l >= r), nil
 	default:
-		// Handed by prior type check
-		unreachable("prevented by prior type check")
 	}
+	unreachable("prevented by prior type check")
+	return nil, nil
 }
 
-func (ctx *EvaluationContext) evalBinaryBoolean(op OperatorType, left, right Value) (Value, error) {
+func (ctx *EvaluationContext) evalBinaryBoolean(op Operator, left, right Value) (Value, error) {
 	var ok bool
 	var l, r bool
 	if l, ok = left.Unwrap().(bool); !ok {
-		// TODO: feed line and column
-		return nil, NewRuntimeError(NewDowncastError(left, "bool"), 0, 0)
+		return nil, NewRuntimeError(NewDowncastError(left, "bool"), op.Line, op.Column)
 	}
 	if r, ok = right.Unwrap().(bool); !ok {
-		// TODO: feed line and column
-		return nil, NewRuntimeError(NewDowncastError(right, "bool"), 0, 0)
+		return nil, NewRuntimeError(NewDowncastError(right, "bool"), op.Line, op.Column)
 	}
-	switch op {
+	switch op.Type {
 	case OpEqualTo:
 		return ValueBoolean(l == r), nil
 	case OpNotEqualTo:
 		return ValueBoolean(l != r), nil
 	default:
-		// Handed by prior type check
-		unreachable("prevented by prior type check")
 	}
+	unreachable("prevented by prior type check")
+	return nil, nil
 }
