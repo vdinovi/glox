@@ -8,45 +8,7 @@ import (
 	"testing"
 )
 
-func TestLexerExpression(t *testing.T) {
-	input := "(1.23 + (2*3) / -4) + !\"test\" * (false)"
-	want := []Token{
-		{Type: TokenLeftParen, Lexem: "("},
-		{Type: TokenNumber, Lexem: "1.23"},
-		{Type: TokenPlus, Lexem: "+"},
-		{Type: TokenLeftParen, Lexem: "("},
-		{Type: TokenNumber, Lexem: "2"},
-		{Type: TokenStar, Lexem: "*"},
-		{Type: TokenNumber, Lexem: "3"},
-		{Type: TokenRightParen, Lexem: ")"},
-		{Type: TokenSlash, Lexem: "/"},
-		{Type: TokenMinus, Lexem: "-"},
-		{Type: TokenNumber, Lexem: "4"},
-		{Type: TokenRightParen, Lexem: ")"},
-		{Type: TokenPlus, Lexem: "+"},
-		{Type: TokenBang, Lexem: "!"},
-		{Type: TokenString, Lexem: "test"},
-		{Type: TokenStar, Lexem: "*"},
-		{Type: TokenLeftParen, Lexem: "("},
-		{Type: TokenFalse, Lexem: "false"},
-		{Type: TokenRightParen, Lexem: ")"},
-		{Type: TokenEOF, Lexem: ""},
-	}
-	lexer, err := NewLexer(strings.NewReader(input))
-	if err != nil {
-		t.Fatalf("Unexpected error: %s", err)
-	}
-
-	tokens, err := lexer.Scan()
-	if err != nil {
-		t.Fatalf("Unexpected error: %s", err)
-	}
-	if reflect.DeepEqual(tokens, want) {
-		t.Fatalf("Expected %q to yield tokens %v, but got %v", input, want, tokens)
-	}
-}
-
-func TestLexerBasicTokens(t *testing.T) {
+func TestLexerBasic(t *testing.T) {
 	tests := []struct {
 		text  string
 		token Token
@@ -114,6 +76,44 @@ func TestLexerBasicTokens(t *testing.T) {
 				t.Errorf("Expected %q to yield implicit token %+v, got %+v ", test.text, eofToken, token)
 			}
 		})
+	}
+}
+
+func TestLexerExpression(t *testing.T) {
+	input := "(1.23 + (2*3) / -4) + !\"test\" * (false)"
+	want := []Token{
+		tokenDefault(TokenLeftParen),
+		{Type: TokenNumber, Lexem: "1.23"},
+		tokenDefault(TokenPlus),
+		tokenDefault(TokenLeftParen),
+		{Type: TokenNumber, Lexem: "1.23"},
+		tokenDefault(TokenStar),
+		{Type: TokenNumber, Lexem: "3"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenSlash),
+		tokenDefault(TokenMinus),
+		{Type: TokenNumber, Lexem: "4"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenPlus),
+		tokenDefault(TokenBang),
+		{Type: TokenString, Lexem: "test"},
+		tokenDefault(TokenStar),
+		tokenDefault(TokenLeftParen),
+		tokenDefault(TokenFalse),
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenEOF),
+	}
+	lexer, err := NewLexer(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
+	}
+
+	tokens, err := lexer.Scan()
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
+	}
+	if reflect.DeepEqual(tokens, want) {
+		t.Fatalf("Expected %q to yield tokens %v, but got %v", input, want, tokens)
 	}
 }
 
@@ -206,6 +206,422 @@ func TestUnexpectedCharacter(t *testing.T) {
 		}
 		if unexpectedCharacterError.Actual != '?' {
 			t.Errorf("Expected %c, got %c", unexpectedCharacterError.Actual, '?')
+		}
+	}
+}
+
+func TestLexerComplex(t *testing.T) {
+	input := `
+var one = 1;
+var str = "str";
+var null = nil;
+var yes = true
+var undefined;
+
+print str;
+print one + 2 ;
+(1.23 + (one*3) / -4) + !\"test\" * (false);
+
+
+// performs arithmetic on stuff
+fun arith(a, b, c, d) {
+	return (a + (b - c)) * d / a;
+} 
+
+arith(one, 2, yes, str)
+
+// compares stuff
+fun compare(a, b, c, d) {
+	return (a > b) >= c < d <= (a + b) < c != (a == c);
+}
+
+compare(-1.23, yes, nil, undefined)
+
+// does conditional stuff
+fun conditional(a, b, c) {
+	while (c < 5) {
+		print c;
+		c = c + 1;
+	}
+
+	for (d = 0; d < 5; d = d + 1) {
+		print d;
+	}
+
+	if a < 1 {
+		return a;
+	} else if a >= 100 {
+		return b;
+	} else {
+		return nil;
+	}
+}
+
+class Foo {
+	init(x) {
+		this.x = x;
+	}
+
+	print() {
+		print this.x;
+	}
+}
+
+class Bar < Foo {
+	init(y) {
+		super().init("foo");
+		this.y = y;
+	}
+
+	print() {
+		super().print()
+		print this.y;
+	}
+}
+
+var foo = Foo("foo");
+foo.print()
+
+var bar = Bar("bar");
+bar.print()
+	`
+	// Generated with
+	// for _, tok := range tokens {
+	// 	switch tok.Type {
+	// 	case lox.TokenString, lox.TokenNumber, lox.TokenIdentifier, lox.TokenComment:
+	// 		fmt.Printf("\t\t{Type: Token%s, Lexem: %q},\n", tok.Type, tok.Lexem)
+	// 	default:
+	// 		fmt.Printf("\t\ttokenDefault(Token%s),\n", tok.Type)
+	// 	}
+	// }
+	want := []Token{
+		tokenDefault(TokenVar),
+		{Type: TokenIdentifier, Lexem: "one"},
+		tokenDefault(TokenEqual),
+		{Type: TokenNumber, Lexem: "1"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenVar),
+		{Type: TokenIdentifier, Lexem: "str"},
+		tokenDefault(TokenEqual),
+		{Type: TokenString, Lexem: "str"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenVar),
+		{Type: TokenIdentifier, Lexem: "null"},
+		tokenDefault(TokenEqual),
+		tokenDefault(TokenNil),
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenVar),
+		{Type: TokenIdentifier, Lexem: "yes"},
+		tokenDefault(TokenEqual),
+		tokenDefault(TokenTrue),
+		tokenDefault(TokenVar),
+		{Type: TokenIdentifier, Lexem: "undefined"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenPrint),
+		{Type: TokenIdentifier, Lexem: "str"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenPrint),
+		{Type: TokenIdentifier, Lexem: "one"},
+		tokenDefault(TokenPlus),
+		{Type: TokenNumber, Lexem: "2"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenLeftParen),
+		{Type: TokenNumber, Lexem: "1.23"},
+		tokenDefault(TokenPlus),
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "one"},
+		tokenDefault(TokenStar),
+		{Type: TokenNumber, Lexem: "3"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenSlash),
+		tokenDefault(TokenMinus),
+		{Type: TokenNumber, Lexem: "4"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenPlus),
+		tokenDefault(TokenBang),
+		{Type: TokenString, Lexem: "test"},
+		tokenDefault(TokenStar),
+		tokenDefault(TokenLeftParen),
+		tokenDefault(TokenFalse),
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenSemicolon),
+		{Type: TokenComment, Lexem: " performs arithmetic on stuff"},
+		tokenDefault(TokenFun),
+		{Type: TokenIdentifier, Lexem: "arith"},
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "b"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "d"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenReturn),
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenPlus),
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "b"},
+		tokenDefault(TokenMinus),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenStar),
+		{Type: TokenIdentifier, Lexem: "d"},
+		tokenDefault(TokenSlash),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		{Type: TokenIdentifier, Lexem: "arith"},
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "one"},
+		tokenDefault(TokenComma),
+		{Type: TokenNumber, Lexem: "2"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "yes"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "str"},
+		tokenDefault(TokenRightParen),
+		{Type: TokenComment, Lexem: " compares stuff"},
+		tokenDefault(TokenFun),
+		{Type: TokenIdentifier, Lexem: "compare"},
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "b"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "d"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenReturn),
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenGreater),
+		{Type: TokenIdentifier, Lexem: "b"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenGreaterEqual),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenLess),
+		{Type: TokenIdentifier, Lexem: "d"},
+		tokenDefault(TokenLessEqual),
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenPlus),
+		{Type: TokenIdentifier, Lexem: "b"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenLess),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenBangEqual),
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenEqualEqual),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		{Type: TokenIdentifier, Lexem: "compare"},
+		tokenDefault(TokenLeftParen),
+		tokenDefault(TokenMinus),
+		{Type: TokenNumber, Lexem: "1.23"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "yes"},
+		tokenDefault(TokenComma),
+		tokenDefault(TokenNil),
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "undefined"},
+		tokenDefault(TokenRightParen),
+		{Type: TokenComment, Lexem: " does conditional stuff"},
+		tokenDefault(TokenFun),
+		{Type: TokenIdentifier, Lexem: "conditional"},
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "b"},
+		tokenDefault(TokenComma),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenWhile),
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenLess),
+		{Type: TokenNumber, Lexem: "5"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenPrint),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenSemicolon),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenEqual),
+		{Type: TokenIdentifier, Lexem: "c"},
+		tokenDefault(TokenPlus),
+		{Type: TokenNumber, Lexem: "1"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenFor),
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "d"},
+		tokenDefault(TokenEqual),
+		{Type: TokenNumber, Lexem: "0"},
+		tokenDefault(TokenSemicolon),
+		{Type: TokenIdentifier, Lexem: "d"},
+		tokenDefault(TokenLess),
+		{Type: TokenNumber, Lexem: "5"},
+		tokenDefault(TokenSemicolon),
+		{Type: TokenIdentifier, Lexem: "d"},
+		tokenDefault(TokenEqual),
+		{Type: TokenIdentifier, Lexem: "d"},
+		tokenDefault(TokenPlus),
+		{Type: TokenNumber, Lexem: "1"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenPrint),
+		{Type: TokenIdentifier, Lexem: "d"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenIf),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenLess),
+		{Type: TokenNumber, Lexem: "1"},
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenReturn),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenElse),
+		tokenDefault(TokenIf),
+		{Type: TokenIdentifier, Lexem: "a"},
+		tokenDefault(TokenGreaterEqual),
+		{Type: TokenNumber, Lexem: "100"},
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenReturn),
+		{Type: TokenIdentifier, Lexem: "b"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenElse),
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenReturn),
+		tokenDefault(TokenNil),
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenClass),
+		{Type: TokenIdentifier, Lexem: "Foo"},
+		tokenDefault(TokenLeftBrace),
+		{Type: TokenIdentifier, Lexem: "init"},
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "x"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenThis),
+		tokenDefault(TokenDot),
+		{Type: TokenIdentifier, Lexem: "x"},
+		tokenDefault(TokenEqual),
+		{Type: TokenIdentifier, Lexem: "x"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenPrint),
+		tokenDefault(TokenLeftParen),
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenPrint),
+		tokenDefault(TokenThis),
+		tokenDefault(TokenDot),
+		{Type: TokenIdentifier, Lexem: "x"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenClass),
+		{Type: TokenIdentifier, Lexem: "Bar"},
+		tokenDefault(TokenLess),
+		{Type: TokenIdentifier, Lexem: "Foo"},
+		tokenDefault(TokenLeftBrace),
+		{Type: TokenIdentifier, Lexem: "init"},
+		tokenDefault(TokenLeftParen),
+		{Type: TokenIdentifier, Lexem: "y"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenSuper),
+		tokenDefault(TokenLeftParen),
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenDot),
+		{Type: TokenIdentifier, Lexem: "init"},
+		tokenDefault(TokenLeftParen),
+		{Type: TokenString, Lexem: "foo"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenThis),
+		tokenDefault(TokenDot),
+		{Type: TokenIdentifier, Lexem: "y"},
+		tokenDefault(TokenEqual),
+		{Type: TokenIdentifier, Lexem: "y"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenPrint),
+		tokenDefault(TokenLeftParen),
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenLeftBrace),
+		tokenDefault(TokenSuper),
+		tokenDefault(TokenLeftParen),
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenDot),
+		tokenDefault(TokenPrint),
+		tokenDefault(TokenLeftParen),
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenPrint),
+		tokenDefault(TokenThis),
+		tokenDefault(TokenDot),
+		{Type: TokenIdentifier, Lexem: "y"},
+		tokenDefault(TokenSemicolon),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenRightBrace),
+		tokenDefault(TokenVar),
+		{Type: TokenIdentifier, Lexem: "foo"},
+		tokenDefault(TokenEqual),
+		{Type: TokenIdentifier, Lexem: "Foo"},
+		tokenDefault(TokenLeftParen),
+		{Type: TokenString, Lexem: "foo"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenSemicolon),
+		{Type: TokenIdentifier, Lexem: "foo"},
+		tokenDefault(TokenDot),
+		tokenDefault(TokenPrint),
+		tokenDefault(TokenLeftParen),
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenVar),
+		{Type: TokenIdentifier, Lexem: "bar"},
+		tokenDefault(TokenEqual),
+		{Type: TokenIdentifier, Lexem: "Bar"},
+		tokenDefault(TokenLeftParen),
+		{Type: TokenString, Lexem: "bar"},
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenSemicolon),
+		{Type: TokenIdentifier, Lexem: "bar"},
+		tokenDefault(TokenDot),
+		tokenDefault(TokenPrint),
+		tokenDefault(TokenLeftParen),
+		tokenDefault(TokenRightParen),
+		tokenDefault(TokenEOF),
+	}
+	lexer, err := NewLexer(strings.NewReader(input))
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
+	}
+
+	tokens, err := lexer.Scan()
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
+	}
+	if len(tokens) != len(want) {
+		t.Fatalf("Expected program to yield %d tokens, but got %d", len(want), len(tokens))
+	}
+	for i, w := range want {
+		if tok := tokens[i]; tok != w {
+			t.Fatalf("Expected tokens[%d] to be %v, but got %v", i, w, tok)
 		}
 	}
 }
