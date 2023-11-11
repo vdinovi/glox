@@ -30,3 +30,7 @@ func ExitErr(err error) {
 	fmt.Fprintf(os.Stderr, "error: %s\n", err)
 	Exit(ExitCodeErr)
 }
+
+func unreachable(note string) {
+	panic("unreachable: " + note)
+}

@@ -33,8 +33,7 @@ func (ctx *EvaluationContext) EvaluateUnaryExpression(e UnaryExpression) (Value,
 	case TypeNumeric:
 		val, err = ctx.evalUnaryNumeric(e.op.Type, rightVal)
 	default:
-		// Handled by prior type check
-		panic("unreachable")
+		unreachable("prevented by prior type check")
 	}
 	if err == nil {
 		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
@@ -63,8 +62,7 @@ func (ctx *EvaluationContext) EvaluateBinaryExpression(e BinaryExpression) (Valu
 	case TypeBoolean:
 		val, err = ctx.evalBinaryBoolean(e.op.Type, leftVal, rightVal)
 	default:
-		// Handled by prior type check
-		panic("unreachable")
+		unreachable("prevented by prior type check")
 	}
 	if err != nil {
 		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
@@ -114,8 +112,7 @@ func (ctx *EvaluationContext) evalUnaryNumeric(op OperatorType, right Value) (Va
 	case OpSubtract:
 		return ValueNumeric(-n), nil
 	default:
-		// Handled by prior type check
-		panic("unreachable")
+		unreachable("prevented by prior type check")
 	}
 }
 
@@ -150,8 +147,7 @@ func (ctx *EvaluationContext) evalBinaryString(op OperatorType, left, right Valu
 	case OpNotEqualTo:
 		return ValueBoolean(l != r), nil
 	default:
-		// Handled by prior type check
-		panic("unreachable")
+		unreachable("prevented by prior type check")
 	}
 }
 
@@ -189,7 +185,7 @@ func (ctx *EvaluationContext) evalBinaryNumeric(op OperatorType, left, right Val
 		return ValueBoolean(l >= r), nil
 	default:
 		// Handed by prior type check
-		panic("unreachable")
+		unreachable("prevented by prior type check")
 	}
 }
 
@@ -211,6 +207,6 @@ func (ctx *EvaluationContext) evalBinaryBoolean(op OperatorType, left, right Val
 		return ValueBoolean(l != r), nil
 	default:
 		// Handed by prior type check
-		panic("unreachable")
+		unreachable("prevented by prior type check")
 	}
 }
