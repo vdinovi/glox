@@ -18,17 +18,17 @@ const usagef = `Usage: %s [file...]
 `
 
 func main() {
-	debug := flag.Bool("debug", false, "debug logging")
+	logLevel := flag.String("log", "", "enable logging at specified level")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), usagef, os.Args[0])
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 
-	lox.SetConsoleLogOutput(os.Stderr)
-	lox.SetLogLevel("info")
-	if *debug {
-		lox.SetLogLevel("debug")
+	lox.DisableLogger()
+	if *logLevel != "" {
+		lox.SetConsoleLogOutput(os.Stderr)
+		lox.SetLogLevel(*logLevel)
 	}
 
 	if flag.NArg() == 0 {

@@ -7,6 +7,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Disable the logger
+func DisableLogger() {
+	zerolog.SetGlobalLevel(zerolog.Disabled)
+}
+
 // Sets the global log level
 func SetLogLevel(level string) error {
 	l, err := zerolog.ParseLevel(level)

@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	_ "io"
 	"os"
 	"path/filepath"
 
@@ -14,7 +13,7 @@ import (
 )
 
 func main() {
-	debug := flag.Bool("debug", false, "debug logging")
+	logLevel := flag.String("log", "", "enable logging at specified level")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [file]\n", os.Args[0])
 		flag.PrintDefaults()
@@ -25,10 +24,10 @@ func main() {
 		lox.Exit(lox.ExitCodeErr)
 	}
 
-	lox.SetConsoleLogOutput(os.Stderr)
-	lox.SetLogLevel("info")
-	if *debug {
-		lox.SetLogLevel("debug")
+	lox.DisableLogger()
+	if *logLevel != "" {
+		lox.SetConsoleLogOutput(os.Stderr)
+		lox.SetLogLevel(*logLevel)
 	}
 
 	path := filepath.Clean(os.Args[1])
