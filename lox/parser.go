@@ -16,7 +16,7 @@ func NewParser(tokens []Token) Parser {
 	}
 }
 
-func (p *Parser) Parse() ([]Statement, error) {
+func (p *Parser) Parse() (Program, error) {
 	log.Debug().Msgf("(parser) scanning %d tokens", len(p.scan.tokens))
 	stmts := []Statement{}
 	for !p.done() {

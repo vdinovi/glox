@@ -10,10 +10,10 @@ import (
 	"testing"
 )
 
-//go:embed lexer_test/program.lox
+//go:embed fixtures/program.lox
 var program string
 
-//go:embed lexer_test/program_tokens.json
+//go:embed fixtures/program_tokens.json
 var program_tokens string
 
 func TestLexerBasic(t *testing.T) {
@@ -222,7 +222,7 @@ func TestLexerProgram(t *testing.T) {
 	var want []Token
 	err := json.Unmarshal([]byte(program_tokens), &want)
 	if err != nil {
-		t.Fatalf("Failed to deserialize json tokens")
+		t.Fatalf("Failed to deserialize tokens")
 	}
 
 	lexer, err := NewLexer(strings.NewReader(program))

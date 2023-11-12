@@ -1,6 +1,7 @@
 package lox
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 )
@@ -65,5 +66,23 @@ func Test_Parse_UnmatchedParen(t *testing.T) {
 	}
 	if utErr.Token.Type != TokenLeftParen {
 		t.Fatalf("Expected UnmatchedTokenError to be for %s but got %s", TokenLeftParen, utErr.Token.Type)
+	}
+}
+
+func TestParserProgram(t *testing.T) {
+	var tokens []Token
+	err := json.Unmarshal([]byte(program_tokens), &tokens)
+	if err != nil {
+		t.Fatalf("Failed to deserialize tokens")
+	}
+
+	parser := NewParser(tokens)
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
+	}
+
+	_, err = parser.Parse()
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
 	}
 }
