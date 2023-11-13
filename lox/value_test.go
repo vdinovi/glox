@@ -5,7 +5,6 @@ import (
 )
 
 func TestValue(t *testing.T) {
-	symbols := make(Symbols)
 	tests := []struct {
 		val    Value
 		typ    Type
@@ -24,23 +23,15 @@ func TestValue(t *testing.T) {
 		{ValueNil(struct{}{}), TypeNil, false, "Value(nil)"},
 	}
 	for _, test := range tests {
-		if actual, err := test.val.Type(symbols); err != nil {
-			t.Errorf("Unexpected error: %s", err)
-			continue
-		} else if actual != test.typ {
-			t.Errorf("Expected %s to have type %s, but got %s", test.val, test.typ, actual)
+		// x := NewExecutor(io.Discard)
+		if v := test.val.Type(); v != test.typ {
+			t.Errorf("Expected %s to have type %s, but got %s", test.val, test.typ, v)
 		}
-
-		if actual := test.val.Truthy(); actual != test.truthy {
-			if test.truthy {
-				t.Errorf("Expected %s to be truthy, but was falsey", test.val)
-			} else {
-				t.Errorf("Expected %s to be falsey, but was truthy", test.val)
-			}
+		if b := test.val.Truthy(); b != test.truthy {
+			t.Errorf("Expected %s to be %v, but was %v", test.val, test.truthy, b)
 		}
-
-		if actual := test.val.String(); actual != test.str {
-			t.Errorf("Expected %s to have string %s, but got %s", test.val, test.str, actual)
+		if s := test.val.String(); s != test.str {
+			t.Errorf("Expected %s to have string %s, but got %s", test.val, test.str, s)
 		}
 	}
 }

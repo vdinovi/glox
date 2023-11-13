@@ -71,8 +71,7 @@ func (l *Lexer) next() (*Token, error) {
 		return nil, err
 	}
 
-	line, column := l.scan.position()
-	token := Token{Line: line, Column: column}
+	token := Token{Position: l.scan.position()}
 	next, err := l.scan.advance()
 	if err != nil {
 		return nil, err
@@ -113,7 +112,7 @@ func (l *Lexer) next() (*Token, error) {
 			return nil, err
 		}
 		if err == io.EOF {
-			return nil, NewSyntaxError(NewUnterminatedStringError(), line, column)
+			return nil, NewSyntaxError(NewUnterminatedStringError(), token.Position)
 		}
 		token.Type = TokenString
 		token.Lexem = string(runes)
@@ -145,7 +144,7 @@ func (l *Lexer) next() (*Token, error) {
 	default:
 		if isNotLetterOrUnderscore(next) {
 			return nil, NewSyntaxError(
-				NewUnexpectedCharacterError("a letter or underscore character", next), line, column,
+				NewUnexpectedCharacterError("a letter or underscore character", next), token.Position,
 			)
 		} else {
 			runes, err := l.scan.until(isNotLetterOrUnderscore)
@@ -258,6 +257,6 @@ func (s *runeScanner) until(fn runeMatchFunc) ([]rune, error) {
 	}
 }
 
-func (s *runeScanner) position() (int, int) {
-	return s.line + 1, s.column + 1
+func (s *runeScanner) position() Position {
+	return Position{s.line + 1, s.column + 1}
 }

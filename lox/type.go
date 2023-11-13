@@ -12,7 +12,7 @@ const (
 )
 
 type Typed interface {
-	Type(Symbols) (Type, error)
+	Type(ctx *EvaluationContext) (Type, error)
 }
 
 // func typeFor(v any) Type {

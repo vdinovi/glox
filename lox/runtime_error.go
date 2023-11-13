@@ -4,24 +4,22 @@ import "fmt"
 
 // Container for all runtime errors
 type RuntimeError struct {
-	Err    error // the wrapped error
-	Line   int   // the originating line in which the error occurred
-	Column int   // the originating column in which the error occurred
+	Err      error // the wrapped error
+	Position       // the originating location
 }
 
 func (e RuntimeError) Error() string {
-	return fmt.Sprintf("Runtime Error on line %d: %s", e.Line, e.Err)
+	return fmt.Sprintf("Runtime Error on line %d: %s", e.Position.Line, e.Err)
 }
 
 func (e RuntimeError) Unwrap() error {
 	return e.Err
 }
 
-func NewRuntimeError(err error, line, column int) RuntimeError {
+func NewRuntimeError(err error, pos Position) RuntimeError {
 	return RuntimeError{
-		Err:    err,
-		Line:   line,
-		Column: column,
+		Err:      err,
+		Position: pos,
 	}
 }
 

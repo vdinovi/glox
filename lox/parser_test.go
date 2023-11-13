@@ -3,8 +3,116 @@ package lox
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 )
+
+func TestParseVariableDeclaration(t *testing.T) {
+	start := Position{1, 1}
+	tests := []struct {
+		text  string
+		stmts []DeclarationStatement
+		err   error
+	}{
+		{
+			text: "var one = 1;",
+			stmts: []DeclarationStatement{
+				{name: "one", pos: start, expr: NumericExpression{value: 1, pos: start}},
+			},
+		},
+		{
+			text: "var pi = 3.14;",
+			stmts: []DeclarationStatement{
+				{name: "pi", pos: start, expr: NumericExpression{value: 3.14, pos: start}},
+			},
+		},
+		{
+			text: "var neg_pi = -3.14;",
+			stmts: []DeclarationStatement{
+				{name: "neg_pi", pos: start,
+					expr: UnaryExpression{
+						op:    Operator{Type: OpSubtract, Lexem: "-"},
+						pos:   start,
+						right: NumericExpression{value: 3.14, pos: start},
+					}},
+			},
+		},
+		{
+			text: "var str = \"string\";",
+			stmts: []DeclarationStatement{
+				{name: "str", pos: start, expr: StringExpression{value: "string", pos: start}},
+			},
+		},
+		{
+			text: "var yes = true;",
+			stmts: []DeclarationStatement{
+				{name: "yes", pos: start, expr: BooleanExpression{value: true, pos: start}},
+			},
+		},
+		{
+			text: "var no = false;",
+			stmts: []DeclarationStatement{
+				{name: "no", pos: start, expr: BooleanExpression{value: false, pos: start}},
+			},
+		},
+		{
+			text: "var null = nil;",
+			stmts: []DeclarationStatement{
+				{name: "null", pos: start, expr: NilExpression{pos: start}},
+			},
+		},
+		{
+			text: "var undefined;",
+			stmts: []DeclarationStatement{
+				{name: "undefined", pos: start, expr: NilExpression{pos: start}},
+			},
+		},
+		{
+			text: "var ;",
+			err:  NewSyntaxError(NewUnexpectedTokenError("Identifier", Token{Type: TokenSemicolon, Lexem: ";", Position: start}), start),
+		},
+		{
+			text: "var x = 1",
+			// TODO: why is this reporting Position{0,0} and not Position{1,1}?
+			err: NewSyntaxError(NewUnexpectedTokenError("Semicolon", Token{Type: TokenEOF, Position: Position{}}), Position{}),
+		},
+		// TODO: panics
+		// {
+		// 	text: "x = 1",
+		// 	err:  NewSyntaxError(NewUnexpectedTokenError("Identifier", Token{Type: TokenSemicolon, Lexem: ";", Position: start}), start),
+		// },
+	}
+	for _, test := range tests {
+		lexer, err := NewLexer(strings.NewReader(test.text))
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		tokens, err := lexer.Scan()
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+		parser := NewParser(tokens)
+		program, err := parser.Parse()
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected %q to produce error (%v), but got (%v)", test.text, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Error(err)
+			continue
+		}
+
+		for i, want := range test.stmts {
+			if got := program[i]; got != want {
+				t.Errorf("Expected %s to have declaration %s, but got %s", test.text, want, got)
+				continue
+			}
+		}
+	}
+}
 
 // func TestParse(t *testing.T) {
 // 	input := "(1.23 + (2*3) / -4) + \"test\" * (false)"

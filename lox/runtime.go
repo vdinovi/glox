@@ -19,7 +19,7 @@ func (r *Runtime) Print(s string) error {
 	_, err := fmt.Println(s)
 	if err != nil {
 		// TODO: feed line and column
-		return NewRuntimeError(err, 0, 0)
+		return NewRuntimeError(err, Position{})
 	}
 	return nil
 }

@@ -62,8 +62,7 @@ func TestLexerBasic(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test.token.Line = 1
-		test.token.Column = 1
+		test.token.Position = Position{1, 1}
 
 		t.Run(fmt.Sprintf("%q yields %s", test.text, test.token.Type.String()), func(t *testing.T) {
 			lexer, err := NewLexer(strings.NewReader(test.text))

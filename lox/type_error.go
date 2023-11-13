@@ -4,24 +4,22 @@ import "fmt"
 
 // Container for all type-related errors
 type TypeError struct {
-	Err    error // the wrapped error
-	Line   int   // the originating line in which the error occurred
-	Column int   // the originating column in which the error occurred
+	Err      error // the wrapped error
+	Position       // the originating location
 }
 
 func (e TypeError) Error() string {
-	return fmt.Sprintf("Type Error on line %d: %s", e.Line, e.Err)
+	return fmt.Sprintf("Type Error on line %d: %s", e.Position.Line, e.Err)
 }
 
 func (e TypeError) Unwrap() error {
 	return e.Err
 }
 
-func NewTypeError(err error, line, column int) TypeError {
+func NewTypeError(err error, pos Position) TypeError {
 	return TypeError{
-		Err:    err,
-		Line:   line,
-		Column: column,
+		Err:      err,
+		Position: pos,
 	}
 }
 

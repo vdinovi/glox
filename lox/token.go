@@ -54,10 +54,9 @@ const (
 
 // Represents a valid syntax token
 type Token struct {
-	Type   TokenType `json:"Type"`   // type of token
-	Lexem  string    `json:"Lexem"`  // associated string
-	Line   int       `json:"Line"`   // originating line
-	Column int       `json:"Column"` // originating column
+	Type     TokenType `json:"Type"`     // type of token
+	Lexem    string    `json:"Lexem"`    // associated string
+	Position Position  `json:"Position"` // originating location
 }
 
 func (t Token) String() string {
@@ -68,7 +67,7 @@ func (t Token) String() string {
 // If there is no associated operator, returns the error NoOperatorForTokenError
 func (t Token) Operator() (Operator, error) {
 	var err error
-	op := Operator{Type: ErrOp, Lexem: t.Lexem, Line: t.Line, Column: t.Column}
+	op := Operator{Type: ErrOp, Lexem: t.Lexem}
 	switch t.Type {
 	case TokenPlus:
 		op.Type = OpAdd
@@ -94,6 +93,11 @@ func (t Token) Operator() (Operator, error) {
 		err = NoOperatorForTokenError{t.Type}
 	}
 	return op, err
+}
+
+type Position struct {
+	Line   int `json:"Line"`   // originating line
+	Column int `json:"Column"` // originating column
 }
 
 type NoOperatorForTokenError struct {

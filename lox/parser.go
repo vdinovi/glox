@@ -38,62 +38,66 @@ func (p *Parser) done() bool {
 }
 
 func (p *Parser) declaration() (Statement, error) {
-	if _, ok := p.scan.match(TokenVar); ok {
+	if token, ok := p.scan.match(TokenVar); ok {
+		log.Debug().Msgf("(parser) %s ... ;", token.Lexem)
 		return p.varDeclaration()
 	}
 	return p.statement()
 }
 
 func (p *Parser) varDeclaration() (Statement, error) {
-	var name string
+	stmt := DeclarationStatement{}
 	if token, ok := p.scan.match(TokenIdentifier); ok {
-		name = token.Lexem
+		stmt.name = token.Lexem
+		stmt.pos = token.Position
 	} else {
 		return nil, NewSyntaxError(
-			NewUnexpectedTokenError(TokenIdentifier.String(), token), token.Line, token.Column,
+			NewUnexpectedTokenError(TokenIdentifier.String(), token), token.Position,
 		)
 	}
 
-	var init Expression = NilExpression{}
 	if _, ok := p.scan.match(TokenEqual); ok {
 		var err error
-		init, err = p.expression()
+		stmt.expr, err = p.expression()
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		stmt.expr = NilExpression{pos: stmt.pos}
 	}
 
 	if token, ok := p.scan.match(TokenSemicolon); !ok {
 		return nil, NewSyntaxError(
-			NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Line, token.Column,
+			NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Position,
 		)
 	}
 
-	return DeclarationStatement{name: name, expr: init}, nil
+	return stmt, nil
 }
 
 func (p *Parser) statement() (Statement, error) {
 	if token, ok := p.scan.match(TokenPrint); ok {
-		log.Debug().Msgf("(parser) %s ... ;", token)
-		return p.printStatement()
+		log.Debug().Msgf("(parser) %s ... ;", token.Lexem)
+		return p.printStatement(token.Position)
 	}
 	return p.expressionStatement()
 }
 
-func (p *Parser) printStatement() (Statement, error) {
+func (p *Parser) printStatement(pos Position) (Statement, error) {
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
+	stmt := DeclarationStatement{expr: expr, pos: pos}
 
 	if token, ok := p.scan.match(TokenSemicolon); !ok {
 		return nil, NewSyntaxError(
-			NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Line, token.Column,
+			NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Position,
 		)
 	}
 
 	p.skipComments()
-	return PrintStatement{expr: expr}, nil
+	return stmt, nil
 }
 
 func (p *Parser) expressionStatement() (Statement, error) {
@@ -102,13 +106,14 @@ func (p *Parser) expressionStatement() (Statement, error) {
 	if err != nil {
 		return nil, err
 	}
+	stmt := ExpressionStatement{expr: expr, pos: expr.Position()}
 	if token, ok := p.scan.match(TokenSemicolon); !ok {
 		return nil, NewSyntaxError(
-			NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Line, token.Column,
+			NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Position,
 		)
 	}
 	p.skipComments()
-	return ExpressionStatement{expr: expr}, nil
+	return stmt, nil
 }
 
 func (p *Parser) expression() (Expression, error) {
@@ -135,7 +140,7 @@ func (p *Parser) equality() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		expr = BinaryExpression{op: op, left: expr, right: right}
+		expr = BinaryExpression{op: op, left: expr, right: right, pos: expr.Position()}
 	}
 	return expr, nil
 }
@@ -160,7 +165,7 @@ func (p *Parser) comparison() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		expr = BinaryExpression{op: op, left: expr, right: right}
+		expr = BinaryExpression{op: op, left: expr, right: right, pos: expr.Position()}
 	}
 	return expr, nil
 }
@@ -185,7 +190,7 @@ func (p *Parser) term() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		expr = BinaryExpression{op: op, left: expr, right: right}
+		expr = BinaryExpression{op: op, left: expr, right: right, pos: expr.Position()}
 	}
 	return expr, nil
 }
@@ -210,7 +215,7 @@ func (p *Parser) factor() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		expr = BinaryExpression{op: op, left: expr, right: right}
+		expr = BinaryExpression{op: op, left: expr, right: right, pos: expr.Position()}
 	}
 	return expr, nil
 }
@@ -227,7 +232,7 @@ func (p *Parser) unary() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		return UnaryExpression{op: op, right: right}, nil
+		return UnaryExpression{op: op, right: right, pos: token.Position}, nil
 	}
 	return p.primary()
 }
@@ -246,7 +251,7 @@ func (p *Parser) primary() (Expression, error) {
 	}
 
 	token := p.scan.peek()
-	return nil, NewSyntaxError(NewMissingTerminalError(token), token.Line, token.Column)
+	return nil, NewSyntaxError(NewMissingTerminalError(token), token.Position)
 }
 
 func (p *Parser) literal() (Expression, error) {
@@ -254,24 +259,25 @@ func (p *Parser) literal() (Expression, error) {
 		log.Debug().Msgf("(parser) terminal: %s", token)
 		n, err := strconv.ParseFloat(token.Lexem, 64)
 		if err != nil {
-			return nil, NewSyntaxError(NewNumberConversionError(err, token), token.Line, token.Column)
+			return nil, NewSyntaxError(NewNumberConversionError(err, token), token.Position)
 		}
-		return NumericExpression(n), nil
+		return NumericExpression{value: n, pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenString); ok {
 		log.Debug().Msgf("(parser) terminal: %s", token)
-		return StringExpression(token.Lexem), nil
+		return StringExpression{value: token.Lexem, pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenTrue); ok {
 		log.Debug().Msgf("(parser) terminal: %s", token)
-		return BooleanExpression(true), nil
+		return BooleanExpression{value: true, pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenFalse); ok {
 		log.Debug().Msgf("(parser) terminal: %s", token)
-		return BooleanExpression(false), nil
+		return BooleanExpression{value: false, pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenNil); ok {
 		log.Debug().Msgf("(parser) terminal: %s", token)
-		return NilExpression{}, nil
+		return NilExpression{pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenIdentifier); ok {
 		log.Debug().Msgf("(parser) terminal: %s", token)
-		return NilExpression{}, nil
+		// TODO:
+		panic("NYI")
 	}
 
 	return nil, nil
@@ -296,10 +302,10 @@ func (p *Parser) grouping() (Expression, error) {
 		}
 		if _, ok := p.scan.match(TokenRightParen); !ok {
 			return nil, NewSyntaxError(
-				NewUnexpectedTokenError(TokenRightParen.String(), token), token.Line, token.Column,
+				NewUnexpectedTokenError(TokenRightParen.String(), token), token.Position,
 			)
 		}
-		return GroupingExpression{expr: expr}, nil
+		return GroupingExpression{expr: expr, pos: token.Position}, nil
 	}
 	return nil, nil
 }

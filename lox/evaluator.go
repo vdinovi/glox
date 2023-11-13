@@ -5,22 +5,24 @@ import (
 )
 
 type Symbols map[string]Type
-type Bindings map[string]Value
+type Environment map[string]Value
 
 type EvaluationContext struct {
-	symbols  Symbols
-	bindings Bindings
+	sym Symbols
+	env Environment
+	pos Position
 }
 
 func NewEvaluationContext() *EvaluationContext {
 	return &EvaluationContext{
-		symbols:  make(Symbols),
-		bindings: make(Bindings),
+		sym: make(Symbols),
+		env: make(Environment),
+		pos: Position{},
 	}
 }
 
 func (ctx *EvaluationContext) EvaluateUnaryExpression(e UnaryExpression) (Value, Type, error) {
-	rightType, typ, err := ctx.symbols.TypeCheckUnaryExpression(e)
+	rightType, typ, err := ctx.TypeCheckUnaryExpression(e)
 	if err != nil {
 		return nil, ErrType, err
 	}
@@ -45,7 +47,7 @@ func (ctx *EvaluationContext) EvaluateUnaryExpression(e UnaryExpression) (Value,
 }
 
 func (ctx *EvaluationContext) EvaluateBinaryExpression(e BinaryExpression) (Value, Type, error) {
-	leftType, _, typ, err := ctx.symbols.TypeCheckBinaryExpression(e)
+	leftType, _, typ, err := ctx.TypeCheckBinaryExpression(e)
 	if err != nil {
 		return nil, ErrType, err
 	}
@@ -73,7 +75,7 @@ func (ctx *EvaluationContext) EvaluateBinaryExpression(e BinaryExpression) (Valu
 }
 
 func (ctx *EvaluationContext) EvaluateGroupingExpression(e GroupingExpression) (Value, Type, error) {
-	_, typ, err := ctx.symbols.TypeCheckGroupingExpression(e)
+	_, typ, err := ctx.TypeCheckGroupingExpression(e)
 	if err != nil {
 		return nil, ErrType, err
 	}
@@ -87,15 +89,15 @@ func (ctx *EvaluationContext) EvaluateGroupingExpression(e GroupingExpression) (
 }
 
 func (ctx *EvaluationContext) EvaluateStringExpression(e StringExpression) (Value, error) {
-	return ValueString(e), nil
+	return ValueString(e.value), nil
 }
 
 func (ctx *EvaluationContext) EvaluateNumericExpression(e NumericExpression) (Value, error) {
-	return ValueNumeric(e), nil
+	return ValueNumeric(e.value), nil
 }
 
 func (ctx *EvaluationContext) EvaluateBooleanExpression(e BooleanExpression) (Value, error) {
-	return ValueBoolean(e), nil
+	return ValueBoolean(e.value), nil
 }
 
 func (ctx *EvaluationContext) EvaluateNilExpression(e NilExpression) (Value, error) {
@@ -105,7 +107,7 @@ func (ctx *EvaluationContext) EvaluateNilExpression(e NilExpression) (Value, err
 func (ctx *EvaluationContext) evalUnaryNumeric(op Operator, right Value) (Value, error) {
 	n, ok := right.Unwrap().(float64)
 	if ok {
-		return nil, NewRuntimeError(NewDowncastError(right, "float64"), op.Line, op.Column)
+		return nil, NewRuntimeError(NewDowncastError(right, "float64"), Position{})
 	}
 	switch op.Type {
 	case OpSubtract:
@@ -131,10 +133,12 @@ func (ctx *EvaluationContext) evalBinaryString(op Operator, left, right Value) (
 	var ok bool
 	var l, r string
 	if l, ok = left.Unwrap().(string); !ok {
-		return nil, NewRuntimeError(NewDowncastError(left, "string"), op.Line, op.Column)
+		// TODO
+		return nil, NewRuntimeError(NewDowncastError(left, "string"), Position{})
 	}
 	if r, ok = right.Unwrap().(string); !ok {
-		return nil, NewRuntimeError(NewDowncastError(right, "string"), op.Line, op.Column)
+		// TODO
+		return nil, NewRuntimeError(NewDowncastError(right, "string"), Position{})
 	}
 	switch op.Type {
 	case OpAdd:
@@ -152,10 +156,12 @@ func (ctx *EvaluationContext) evalBinaryNumeric(op Operator, left, right Value) 
 	var ok bool
 	var l, r float64
 	if l, ok = left.Unwrap().(float64); !ok {
-		return nil, NewRuntimeError(NewDowncastError(left, "string"), op.Line, op.Column)
+		// TODO
+		return nil, NewRuntimeError(NewDowncastError(left, "string"), Position{})
 	}
 	if r, ok = right.Unwrap().(float64); !ok {
-		return nil, NewRuntimeError(NewDowncastError(right, "string"), op.Line, op.Column)
+		// TODO
+		return nil, NewRuntimeError(NewDowncastError(right, "string"), Position{})
 	}
 	switch op.Type {
 	case OpAdd:
@@ -188,10 +194,12 @@ func (ctx *EvaluationContext) evalBinaryBoolean(op Operator, left, right Value) 
 	var ok bool
 	var l, r bool
 	if l, ok = left.Unwrap().(bool); !ok {
-		return nil, NewRuntimeError(NewDowncastError(left, "bool"), op.Line, op.Column)
+		// TODO
+		return nil, NewRuntimeError(NewDowncastError(left, "bool"), Position{})
 	}
 	if r, ok = right.Unwrap().(bool); !ok {
-		return nil, NewRuntimeError(NewDowncastError(right, "bool"), op.Line, op.Column)
+		// TODO
+		return nil, NewRuntimeError(NewDowncastError(right, "bool"), Position{})
 	}
 	switch op.Type {
 	case OpEqualTo:

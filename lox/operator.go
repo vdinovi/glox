@@ -20,10 +20,8 @@ const (
 )
 
 type Operator struct {
-	Type   OperatorType // type of the operator
-	Lexem  string       // associated string
-	Line   int          // originating line
-	Column int          // originating column
+	Type  OperatorType // type of the operator
+	Lexem string       // associated string
 }
 
 func (o Operator) String() string {

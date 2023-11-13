@@ -7,17 +7,23 @@ import (
 type Program []Statement
 
 type Statement interface {
-	TypeCheck(Symbols) error
+	Position() Position
+	TypeCheck(*EvaluationContext) error
 	Execute(*Executor) error
 	fmt.Stringer
 }
 
 type ExpressionStatement struct {
 	expr Expression
+	pos  Position
 }
 
-func (s ExpressionStatement) TypeCheck(syms Symbols) error {
-	return syms.TypeCheckExpressionStatement(s)
+func (s ExpressionStatement) Position() Position {
+	return s.pos
+}
+
+func (s ExpressionStatement) TypeCheck(ctx *EvaluationContext) error {
+	return ctx.TypeCheckExpressionStatement(s)
 }
 
 func (s ExpressionStatement) Execute(e *Executor) error {
@@ -30,10 +36,15 @@ func (s ExpressionStatement) String() string {
 
 type PrintStatement struct {
 	expr Expression
+	pos  Position
 }
 
-func (s PrintStatement) TypeCheck(syms Symbols) error {
-	return syms.TypeCheckPrintStatement(s)
+func (s PrintStatement) Position() Position {
+	return s.pos
+}
+
+func (s PrintStatement) TypeCheck(ctx *EvaluationContext) error {
+	return ctx.TypeCheckPrintStatement(s)
 }
 
 func (s PrintStatement) Execute(e *Executor) error {
@@ -46,10 +57,15 @@ func (s PrintStatement) String() string {
 
 type DeclarationStatement struct {
 	name string
+	pos  Position
 	expr Expression
 }
 
-func (d DeclarationStatement) TypeCheck(Symbols) error {
+func (s DeclarationStatement) Position() Position {
+	return s.pos
+}
+
+func (d DeclarationStatement) TypeCheck(*EvaluationContext) error {
 	return nil
 }
 

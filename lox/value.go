@@ -5,10 +5,10 @@ import (
 )
 
 type Value interface {
-	Typed
 	fmt.Stringer
 	Unwrap() any
 	Truthy() bool
+	Type() Type
 }
 
 type ValueString string
@@ -17,8 +17,8 @@ func (v ValueString) String() string {
 	return string(v)
 }
 
-func (ValueString) Type(Symbols) (Type, error) {
-	return TypeString, nil
+func (ValueString) Type() Type {
+	return TypeString
 }
 
 func (v ValueString) Unwrap() any {
@@ -35,8 +35,8 @@ func (v ValueNumeric) String() string {
 	return fmt.Sprint(float64(v))
 }
 
-func (e ValueNumeric) Type(Symbols) (Type, error) {
-	return TypeNumeric, nil
+func (e ValueNumeric) Type() Type {
+	return TypeNumeric
 }
 
 func (v ValueNumeric) Unwrap() any {
@@ -60,8 +60,8 @@ func (v ValueBoolean) String() string {
 	return "false"
 }
 
-func (e ValueBoolean) Type(Symbols) (Type, error) {
-	return TypeBoolean, nil
+func (e ValueBoolean) Type() Type {
+	return TypeBoolean
 }
 
 func (v ValueBoolean) Unwrap() any {
@@ -80,8 +80,8 @@ func (v ValueNil) String() string {
 	return "nil"
 }
 
-func (e ValueNil) Type(Symbols) (Type, error) {
-	return TypeNil, nil
+func (e ValueNil) Type() Type {
+	return TypeNil
 }
 
 func (v ValueNil) Unwrap() any {

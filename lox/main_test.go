@@ -1,6 +1,7 @@
 package lox
 
 import (
+	"os"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -8,4 +9,5 @@ import (
 
 func TestMain(m *testing.M) {
 	zerolog.SetGlobalLevel(zerolog.Disabled)
+	os.Exit(m.Run())
 }

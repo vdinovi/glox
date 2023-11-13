@@ -4,24 +4,22 @@ import "fmt"
 
 // Container for all syntax-related errors
 type SyntaxError struct {
-	Err    error // the wrapped error
-	Line   int   // the originating line in which the error occurred
-	Column int   // the originating column in which the error occurred
+	Err      error // the wrapped error
+	Position       // the originating location
 }
 
 func (e SyntaxError) Error() string {
-	return fmt.Sprintf("Syntax Error on line %d: %s", e.Line, e.Err)
+	return fmt.Sprintf("Syntax Error on line %d: %s", e.Position.Line, e.Err)
 }
 
 func (e SyntaxError) Unwrap() error {
 	return e.Err
 }
 
-func NewSyntaxError(err error, line, column int) SyntaxError {
+func NewSyntaxError(err error, pos Position) SyntaxError {
 	return SyntaxError{
-		Err:    err,
-		Line:   line,
-		Column: column,
+		Err:      err,
+		Position: pos,
 	}
 }
 

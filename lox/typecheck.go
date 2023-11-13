@@ -4,18 +4,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (syms Symbols) TypeCheckProgram(prog Program) error {
+func (ctx *EvaluationContext) TypeCheckProgram(prog Program) error {
 	for _, stmt := range prog {
 		log.Debug().Msgf("(typechecker) checking statement %s", stmt)
-		if err := stmt.TypeCheck(syms); err != nil {
+		if err := stmt.TypeCheck(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (syms Symbols) TypeCheckPrintStatement(s PrintStatement) error {
-	typ, err := s.expr.Type(syms)
+func (ctx *EvaluationContext) TypeCheckPrintStatement(s PrintStatement) error {
+	typ, err := s.expr.Type(ctx)
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", s, err)
 		return err
@@ -24,8 +24,8 @@ func (syms Symbols) TypeCheckPrintStatement(s PrintStatement) error {
 	return nil
 }
 
-func (syms Symbols) TypeCheckExpressionStatement(s ExpressionStatement) error {
-	typ, err := s.expr.Type(syms)
+func (ctx *EvaluationContext) TypeCheckExpressionStatement(s ExpressionStatement) error {
+	typ, err := s.expr.Type(ctx)
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", s, err)
 		return err
@@ -34,16 +34,16 @@ func (syms Symbols) TypeCheckExpressionStatement(s ExpressionStatement) error {
 	return nil
 }
 
-func (syms Symbols) TypeCheckUnaryExpression(e UnaryExpression) (right, result Type, err error) {
-	right, err = e.right.Type(syms)
+func (ctx *EvaluationContext) TypeCheckUnaryExpression(e UnaryExpression) (right, result Type, err error) {
+	right, err = e.right.Type(ctx)
 	if err != nil {
 		return ErrType, ErrType, err
 	}
 	switch right {
 	case TypeNumeric:
-		result, err = syms.typeCheckUnaryNumeric(e.op, right)
+		result, err = ctx.typeCheckUnaryNumeric(e.op, right)
 	default:
-		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, right), e.op.Line, e.op.Column)
+		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, right), e.Position())
 	}
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
@@ -53,26 +53,26 @@ func (syms Symbols) TypeCheckUnaryExpression(e UnaryExpression) (right, result T
 	return right, result, nil
 }
 
-func (syms Symbols) TypeCheckBinaryExpression(e BinaryExpression) (left, right, result Type, err error) {
-	if left, err = e.left.Type(syms); err != nil {
+func (ctx *EvaluationContext) TypeCheckBinaryExpression(e BinaryExpression) (left, right, result Type, err error) {
+	if left, err = e.left.Type(ctx); err != nil {
 		return ErrType, ErrType, ErrType, err
 	}
-	if right, err = e.right.Type(syms); err != nil {
+	if right, err = e.right.Type(ctx); err != nil {
 		return ErrType, ErrType, ErrType, err
 	}
 	if left != right {
-		return ErrType, ErrType, ErrType, NewTypeError(NewTypeMismatchError(left, right), e.op.Line, e.op.Column)
+		return ErrType, ErrType, ErrType, NewTypeError(NewTypeMismatchError(left, right), e.Position())
 	}
 	var typ Type
 	switch left {
 	case TypeNumeric:
-		typ, err = syms.typeCheckBinaryNumeric(e.op, left, right)
+		typ, err = ctx.typeCheckBinaryNumeric(e.op, left, right)
 	case TypeString:
-		typ, err = syms.typeCheckBinaryString(e.op, left, right)
+		typ, err = ctx.typeCheckBinaryString(e.op, left, right)
 	case TypeBoolean:
-		typ, err = syms.typeCheckBinaryBoolean(e.op, left, right)
+		typ, err = ctx.typeCheckBinaryBoolean(e.op, left, right)
 	default:
-		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, left, right), e.op.Line, e.op.Column)
+		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
@@ -82,8 +82,8 @@ func (syms Symbols) TypeCheckBinaryExpression(e BinaryExpression) (left, right, 
 	return left, right, typ, err
 }
 
-func (syms Symbols) TypeCheckGroupingExpression(e GroupingExpression) (inner, result Type, err error) {
-	inner, err = e.expr.Type(syms)
+func (ctx *EvaluationContext) TypeCheckGroupingExpression(e GroupingExpression) (inner, result Type, err error) {
+	inner, err = e.expr.Type(ctx)
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
 		return ErrType, ErrType, err
@@ -92,58 +92,62 @@ func (syms Symbols) TypeCheckGroupingExpression(e GroupingExpression) (inner, re
 	return inner, result, err
 }
 
-func (syms Symbols) TypeCheckStringExpression(e StringExpression) (Type, error) {
+func (ctx *EvaluationContext) TypeCheckStringExpression(e StringExpression) (Type, error) {
 	return TypeString, nil
 }
 
-func (syms Symbols) TypeCheckNumericExpression(NumericExpression) (Type, error) {
+func (ctx *EvaluationContext) TypeCheckNumericExpression(NumericExpression) (Type, error) {
 	return TypeNumeric, nil
 }
 
-func (syms Symbols) TypeCheckBooleanExpression(BooleanExpression) (Type, error) {
+func (ctx *EvaluationContext) TypeCheckBooleanExpression(BooleanExpression) (Type, error) {
 	return TypeBoolean, nil
 }
 
-func (syms Symbols) TypeCheckNilExpression(e NilExpression) (Type, error) {
+func (ctx *EvaluationContext) TypeCheckNilExpression(e NilExpression) (Type, error) {
 	return TypeNil, nil
 }
 
-func (syms Symbols) typeCheckUnaryNumeric(op Operator, typ Type) (Type, error) {
+func (ctx *EvaluationContext) typeCheckUnaryNumeric(op Operator, typ Type) (Type, error) {
 	switch op.Type {
 	case OpAdd:
 		return TypeNumeric, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, typ), op.Line, op.Column)
+		// TODO
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, typ), Position{})
 	}
 }
 
-func (syms Symbols) typeCheckBinaryNumeric(op Operator, left, right Type) (Type, error) {
+func (ctx *EvaluationContext) typeCheckBinaryNumeric(op Operator, left, right Type) (Type, error) {
 	switch op.Type {
 	case OpAdd, OpSubtract, OpMultiply, OpDivide:
 		return TypeNumeric, nil
 	case OpEqualTo, OpNotEqualTo, OpLessThan, OpLessThanOrEqualTo, OpGreaterThan, OpGreaterThanOrEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), op.Line, op.Column)
+		// TODO
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), Position{})
 	}
 }
 
-func (syms Symbols) typeCheckBinaryString(op Operator, left, right Type) (Type, error) {
+func (ctx *EvaluationContext) typeCheckBinaryString(op Operator, left, right Type) (Type, error) {
 	switch op.Type {
 	case OpAdd:
 		return TypeString, nil
 	case OpEqualTo, OpNotEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), op.Line, op.Column)
+		// TODO
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), Position{})
 	}
 }
 
-func (syms Symbols) typeCheckBinaryBoolean(op Operator, left, right Type) (Type, error) {
+func (ctx *EvaluationContext) typeCheckBinaryBoolean(op Operator, left, right Type) (Type, error) {
 	switch op.Type {
 	case OpEqualTo, OpNotEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), op.Line, op.Column)
+		// TODO
+		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), Position{})
 	}
 }
