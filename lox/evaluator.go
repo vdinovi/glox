@@ -41,7 +41,7 @@ func (ctx *EvaluationContext) EvaluateUnaryExpression(e UnaryExpression) (Value,
 		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
 		return nil, ErrType, err
 	}
-	log.Debug().Msgf("(evaluator) binary expr %s evaluates to %s", e, val)
+	log.Debug().Msgf("(evaluator) binary expr %q evaluates to %s", e, val)
 	return val, typ, err
 
 }
@@ -70,7 +70,7 @@ func (ctx *EvaluationContext) EvaluateBinaryExpression(e BinaryExpression) (Valu
 		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
 		return nil, ErrType, err
 	}
-	log.Debug().Msgf("(evaluator) binary expr %s evaluates to %s", e, val)
+	log.Debug().Msgf("(evaluator) binary expr %q evaluates to %s", e, val)
 	return val, typ, err
 }
 
@@ -84,7 +84,22 @@ func (ctx *EvaluationContext) EvaluateGroupingExpression(e GroupingExpression) (
 		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
 		return nil, ErrType, err
 	}
-	log.Debug().Msgf("(evaluator) grouping expr %s evaluates to %s", e, val)
+	log.Debug().Msgf("(evaluator) grouping expr %q evaluates to %s", e, val)
+	return val, typ, nil
+}
+
+func (ctx *EvaluationContext) EvaluateVariableExpression(e VariableExpression) (Value, Type, error) {
+	typ, err := ctx.TypeCheckVariableExpression(e)
+	if err != nil {
+		return nil, ErrType, err
+	}
+	val, ok := ctx.env[e.name]
+	if !ok {
+		err := NewTypeError(NewUndefinedVariableError(e.name), e.Position())
+		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
+		return nil, ErrType, err
+	}
+	log.Debug().Msgf("(evaluator) variable expr %q evaluates to %s", e, val)
 	return val, typ, nil
 }
 

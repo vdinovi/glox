@@ -87,6 +87,29 @@ func (e GroupingExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
 	return val, err
 }
 
+type VariableExpression struct {
+	name string
+	expr Expression
+	pos  Position
+}
+
+func (e VariableExpression) Position() Position {
+	return e.pos
+}
+
+func (e VariableExpression) String() string {
+	return e.name
+}
+
+func (e VariableExpression) Type(ctx *EvaluationContext) (Type, error) {
+	return ctx.TypeCheckVariableExpression(e)
+}
+
+func (e VariableExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+	val, _, err := ctx.EvaluateVariableExpression(e)
+	return val, err
+}
+
 type StringExpression struct {
 	value string
 	pos   Position

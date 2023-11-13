@@ -65,14 +65,14 @@ func (s DeclarationStatement) Position() Position {
 	return s.pos
 }
 
-func (d DeclarationStatement) TypeCheck(*EvaluationContext) error {
-	return nil
+func (s DeclarationStatement) TypeCheck(ctx *EvaluationContext) error {
+	return ctx.TypeCheckDeclarationStatement(s)
 }
 
-func (d DeclarationStatement) Execute(*Executor) error {
-	return nil
+func (s DeclarationStatement) Execute(ctx *Executor) error {
+	return ctx.ExecuteDeclarationStatement(s)
 }
 
-func (d DeclarationStatement) String() string {
-	return ""
+func (s DeclarationStatement) String() string {
+	return fmt.Sprintf("var %s = %s ;", s.name, s.expr)
 }

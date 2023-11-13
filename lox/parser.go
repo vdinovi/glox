@@ -276,8 +276,7 @@ func (p *Parser) literal() (Expression, error) {
 		return NilExpression{pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenIdentifier); ok {
 		log.Debug().Msgf("(parser) terminal: %s", token)
-		// TODO:
-		panic("NYI")
+		return VariableExpression{name: token.Lexem, pos: token.Position}, nil
 	}
 
 	return nil, nil

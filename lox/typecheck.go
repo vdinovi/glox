@@ -34,6 +34,16 @@ func (ctx *EvaluationContext) TypeCheckExpressionStatement(s ExpressionStatement
 	return nil
 }
 
+func (ctx *EvaluationContext) TypeCheckDeclarationStatement(s DeclarationStatement) error {
+	typ, err := s.expr.Type(ctx)
+	if err != nil {
+		log.Error().Msgf("(typechecker) error in %q: %s", s, err)
+		return err
+	}
+	log.Debug().Msgf("(typechecker) %q => %s", s, typ)
+	return nil
+}
+
 func (ctx *EvaluationContext) TypeCheckUnaryExpression(e UnaryExpression) (right, result Type, err error) {
 	right, err = e.right.Type(ctx)
 	if err != nil {
@@ -79,7 +89,7 @@ func (ctx *EvaluationContext) TypeCheckBinaryExpression(e BinaryExpression) (lef
 		return ErrType, ErrType, ErrType, err
 	}
 	log.Debug().Msgf("(typechecker) %q => %s", e, typ)
-	return left, right, typ, err
+	return left, right, typ, nil
 }
 
 func (ctx *EvaluationContext) TypeCheckGroupingExpression(e GroupingExpression) (inner, result Type, err error) {
@@ -89,7 +99,18 @@ func (ctx *EvaluationContext) TypeCheckGroupingExpression(e GroupingExpression) 
 		return ErrType, ErrType, err
 	}
 	log.Debug().Msgf("(typechecker) %q => %s", e, result)
-	return inner, result, err
+	return inner, result, nil
+}
+
+func (ctx *EvaluationContext) TypeCheckVariableExpression(e VariableExpression) (result Type, err error) {
+	val, ok := ctx.env[e.name]
+	if !ok {
+		err := NewRuntimeError(NewUndefinedVariableError(e.name), e.Position())
+		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
+		return ErrType, err
+	}
+	log.Debug().Msgf("(typechecker) %q => %s", e, val.Type())
+	return val.Type(), nil
 }
 
 func (ctx *EvaluationContext) TypeCheckStringExpression(e StringExpression) (Type, error) {
@@ -110,7 +131,7 @@ func (ctx *EvaluationContext) TypeCheckNilExpression(e NilExpression) (Type, err
 
 func (ctx *EvaluationContext) typeCheckUnaryNumeric(op Operator, typ Type) (Type, error) {
 	switch op.Type {
-	case OpAdd:
+	case OpSubtract, OpAdd:
 		return TypeNumeric, nil
 	default:
 		// TODO

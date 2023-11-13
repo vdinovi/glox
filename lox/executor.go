@@ -22,10 +22,6 @@ func (e *Executor) Execute(stmt Statement) error {
 	return stmt.Execute(e)
 }
 
-func (e *Executor) Print(val Value) error {
-	return e.runtime.Print(val.String())
-}
-
 func (x *Executor) ExecuteExpressionStatement(s ExpressionStatement) error {
 	log.Debug().Msgf("(executor) executing %q", s)
 	_, err := s.expr.Evaluate(x.ctx)
@@ -41,12 +37,24 @@ func (x *Executor) ExecutePrintStatement(s PrintStatement) error {
 	log.Debug().Msgf("(executor) executing %q", s)
 	val, err := s.expr.Evaluate(x.ctx)
 	if err == nil {
-		err = x.Print(val)
+		err = x.runtime.Print(val.String())
 	}
 	if err != nil {
 		log.Error().Msgf("(executor) error in %q: %s", s, err)
 		return err
 	}
-	log.Debug().Msg("(executor) success")
+	log.Debug().Msgf("(executor) success: printed %s", val)
+	return nil
+}
+
+func (x *Executor) ExecuteDeclarationStatement(s DeclarationStatement) error {
+	log.Debug().Msgf("(executor) executing %q", s)
+	val, err := s.expr.Evaluate(x.ctx)
+	if err != nil {
+		log.Error().Msgf("(executor) error in %q: %s", s, err)
+		return err
+	}
+	x.ctx.env[s.name] = val
+	log.Debug().Msgf("(executor) success: %q = %s", s.name, val)
 	return nil
 }

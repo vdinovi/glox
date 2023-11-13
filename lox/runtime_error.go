@@ -56,3 +56,16 @@ func NewInvalidExpressionForTypeError(expr Expression, types ...Type) InvalidExp
 		Types:      types,
 	}
 }
+
+// Error indicating that the variable is undefined
+type UndefinedVariableError struct {
+	Name string
+}
+
+func (e UndefinedVariableError) Error() string {
+	return fmt.Sprintf("variable %s is not defined", e.Name)
+}
+
+func NewUndefinedVariableError(name string) UndefinedVariableError {
+	return UndefinedVariableError{Name: name}
+}
