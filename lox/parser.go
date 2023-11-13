@@ -88,7 +88,7 @@ func (p *Parser) printStatement(pos Position) (Statement, error) {
 	if err != nil {
 		return nil, err
 	}
-	stmt := DeclarationStatement{expr: expr, pos: pos}
+	stmt := PrintStatement{expr: expr, pos: pos}
 
 	if token, ok := p.scan.match(TokenSemicolon); !ok {
 		return nil, NewSyntaxError(
