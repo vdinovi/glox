@@ -80,6 +80,10 @@ func (p *Parser) statement() (Statement, error) {
 		log.Debug().Msgf("(parser) %s ... ;", token.Lexem)
 		return p.printStatement(token.Position)
 	}
+	if token, ok := p.scan.match(TokenLeftBrace); ok {
+		log.Debug().Msg("(parser) { ... } ;")
+		return p.blockStatement(token.Position)
+	}
 	return p.expressionStatement()
 }
 
@@ -98,6 +102,20 @@ func (p *Parser) printStatement(pos Position) (Statement, error) {
 
 	p.skipComments()
 	return stmt, nil
+}
+
+func (p *Parser) blockStatement(pos Position) (Statement, error) {
+	block := BlockStatement{stmts: make([]Statement, 0), pos: pos}
+	for {
+		if _, ok := p.scan.match(TokenRightBrace); ok || p.scan.done() {
+			return block, nil
+		}
+		stmt, err := p.declaration()
+		if err != nil {
+			return nil, err
+		}
+		block.stmts = append(block.stmts, stmt)
+	}
 }
 
 func (p *Parser) expressionStatement() (Statement, error) {

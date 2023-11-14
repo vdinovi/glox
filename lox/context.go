@@ -45,6 +45,16 @@ func NewContext() *Context {
 	}
 }
 
+func (ctx *Context) PushEnvironment() {
+	ctx.types = NewEnvironment(ctx.types)
+	ctx.values = NewEnvironment(ctx.values)
+}
+
+func (ctx *Context) PopEnvironment() {
+	ctx.types = ctx.types.parent
+	ctx.values = ctx.values.parent
+}
+
 type VariableRedeclarationError struct {
 	Name string
 }

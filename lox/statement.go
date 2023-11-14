@@ -2,6 +2,7 @@ package lox
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Program []Statement
@@ -11,6 +12,33 @@ type Statement interface {
 	TypeCheck(ctx *Context) error
 	Execute(*Executor) error
 	fmt.Stringer
+}
+
+type BlockStatement struct {
+	stmts []Statement
+	pos   Position
+}
+
+func (s BlockStatement) Position() Position {
+	return s.pos
+}
+
+func (s BlockStatement) TypeCheck(ctx *Context) error {
+	return ctx.TypeCheckBlockStatement(s)
+}
+
+func (s BlockStatement) Execute(e *Executor) error {
+	return e.ExecuteBlockStatement(s)
+}
+
+func (s BlockStatement) String() string {
+	var sb strings.Builder
+	sb.WriteString("{ ")
+	for _, stmt := range s.stmts {
+		fmt.Fprint(&sb, " ", stmt.String())
+	}
+	sb.WriteString(" } ;")
+	return sb.String()
 }
 
 type ExpressionStatement struct {

@@ -14,6 +14,18 @@ func (ctx *Context) TypeCheckProgram(prog Program) error {
 	return nil
 }
 
+func (ctx *Context) TypeCheckBlockStatement(s BlockStatement) error {
+	ctx.types = NewEnvironment(ctx.types)
+	defer func() { ctx.types = ctx.types.parent }()
+	for _, stmt := range s.stmts {
+		if err := stmt.TypeCheck(ctx); err != nil {
+			log.Error().Msgf("(typechecker) error in %q: %s", s, err)
+			return err
+		}
+	}
+	return nil
+}
+
 func (ctx *Context) TypeCheckPrintStatement(s PrintStatement) error {
 	typ, err := s.expr.Type(ctx)
 	if err != nil {
@@ -25,12 +37,11 @@ func (ctx *Context) TypeCheckPrintStatement(s PrintStatement) error {
 }
 
 func (ctx *Context) TypeCheckExpressionStatement(s ExpressionStatement) error {
-	typ, err := s.expr.Type(ctx)
+	_, err := s.expr.Type(ctx)
 	if err != nil {
 		log.Error().Msgf("(typechecker) error in %q: %s", s, err)
 		return err
 	}
-	log.Debug().Msgf("(typechecker) %q => %s", s, typ)
 	return nil
 }
 
@@ -43,7 +54,6 @@ func (ctx *Context) TypeCheckDeclarationStatement(s DeclarationStatement) error 
 		log.Error().Msgf("(typechecker) error in %q: %s", s, err)
 		return err
 	}
-	log.Debug().Msgf("(typechecker) %q => %s", s, typ)
 	return nil
 }
 

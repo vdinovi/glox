@@ -26,6 +26,24 @@ func (e *Executor) Execute(stmt Statement) error {
 	return stmt.Execute(e)
 }
 
+func (x *Executor) ExecuteBlockStatement(s BlockStatement) error {
+	log.Debug().Msgf("(executor) executing %q", s)
+	x.ctx.PushEnvironment()
+	defer func() { x.ctx.PopEnvironment() }()
+	for _, stmt := range s.stmts {
+		if err := stmt.TypeCheck(x.ctx); err != nil {
+			log.Error().Msgf("(executor) error in %q: %s", s, err)
+			return err
+		}
+		if err := stmt.Execute(x); err != nil {
+			log.Error().Msgf("(executor) error in %q: %s", s, err)
+			return err
+		}
+	}
+	log.Debug().Msg("(executor) success")
+	return nil
+}
+
 func (x *Executor) ExecuteExpressionStatement(s ExpressionStatement) error {
 	log.Debug().Msgf("(executor) executing %q", s)
 	_, err := s.expr.Evaluate(x.ctx)
