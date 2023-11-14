@@ -117,7 +117,25 @@ func (p *Parser) expressionStatement() (Statement, error) {
 }
 
 func (p *Parser) expression() (Expression, error) {
-	return p.equality()
+	return p.assignment()
+}
+
+func (p *Parser) assignment() (Expression, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := p.scan.match(TokenEqual); ok {
+		right, err := p.assignment()
+		if err != nil {
+			return nil, err
+		}
+		if left, ok := expr.(VariableExpression); ok {
+			return AssignmentExpression{name: left.name, right: right, pos: left.Position()}, nil
+		}
+		return nil, NewSyntaxError(NewInvalidAssignmentTargetError(expr.String()), expr.Position())
+	}
+	return expr, nil
 }
 
 func (p *Parser) equality() (Expression, error) {

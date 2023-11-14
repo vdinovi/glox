@@ -2,8 +2,36 @@ package lox
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
+
+func TestTypecheckCustom(t *testing.T) {
+	src := `
+var a = 1;
+var b = 2;
+print a + b;
+print a = "test";
+	`
+	lexer, err := NewLexer(strings.NewReader(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tokens, err := lexer.Scan()
+	if err != nil {
+		t.Fatal(err)
+	}
+	parser := NewParser(tokens)
+	prog, err := parser.Parse()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := NewContext()
+	err = ctx.TypeCheckProgram(prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestTypecheckPrintStatement(t *testing.T) {
 	start := Position{1, 1}
@@ -16,11 +44,11 @@ func TestTypecheckPrintStatement(t *testing.T) {
 		{stmt: PrintStatement{expr: BooleanExpression{value: true, pos: start}, pos: start}},
 		{stmt: PrintStatement{expr: BooleanExpression{value: false, pos: start}, pos: start}},
 		{stmt: PrintStatement{expr: NilExpression{pos: start}, pos: start}},
-		{stmt: PrintStatement{expr: VariableExpression{name: "foo", expr: NumericExpression{value: 1, pos: start}, pos: start}, pos: start}},
+		{stmt: PrintStatement{expr: VariableExpression{name: "foo", pos: start}, pos: start}},
 	}
 
 	for _, test := range tests {
-		ctx := NewEvaluationContext()
+		ctx := NewContext()
 		err := ctx.TypeCheckPrintStatement(test.stmt)
 		if test.err != nil {
 			if err != test.err {
@@ -45,11 +73,11 @@ func TestTypeCheckExpressionStatement(t *testing.T) {
 		{stmt: ExpressionStatement{expr: BooleanExpression{value: true, pos: start}, pos: start}},
 		{stmt: ExpressionStatement{expr: BooleanExpression{value: false, pos: start}, pos: start}},
 		{stmt: ExpressionStatement{expr: NilExpression{pos: start}, pos: start}},
-		{stmt: ExpressionStatement{expr: VariableExpression{name: "foo", expr: NumericExpression{value: 1, pos: start}, pos: start}, pos: start}},
+		{stmt: ExpressionStatement{expr: VariableExpression{name: "foo", pos: start}, pos: start}},
 	}
 
 	for _, test := range tests {
-		ctx := NewEvaluationContext()
+		ctx := NewContext()
 		err := ctx.TypeCheckExpressionStatement(test.stmt)
 		if test.err != nil {
 			if err != test.err {
@@ -89,7 +117,7 @@ func TestTypeCheckUnaryExpression(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		ctx := NewEvaluationContext()
+		ctx := NewContext()
 		_, typ, err := ctx.TypeCheckUnaryExpression(test.expr)
 		if test.err != nil {
 			if err != test.err {

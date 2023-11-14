@@ -4,24 +4,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Symbols map[string]Type
-type Environment map[string]Value
-
-type EvaluationContext struct {
-	sym Symbols
-	env Environment
-	pos Position
-}
-
-func NewEvaluationContext() *EvaluationContext {
-	return &EvaluationContext{
-		sym: make(Symbols),
-		env: make(Environment),
-		pos: Position{},
-	}
-}
-
-func (ctx *EvaluationContext) EvaluateUnaryExpression(e UnaryExpression) (Value, Type, error) {
+func (ctx *Context) EvaluateUnaryExpression(e UnaryExpression) (val Value, typ Type, err error) {
 	rightType, typ, err := ctx.TypeCheckUnaryExpression(e)
 	if err != nil {
 		return nil, ErrType, err
@@ -30,7 +13,6 @@ func (ctx *EvaluationContext) EvaluateUnaryExpression(e UnaryExpression) (Value,
 	if err != nil {
 		return nil, ErrType, err
 	}
-	var val Value
 	switch rightType {
 	case TypeNumeric:
 		val, err = ctx.evalUnaryNumeric(e.op, rightVal)
@@ -46,7 +28,7 @@ func (ctx *EvaluationContext) EvaluateUnaryExpression(e UnaryExpression) (Value,
 
 }
 
-func (ctx *EvaluationContext) EvaluateBinaryExpression(e BinaryExpression) (Value, Type, error) {
+func (ctx *Context) EvaluateBinaryExpression(e BinaryExpression) (Value, Type, error) {
 	leftType, _, typ, err := ctx.TypeCheckBinaryExpression(e)
 	if err != nil {
 		return nil, ErrType, err
@@ -74,7 +56,7 @@ func (ctx *EvaluationContext) EvaluateBinaryExpression(e BinaryExpression) (Valu
 	return val, typ, err
 }
 
-func (ctx *EvaluationContext) EvaluateGroupingExpression(e GroupingExpression) (Value, Type, error) {
+func (ctx *Context) EvaluateGroupingExpression(e GroupingExpression) (Value, Type, error) {
 	_, typ, err := ctx.TypeCheckGroupingExpression(e)
 	if err != nil {
 		return nil, ErrType, err
@@ -88,38 +70,51 @@ func (ctx *EvaluationContext) EvaluateGroupingExpression(e GroupingExpression) (
 	return val, typ, nil
 }
 
-func (ctx *EvaluationContext) EvaluateVariableExpression(e VariableExpression) (Value, Type, error) {
-	typ, err := ctx.TypeCheckVariableExpression(e)
+func (ctx *Context) EvaluateAssignmentExpression(e AssignmentExpression) (val Value, typ Type, err error) {
+	_, typ, err = ctx.TypeCheckAssignmentExpression(e)
 	if err != nil {
 		return nil, ErrType, err
 	}
-	val, ok := ctx.env[e.name]
-	if !ok {
-		err := NewTypeError(NewUndefinedVariableError(e.name), e.Position())
+	val, err = e.right.Evaluate(ctx)
+	if err == nil {
+		err = ctx.values.Set(e.name, val)
+	}
+	if err != nil {
 		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
 		return nil, ErrType, err
 	}
-	log.Debug().Msgf("(evaluator) variable expr %q evaluates to %s", e, val)
+	log.Debug().Msgf("(evaluator) assignment expr %q evaluates to %s", e, val)
 	return val, typ, nil
 }
 
-func (ctx *EvaluationContext) EvaluateStringExpression(e StringExpression) (Value, error) {
+func (ctx *Context) EvaluateVariableExpression(e VariableExpression) (Value, Type, error) {
+	val := ctx.values.Lookup(e.name)
+	if val == nil {
+		err := NewRuntimeError(NewUndefinedVariableError(e.name), e.Position())
+		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
+		return nil, ErrType, err
+	}
+	log.Debug().Msgf("(evaluator) variable expr %q evaluates to %s", e, *val)
+	return *val, (*val).Type(), nil
+}
+
+func (ctx *Context) EvaluateStringExpression(e StringExpression) (Value, error) {
 	return ValueString(e.value), nil
 }
 
-func (ctx *EvaluationContext) EvaluateNumericExpression(e NumericExpression) (Value, error) {
+func (ctx *Context) EvaluateNumericExpression(e NumericExpression) (Value, error) {
 	return ValueNumeric(e.value), nil
 }
 
-func (ctx *EvaluationContext) EvaluateBooleanExpression(e BooleanExpression) (Value, error) {
+func (ctx *Context) EvaluateBooleanExpression(e BooleanExpression) (Value, error) {
 	return ValueBoolean(e.value), nil
 }
 
-func (ctx *EvaluationContext) EvaluateNilExpression(e NilExpression) (Value, error) {
+func (ctx *Context) EvaluateNilExpression(e NilExpression) (Value, error) {
 	return Nil, nil
 }
 
-func (ctx *EvaluationContext) evalUnaryNumeric(op Operator, right Value) (Value, error) {
+func (ctx *Context) evalUnaryNumeric(op Operator, right Value) (Value, error) {
 	n, ok := right.Unwrap().(float64)
 	if ok {
 		return nil, NewRuntimeError(NewDowncastError(right, "float64"), Position{})
@@ -132,7 +127,7 @@ func (ctx *EvaluationContext) evalUnaryNumeric(op Operator, right Value) (Value,
 	return nil, nil
 }
 
-func (ctx *EvaluationContext) evalBinaryOperands(left, right Expression) (Value, Value, error) {
+func (ctx *Context) evalBinaryOperands(left, right Expression) (Value, Value, error) {
 	lv, err := left.Evaluate(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -144,7 +139,7 @@ func (ctx *EvaluationContext) evalBinaryOperands(left, right Expression) (Value,
 	return lv, rv, nil
 }
 
-func (ctx *EvaluationContext) evalBinaryString(op Operator, left, right Value) (Value, error) {
+func (ctx *Context) evalBinaryString(op Operator, left, right Value) (Value, error) {
 	var ok bool
 	var l, r string
 	if l, ok = left.Unwrap().(string); !ok {
@@ -167,7 +162,7 @@ func (ctx *EvaluationContext) evalBinaryString(op Operator, left, right Value) (
 	return nil, nil
 }
 
-func (ctx *EvaluationContext) evalBinaryNumeric(op Operator, left, right Value) (Value, error) {
+func (ctx *Context) evalBinaryNumeric(op Operator, left, right Value) (Value, error) {
 	var ok bool
 	var l, r float64
 	if l, ok = left.Unwrap().(float64); !ok {
@@ -205,7 +200,7 @@ func (ctx *EvaluationContext) evalBinaryNumeric(op Operator, left, right Value) 
 	return nil, nil
 }
 
-func (ctx *EvaluationContext) evalBinaryBoolean(op Operator, left, right Value) (Value, error) {
+func (ctx *Context) evalBinaryBoolean(op Operator, left, right Value) (Value, error) {
 	var ok bool
 	var l, r bool
 	if l, ok = left.Unwrap().(bool); !ok {

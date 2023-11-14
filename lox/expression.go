@@ -5,12 +5,12 @@ import (
 )
 
 type Evaluable interface {
-	Evaluate(*EvaluationContext) (Value, error)
+	Evaluate(*Context) (Value, error)
 }
 
 type Expression interface {
 	Position() Position
-	Typed
+	Type(*Context) (Type, error)
 	Evaluable
 	fmt.Stringer
 }
@@ -29,12 +29,12 @@ func (e UnaryExpression) String() string {
 	return fmt.Sprintf("(%s %s)", e.op.Lexem, e.right)
 }
 
-func (e UnaryExpression) Type(ctx *EvaluationContext) (Type, error) {
+func (e UnaryExpression) Type(ctx *Context) (Type, error) {
 	_, typ, err := ctx.TypeCheckUnaryExpression(e)
 	return typ, err
 }
 
-func (e UnaryExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+func (e UnaryExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateUnaryExpression(e)
 	return val, err
 }
@@ -54,12 +54,12 @@ func (e BinaryExpression) String() string {
 	return fmt.Sprintf("(%s %s %s)", e.op.Lexem, e.left, e.right)
 }
 
-func (e BinaryExpression) Type(ctx *EvaluationContext) (Type, error) {
+func (e BinaryExpression) Type(ctx *Context) (Type, error) {
 	_, _, typ, err := ctx.TypeCheckBinaryExpression(e)
 	return typ, err
 }
 
-func (e BinaryExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+func (e BinaryExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateBinaryExpression(e)
 	return val, err
 }
@@ -77,19 +77,42 @@ func (e GroupingExpression) String() string {
 	return fmt.Sprintf("(group %s)", e.expr)
 }
 
-func (e GroupingExpression) Type(ctx *EvaluationContext) (Type, error) {
+func (e GroupingExpression) Type(ctx *Context) (Type, error) {
 	_, typ, err := ctx.TypeCheckGroupingExpression(e)
 	return typ, err
 }
 
-func (e GroupingExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+func (e GroupingExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateGroupingExpression(e)
+	return val, err
+}
+
+type AssignmentExpression struct {
+	name  string
+	right Expression
+	pos   Position
+}
+
+func (e AssignmentExpression) Position() Position {
+	return e.pos
+}
+
+func (e AssignmentExpression) String() string {
+	return fmt.Sprintf("(%s = %s)", e.name, e.right)
+}
+
+func (e AssignmentExpression) Type(ctx *Context) (Type, error) {
+	_, typ, err := ctx.TypeCheckAssignmentExpression(e)
+	return typ, err
+}
+
+func (e AssignmentExpression) Evaluate(ctx *Context) (Value, error) {
+	val, _, err := ctx.EvaluateAssignmentExpression(e)
 	return val, err
 }
 
 type VariableExpression struct {
 	name string
-	expr Expression
 	pos  Position
 }
 
@@ -101,11 +124,11 @@ func (e VariableExpression) String() string {
 	return e.name
 }
 
-func (e VariableExpression) Type(ctx *EvaluationContext) (Type, error) {
+func (e VariableExpression) Type(ctx *Context) (Type, error) {
 	return ctx.TypeCheckVariableExpression(e)
 }
 
-func (e VariableExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+func (e VariableExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateVariableExpression(e)
 	return val, err
 }
@@ -123,11 +146,11 @@ func (e StringExpression) String() string {
 	return e.value
 }
 
-func (e StringExpression) Type(ctx *EvaluationContext) (Type, error) {
+func (e StringExpression) Type(ctx *Context) (Type, error) {
 	return ctx.TypeCheckStringExpression(e)
 }
 
-func (e StringExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+func (e StringExpression) Evaluate(ctx *Context) (Value, error) {
 	return ctx.EvaluateStringExpression(e)
 }
 
@@ -144,11 +167,11 @@ func (e NumericExpression) String() string {
 	return fmt.Sprint(e.value)
 }
 
-func (e NumericExpression) Type(ctx *EvaluationContext) (Type, error) {
+func (e NumericExpression) Type(ctx *Context) (Type, error) {
 	return ctx.TypeCheckNumericExpression(e)
 }
 
-func (e NumericExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+func (e NumericExpression) Evaluate(ctx *Context) (Value, error) {
 	return ctx.EvaluateNumericExpression(e)
 }
 
@@ -168,10 +191,10 @@ func (e BooleanExpression) String() string {
 	return "false"
 }
 
-func (e BooleanExpression) Type(ctx *EvaluationContext) (Type, error) {
+func (e BooleanExpression) Type(ctx *Context) (Type, error) {
 	return ctx.TypeCheckBooleanExpression(e)
 }
-func (e BooleanExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+func (e BooleanExpression) Evaluate(ctx *Context) (Value, error) {
 	return ctx.EvaluateBooleanExpression(e)
 }
 
@@ -187,9 +210,9 @@ func (e NilExpression) String() string {
 	return "nil"
 }
 
-func (e NilExpression) Type(ctx *EvaluationContext) (Type, error) {
+func (e NilExpression) Type(ctx *Context) (Type, error) {
 	return ctx.TypeCheckNilExpression(e)
 }
-func (e NilExpression) Evaluate(ctx *EvaluationContext) (Value, error) {
+func (e NilExpression) Evaluate(ctx *Context) (Value, error) {
 	return ctx.EvaluateNilExpression(e)
 }

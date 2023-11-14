@@ -2,3 +2,4 @@ glox
 tags
 *.test
 tmp
+.vscode

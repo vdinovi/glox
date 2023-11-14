@@ -114,3 +114,16 @@ func NewNumberConversionError(err error, token Token) NumberConversionError {
 		Token: token,
 	}
 }
+
+// Error indicating an invalid target in assignment expression
+type InvalidAssignmentTargetError struct {
+	Name string
+}
+
+func (e InvalidAssignmentTargetError) Error() string {
+	return fmt.Sprintf("invalid assignment target %s", e.Name)
+}
+
+func NewInvalidAssignmentTargetError(name string) InvalidAssignmentTargetError {
+	return InvalidAssignmentTargetError{Name: name}
+}

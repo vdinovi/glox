@@ -8,13 +8,13 @@ import (
 
 type Executor struct {
 	runtime *Runtime
-	ctx     *EvaluationContext
+	ctx     *Context
 }
 
 func NewExecutor(printer io.Writer) *Executor {
 	return &Executor{
 		runtime: NewRuntime(printer),
-		ctx:     NewEvaluationContext(),
+		ctx:     NewContext(),
 	}
 }
 
@@ -50,11 +50,16 @@ func (x *Executor) ExecutePrintStatement(s PrintStatement) error {
 func (x *Executor) ExecuteDeclarationStatement(s DeclarationStatement) error {
 	log.Debug().Msgf("(executor) executing %q", s)
 	val, err := s.expr.Evaluate(x.ctx)
+	if err == nil {
+		err = x.ctx.values.Set(s.name, val)
+		if err == nil {
+			err = x.ctx.types.Set(s.name, val.Type())
+		}
+	}
 	if err != nil {
 		log.Error().Msgf("(executor) error in %q: %s", s, err)
 		return err
 	}
-	x.ctx.env[s.name] = val
 	log.Debug().Msgf("(executor) success: %q = %s", s.name, val)
 	return nil
 }

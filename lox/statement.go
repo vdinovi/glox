@@ -8,7 +8,7 @@ type Program []Statement
 
 type Statement interface {
 	Position() Position
-	TypeCheck(*EvaluationContext) error
+	TypeCheck(ctx *Context) error
 	Execute(*Executor) error
 	fmt.Stringer
 }
@@ -22,7 +22,7 @@ func (s ExpressionStatement) Position() Position {
 	return s.pos
 }
 
-func (s ExpressionStatement) TypeCheck(ctx *EvaluationContext) error {
+func (s ExpressionStatement) TypeCheck(ctx *Context) error {
 	return ctx.TypeCheckExpressionStatement(s)
 }
 
@@ -43,7 +43,7 @@ func (s PrintStatement) Position() Position {
 	return s.pos
 }
 
-func (s PrintStatement) TypeCheck(ctx *EvaluationContext) error {
+func (s PrintStatement) TypeCheck(ctx *Context) error {
 	return ctx.TypeCheckPrintStatement(s)
 }
 
@@ -65,7 +65,7 @@ func (s DeclarationStatement) Position() Position {
 	return s.pos
 }
 
-func (s DeclarationStatement) TypeCheck(ctx *EvaluationContext) error {
+func (s DeclarationStatement) TypeCheck(ctx *Context) error {
 	return ctx.TypeCheckDeclarationStatement(s)
 }
 
