@@ -1,11 +1,20 @@
 package lox
 
 import (
+	"bufio"
 	"io"
 	"unicode"
 
 	"github.com/rs/zerolog/log"
 )
+
+func Scan(rd io.Reader) ([]Token, error) {
+	lexer, err := NewLexer(bufio.NewReader(rd))
+	if err != nil {
+		return nil, err
+	}
+	return lexer.Scan()
+}
 
 type Lexer struct {
 	scan runeScanner

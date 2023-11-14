@@ -18,12 +18,21 @@ func NewExecutor(printer io.Writer) *Executor {
 	}
 }
 
-func (e *Executor) TypeCheck(stmt Statement) error {
-	return stmt.TypeCheck(e.ctx)
+func (x *Executor) TypeCheck(stmt Statement) error {
+	return stmt.TypeCheck(x.ctx)
 }
 
-func (e *Executor) Execute(stmt Statement) error {
-	return stmt.Execute(e)
+func (x *Executor) ExecuteProgram(stmts []Statement) error {
+	for _, stmt := range stmts {
+		if err := x.Execute(stmt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (x *Executor) Execute(stmt Statement) error {
+	return stmt.Execute(x)
 }
 
 func (x *Executor) ExecuteBlockStatement(s BlockStatement) error {

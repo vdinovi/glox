@@ -6,18 +6,32 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/vdinovi/glox/lox"
 )
 
-const usagef = `Usage: %s [file...]
-       starts a repl if no files are provided.
+const usagef = `Usage: %s [file]
+       starts a repl if no file is provided.
 `
 
 func main() {
+	err := setup()
+	if err == nil {
+		if flag.NArg() == 0 {
+			err = interactive()
+		} else {
+			err = file(flag.Arg(0))
+		}
+	}
+	if err != nil {
+		lox.ExitErr(err)
+	}
+	lox.Exit(lox.ExitCodeOK)
+}
+
+func setup() error {
 	logLevel := flag.String("log", "", "enable logging at specified level")
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), usagef, os.Args[0])
@@ -25,79 +39,54 @@ func main() {
 	}
 	flag.Parse()
 
-	lox.DisableLogger()
-	if *logLevel != "" {
+	if *logLevel == "" {
+		lox.DisableLogger()
+	} else {
 		lox.SetConsoleLogOutput(os.Stderr)
 		lox.SetLogLevel(*logLevel)
 	}
-
-	if flag.NArg() == 0 {
-		repl()
-	} else {
-		for _, path := range flag.Args() {
-			execFile(filepath.Clean(path))
-		}
-	}
+	return nil
 }
 
-func execFile(path string) {
-	log.Debug().Msgf("(main) executing %s", path)
-	f, err := os.Open(path)
+func file(fpath string) error {
+	log.Debug().Msgf("(main) executing %s", fpath)
+	f, err := os.Open(fpath)
 	if err != nil {
-		lox.ExitErr(err)
+		return err
 	}
 	defer f.Close()
 
-	x := lox.NewExecutor(os.Stdout)
-	rd := bufio.NewReader(f)
-	err = exec(x, rd)
-	if err != nil {
-		lox.ExitErr(err)
-	}
+	executor := lox.NewExecutor(os.Stdout)
+	reader := bufio.NewReader(f)
+	return execute(executor, reader)
 }
 
-func repl() {
-	x := lox.NewExecutor(os.Stdout)
-	rd := bufio.NewReader(os.Stdin)
-	for {
+func interactive() (err error) {
+	executor := lox.NewExecutor(os.Stdout)
+	reader := bufio.NewReader(os.Stdin)
+	var line string
+	for err == nil {
 		fmt.Printf("> ")
-		line, err := rd.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				lox.Exit(lox.ExitCodeOK)
-			} else {
-				lox.ExitErr(err)
-			}
-		}
-
-		line = strings.TrimRight(line, "\n")
-		rd := strings.NewReader(line)
-		err = exec(x, rd)
-		if err != nil {
-			lox.ExitErr(err)
-		}
-	}
-}
-
-func exec(x *lox.Executor, r io.Reader) error {
-	lexer, err := lox.NewLexer(bufio.NewReader(r))
-	if err != nil {
-		return err
-	}
-	tokens, err := lexer.Scan()
-	if err != nil {
-		return err
-	}
-	parser := lox.NewParser(tokens)
-	stmts, err := parser.Parse()
-	if err != nil {
-		return err
-	}
-	for _, stmt := range stmts {
-		err := x.Execute(stmt)
-		if err != nil {
+		line, err = reader.ReadString('\n')
+		if err == io.EOF {
+			return nil
+		} else if err != nil {
 			return err
 		}
+		line = strings.TrimRight(line, "\n")
+		err = execute(executor, strings.NewReader(line))
 	}
-	return nil
+	return err
+}
+
+func execute(executor *lox.Executor, reader io.Reader) error {
+	tokens, err := lox.Scan(bufio.NewReader(reader))
+	if err != nil {
+		return err
+	}
+	stmts, err := lox.Parse(tokens)
+	if err != nil {
+		return err
+	}
+	return executor.ExecuteProgram(stmts)
 }

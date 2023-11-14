@@ -6,6 +6,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+func Parse(tokens []Token) ([]Statement, error) {
+	parser := NewParser(tokens)
+	return parser.Parse()
+}
+
 type Parser struct {
 	scan tokenScanner
 }
@@ -16,7 +21,7 @@ func NewParser(tokens []Token) Parser {
 	}
 }
 
-func (p *Parser) Parse() (Program, error) {
+func (p *Parser) Parse() ([]Statement, error) {
 	log.Debug().Msgf("(parser) scanning %d tokens", len(p.scan.tokens))
 	stmts := []Statement{}
 	for !p.done() {
