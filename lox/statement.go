@@ -11,6 +11,7 @@ type Statement interface {
 	Position() Position
 	TypeCheck(ctx *Context) error
 	Execute(*Executor) error
+	Equals(Statement) bool
 	fmt.Stringer
 }
 
@@ -41,6 +42,19 @@ func (s BlockStatement) String() string {
 	return sb.String()
 }
 
+func (s BlockStatement) Equals(other Statement) bool {
+	block, ok := other.(BlockStatement)
+	if !ok || len(s.stmts) != len(block.stmts) {
+		return false
+	}
+	for i, st := range s.stmts {
+		if !st.Equals(block.stmts[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 type ExpressionStatement struct {
 	expr Expression
 	pos  Position
@@ -60,6 +74,14 @@ func (s ExpressionStatement) Execute(e *Executor) error {
 
 func (s ExpressionStatement) String() string {
 	return fmt.Sprintf("%s ;", s.expr)
+}
+
+func (s ExpressionStatement) Equals(other Statement) bool {
+	expr, ok := other.(ExpressionStatement)
+	if !ok {
+		return false
+	}
+	return s.expr.Equals(expr.expr)
 }
 
 type PrintStatement struct {
@@ -83,6 +105,14 @@ func (s PrintStatement) String() string {
 	return fmt.Sprintf("print %s ;", s.expr)
 }
 
+func (s PrintStatement) Equals(other Statement) bool {
+	print, ok := other.(PrintStatement)
+	if !ok {
+		return false
+	}
+	return s.expr.Equals(print.expr)
+}
+
 type DeclarationStatement struct {
 	name string
 	pos  Position
@@ -103,4 +133,12 @@ func (s DeclarationStatement) Execute(ctx *Executor) error {
 
 func (s DeclarationStatement) String() string {
 	return fmt.Sprintf("var %s = %s ;", s.name, s.expr)
+}
+
+func (s DeclarationStatement) Equals(other Statement) bool {
+	decl, ok := other.(DeclarationStatement)
+	if !ok || s.name != decl.name {
+		return false
+	}
+	return s.expr.Equals(decl.expr)
 }

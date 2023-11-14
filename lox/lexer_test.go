@@ -155,19 +155,14 @@ func TestLexerIgnore(t *testing.T) {
 }
 
 func TestUnterminatedString(t *testing.T) {
-	var SyntaxError *SyntaxError
-	var unterminatedStringError *UnterminatedStringError
+	var SyntaxError SyntaxError
+	var unterminatedStringError UnterminatedStringError
 
 	tests := []string{
 		"\"string",
 	}
 	for _, text := range tests {
-		lexer, err := NewLexer(strings.NewReader(text))
-		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
-			continue
-		}
-		_, err = lexer.Scan()
+		_, err := Scan(strings.NewReader(text))
 		if err == nil {
 			t.Error("Expected error but got none")
 			continue
@@ -183,8 +178,8 @@ func TestUnterminatedString(t *testing.T) {
 }
 
 func TestUnexpectedCharacter(t *testing.T) {
-	var syntaxError *SyntaxError
-	var unexpectedCharacterError *UnexpectedCharacterError
+	var syntaxError SyntaxError
+	var unexpectedCharacterError UnexpectedCharacterError
 	tests := []struct {
 		text string
 	}{
@@ -193,12 +188,7 @@ func TestUnexpectedCharacter(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		lexer, err := NewLexer(strings.NewReader(test.text))
-		if err != nil {
-			t.Errorf("Unexpected error %s", err)
-			continue
-		}
-		_, err = lexer.Scan()
+		_, err := Scan(strings.NewReader(test.text))
 		if err == nil {
 			t.Error("Expected error but got none")
 			continue

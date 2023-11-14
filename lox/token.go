@@ -100,6 +100,10 @@ type Position struct {
 	Column int `json:"Column"` // originating column
 }
 
+func (p Position) String() string {
+	return fmt.Sprintf("(%d,%d)", p.Line, p.Column)
+}
+
 type NoOperatorForTokenError struct {
 	TokenType
 }

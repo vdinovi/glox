@@ -10,25 +10,3 @@ const (
 	TypeString
 	TypeBoolean
 )
-
-type Typed interface {
-	Type(*Environment[Type]) (Type, error)
-}
-
-// func typeFor(v any) Type {
-// 	if v == nil {
-// 		return TypeNil
-// 	}
-// 	if t, ok := v.(Type); ok {
-// 		return t
-// 	}
-// 	switch v.(type) {
-// 	case float64:
-// 		return TypeNumeric
-// 	case string:
-// 		return TypeString
-// 	case bool:
-// 		return TypeBoolean
-// 	}
-// 	return ErrType
-// }

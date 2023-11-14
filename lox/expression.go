@@ -11,6 +11,7 @@ type Evaluable interface {
 type Expression interface {
 	Position() Position
 	Type(*Context) (Type, error)
+	Equals(Expression) bool
 	Evaluable
 	fmt.Stringer
 }
@@ -39,6 +40,14 @@ func (e UnaryExpression) Evaluate(ctx *Context) (Value, error) {
 	return val, err
 }
 
+func (e UnaryExpression) Equals(other Expression) bool {
+	unary, ok := other.(UnaryExpression)
+	if !ok || e.op != unary.op {
+		return false
+	}
+	return e.right.Equals(unary.right)
+}
+
 type BinaryExpression struct {
 	op    Operator
 	left  Expression
@@ -64,6 +73,14 @@ func (e BinaryExpression) Evaluate(ctx *Context) (Value, error) {
 	return val, err
 }
 
+func (e BinaryExpression) Equals(other Expression) bool {
+	binary, ok := other.(BinaryExpression)
+	if !ok || e.op != binary.op {
+		return false
+	}
+	return e.left.Equals(binary.left) && e.right.Equals(binary.right)
+}
+
 type GroupingExpression struct {
 	expr Expression
 	pos  Position
@@ -85,6 +102,14 @@ func (e GroupingExpression) Type(ctx *Context) (Type, error) {
 func (e GroupingExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateGroupingExpression(e)
 	return val, err
+}
+
+func (e GroupingExpression) Equals(other Expression) bool {
+	group, ok := other.(GroupingExpression)
+	if !ok {
+		return false
+	}
+	return e.expr.Equals(group.expr)
 }
 
 type AssignmentExpression struct {
@@ -111,6 +136,14 @@ func (e AssignmentExpression) Evaluate(ctx *Context) (Value, error) {
 	return val, err
 }
 
+func (e AssignmentExpression) Equals(other Expression) bool {
+	assign, ok := other.(AssignmentExpression)
+	if !ok || e.name != assign.name {
+		return false
+	}
+	return e.right.Equals(assign.right)
+}
+
 type VariableExpression struct {
 	name string
 	pos  Position
@@ -131,6 +164,11 @@ func (e VariableExpression) Type(ctx *Context) (Type, error) {
 func (e VariableExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateVariableExpression(e)
 	return val, err
+}
+
+func (e VariableExpression) Equals(other Expression) bool {
+	variable, ok := other.(VariableExpression)
+	return ok && e.name == variable.name
 }
 
 type StringExpression struct {
@@ -154,6 +192,11 @@ func (e StringExpression) Evaluate(ctx *Context) (Value, error) {
 	return ctx.EvaluateStringExpression(e)
 }
 
+func (e StringExpression) Equals(other Expression) bool {
+	str, ok := other.(StringExpression)
+	return ok && e.value == str.value
+}
+
 type NumericExpression struct {
 	value float64
 	pos   Position
@@ -173,6 +216,11 @@ func (e NumericExpression) Type(ctx *Context) (Type, error) {
 
 func (e NumericExpression) Evaluate(ctx *Context) (Value, error) {
 	return ctx.EvaluateNumericExpression(e)
+}
+
+func (e NumericExpression) Equals(other Expression) bool {
+	num, ok := other.(NumericExpression)
+	return ok && e.value == num.value
 }
 
 type BooleanExpression struct {
@@ -198,6 +246,11 @@ func (e BooleanExpression) Evaluate(ctx *Context) (Value, error) {
 	return ctx.EvaluateBooleanExpression(e)
 }
 
+func (e BooleanExpression) Equals(other Expression) bool {
+	boolean, ok := other.(BooleanExpression)
+	return ok && e.value == boolean.value
+}
+
 type NilExpression struct {
 	pos Position
 }
@@ -215,4 +268,9 @@ func (e NilExpression) Type(ctx *Context) (Type, error) {
 }
 func (e NilExpression) Evaluate(ctx *Context) (Value, error) {
 	return ctx.EvaluateNilExpression(e)
+}
+
+func (e NilExpression) Equals(other Expression) bool {
+	_, ok := other.(NilExpression)
+	return ok
 }

@@ -2,7 +2,16 @@ package lox
 
 import (
 	"fmt"
+	"strconv"
 )
+
+var Zero = ValueNumeric(0)
+
+var True = ValueBoolean(true)
+
+var False = ValueBoolean(false)
+
+var Nil = ValueNil(struct{}{})
 
 type Value interface {
 	fmt.Stringer
@@ -14,7 +23,7 @@ type Value interface {
 type ValueString string
 
 func (v ValueString) String() string {
-	return string(v)
+	return fmt.Sprintf("\"%s\"", string(v))
 }
 
 func (ValueString) Type() Type {
@@ -32,7 +41,7 @@ func (v ValueString) Truthy() bool {
 type ValueNumeric float64
 
 func (v ValueNumeric) String() string {
-	return fmt.Sprint(float64(v))
+	return strconv.FormatFloat(float64(v), 'f', -1, 64)
 }
 
 func (e ValueNumeric) Type() Type {
@@ -48,10 +57,6 @@ func (v ValueNumeric) Truthy() bool {
 }
 
 type ValueBoolean bool
-
-var True = ValueBoolean(true)
-
-var False = ValueBoolean(false)
 
 func (v ValueBoolean) String() string {
 	if bool(v) {
@@ -73,8 +78,6 @@ func (v ValueBoolean) Truthy() bool {
 }
 
 type ValueNil struct{}
-
-var Nil = ValueNil(struct{}{})
 
 func (v ValueNil) String() string {
 	return "nil"
