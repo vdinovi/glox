@@ -4,7 +4,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (ctx *Context) EvaluateUnaryExpression(e UnaryExpression) (val Value, typ Type, err error) {
+func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ Type, err error) {
 	rightType, typ, err := ctx.TypeCheckUnaryExpression(e)
 	if err != nil {
 		return nil, ErrType, err
@@ -28,7 +28,7 @@ func (ctx *Context) EvaluateUnaryExpression(e UnaryExpression) (val Value, typ T
 
 }
 
-func (ctx *Context) EvaluateBinaryExpression(e BinaryExpression) (Value, Type, error) {
+func (ctx *Context) EvaluateBinaryExpression(e *BinaryExpression) (Value, Type, error) {
 	leftType, _, typ, err := ctx.TypeCheckBinaryExpression(e)
 	if err != nil {
 		return nil, ErrType, err
@@ -56,7 +56,7 @@ func (ctx *Context) EvaluateBinaryExpression(e BinaryExpression) (Value, Type, e
 	return val, typ, err
 }
 
-func (ctx *Context) EvaluateGroupingExpression(e GroupingExpression) (Value, Type, error) {
+func (ctx *Context) EvaluateGroupingExpression(e *GroupingExpression) (Value, Type, error) {
 	_, typ, err := ctx.TypeCheckGroupingExpression(e)
 	if err != nil {
 		return nil, ErrType, err
@@ -70,7 +70,7 @@ func (ctx *Context) EvaluateGroupingExpression(e GroupingExpression) (Value, Typ
 	return val, typ, nil
 }
 
-func (ctx *Context) EvaluateAssignmentExpression(e AssignmentExpression) (val Value, typ Type, err error) {
+func (ctx *Context) EvaluateAssignmentExpression(e *AssignmentExpression) (val Value, typ Type, err error) {
 	_, typ, err = ctx.TypeCheckAssignmentExpression(e)
 	if err != nil {
 		return nil, ErrType, err
@@ -87,7 +87,7 @@ func (ctx *Context) EvaluateAssignmentExpression(e AssignmentExpression) (val Va
 	return val, typ, nil
 }
 
-func (ctx *Context) EvaluateVariableExpression(e VariableExpression) (Value, Type, error) {
+func (ctx *Context) EvaluateVariableExpression(e *VariableExpression) (Value, Type, error) {
 	val := ctx.values.Lookup(e.name)
 	if val == nil {
 		err := NewRuntimeError(NewUndefinedVariableError(e.name), e.Position())
@@ -96,22 +96,6 @@ func (ctx *Context) EvaluateVariableExpression(e VariableExpression) (Value, Typ
 	}
 	log.Debug().Msgf("(evaluator) variable expr %q evaluates to %s", e, *val)
 	return *val, (*val).Type(), nil
-}
-
-func (ctx *Context) EvaluateStringExpression(e StringExpression) (Value, error) {
-	return ValueString(e.value), nil
-}
-
-func (ctx *Context) EvaluateNumericExpression(e NumericExpression) (Value, error) {
-	return ValueNumeric(e.value), nil
-}
-
-func (ctx *Context) EvaluateBooleanExpression(e BooleanExpression) (Value, error) {
-	return ValueBoolean(e.value), nil
-}
-
-func (ctx *Context) EvaluateNilExpression(e NilExpression) (Value, error) {
-	return Nil, nil
 }
 
 func (ctx *Context) evalUnaryNumeric(op Operator, right Value) (Value, error) {

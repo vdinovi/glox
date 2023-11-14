@@ -3,8 +3,10 @@ package lox
 //go:generate stringer -type Type  -trimprefix=Type
 type Type int
 
+const ErrType Type = -1
+
 const (
-	ErrType Type = iota
+	TypeAny Type = iota
 	TypeNil
 	TypeNumeric
 	TypeString

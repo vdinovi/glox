@@ -65,7 +65,7 @@ func TestParseExpressionStatement(t *testing.T) {
 		}
 
 		for i, want := range test.stmts {
-			if got := program[i]; !got.Equals(want) {
+			if got := program[i]; !got.Equals(&want) {
 				t.Errorf("Expected %q to be %v, but got %v", test.text, want, got)
 				break
 			}
@@ -122,7 +122,7 @@ func TestParsePrintStatement(t *testing.T) {
 		}
 
 		for i, want := range test.stmts {
-			if got := program[i]; !got.Equals(want) {
+			if got := program[i]; !got.Equals(&want) {
 				t.Errorf("Expected %q to be %v, but got %v", test.text, want, got)
 				break
 			}
@@ -177,7 +177,7 @@ func TestParseDeclarationStatement(t *testing.T) {
 		}
 
 		for i, want := range test.stmts {
-			if got := program[i]; !got.Equals(want) {
+			if got := program[i]; !got.Equals(&want) {
 				t.Errorf("Expected %q to be %v, but got %v", test.text, want, got)
 				break
 			}

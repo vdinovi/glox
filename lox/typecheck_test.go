@@ -34,20 +34,20 @@ func TestTypecheckPrintStatement(t *testing.T) {
 		err  error
 		stmt PrintStatement
 	}{
-		{stmt: PrintStatement{expr: NumericExpression{value: 1, pos: start}, pos: start}},
-		{stmt: PrintStatement{expr: StringExpression{value: "str", pos: start}, pos: start}},
-		{stmt: PrintStatement{expr: BooleanExpression{value: true, pos: start}, pos: start}},
-		{stmt: PrintStatement{expr: BooleanExpression{value: false, pos: start}, pos: start}},
-		{stmt: PrintStatement{expr: NilExpression{pos: start}, pos: start}},
+		{stmt: PrintStatement{expr: &NumericExpression{value: 1, pos: start}, pos: start}},
+		{stmt: PrintStatement{expr: &StringExpression{value: "str", pos: start}, pos: start}},
+		{stmt: PrintStatement{expr: &BooleanExpression{value: true, pos: start}, pos: start}},
+		{stmt: PrintStatement{expr: &BooleanExpression{value: false, pos: start}, pos: start}},
+		{stmt: PrintStatement{expr: &NilExpression{pos: start}, pos: start}},
 		//{stmt: PrintStatement{expr: VariableExpression{name: "foo", pos: start}, pos: start}},
 	}
 
 	for _, test := range tests {
 		ctx := NewContext()
-		err := ctx.TypeCheckPrintStatement(test.stmt)
+		err := ctx.TypeCheckPrintStatement(&test.stmt)
 		if test.err != nil {
 			if err != test.err {
-				t.Errorf("Expected typecheck of statement %s to produce error %q, but got %q", test.stmt, test.err, err)
+				t.Errorf("Expected typecheck of statement %v to produce error %q, but got %q", test.stmt, test.err, err)
 				continue
 			}
 		} else if err != nil {
@@ -64,20 +64,20 @@ func TestTypeCheckExpressionStatement(t *testing.T) {
 		err  error
 		stmt ExpressionStatement
 	}{
-		{stmt: ExpressionStatement{expr: NumericExpression{value: 1, pos: start}, pos: start}},
-		{stmt: ExpressionStatement{expr: StringExpression{value: "str", pos: start}, pos: start}},
-		{stmt: ExpressionStatement{expr: BooleanExpression{value: true, pos: start}, pos: start}},
-		{stmt: ExpressionStatement{expr: BooleanExpression{value: false, pos: start}, pos: start}},
-		{stmt: ExpressionStatement{expr: NilExpression{pos: start}, pos: start}},
+		{stmt: ExpressionStatement{expr: &NumericExpression{value: 1, pos: start}, pos: start}},
+		{stmt: ExpressionStatement{expr: &StringExpression{value: "str", pos: start}, pos: start}},
+		{stmt: ExpressionStatement{expr: &BooleanExpression{value: true, pos: start}, pos: start}},
+		{stmt: ExpressionStatement{expr: &BooleanExpression{value: false, pos: start}, pos: start}},
+		{stmt: ExpressionStatement{expr: &NilExpression{pos: start}, pos: start}},
 		//{stmt: ExpressionStatement{expr: VariableExpression{name: "foo", pos: start}, pos: start}},
 	}
 
 	for _, test := range tests {
 		ctx := NewContext()
-		err := ctx.TypeCheckExpressionStatement(test.stmt)
+		err := ctx.TypeCheckExpressionStatement(&test.stmt)
 		if test.err != nil {
 			if err != test.err {
-				t.Errorf("Expected typecheck of statement %s to produce error %q, but got %q", test.stmt, test.err, err)
+				t.Errorf("Expected typecheck of statement %v to produce error %q, but got %q", test.stmt, test.err, err)
 				continue
 			}
 		} else if err != nil {
@@ -111,10 +111,10 @@ func TestTypeCheckUnaryExpression(t *testing.T) {
 
 	for _, test := range tests {
 		ctx := NewContext()
-		_, typ, err := ctx.TypeCheckUnaryExpression(test.expr)
+		_, typ, err := ctx.TypeCheckUnaryExpression(&test.expr)
 		if test.err != nil {
 			if err != test.err {
-				t.Errorf("Expected typecheck of %q to produce error %q, but got %q", test.expr, test.err, err)
+				t.Errorf("Expected typecheck of %v to produce error %q, but got %q", test.expr, test.err, err)
 				continue
 			}
 		} else if err != nil {
@@ -123,7 +123,7 @@ func TestTypeCheckUnaryExpression(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(typ, test.typ) {
-			t.Errorf("Expected typecheck of %q to produce type %s, but got %s", test.expr, test.typ, typ)
+			t.Errorf("Expected typecheck of %v to produce type %s, but got %s", test.expr, test.typ, typ)
 		}
 	}
 

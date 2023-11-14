@@ -104,6 +104,12 @@ func (p Position) String() string {
 	return fmt.Sprintf("(%d,%d)", p.Line, p.Column)
 }
 
+var ErrPosition = Position{-1, -1}
+
+func (p Position) Invalid() bool {
+	return p == ErrPosition
+}
+
 type NoOperatorForTokenError struct {
 	TokenType
 }

@@ -18,6 +18,15 @@ func NewExecutor(printer io.Writer) *Executor {
 	}
 }
 
+func (x *Executor) TypeCheckProgram(stmts []Statement) error {
+	for _, stmt := range stmts {
+		if err := x.TypeCheck(stmt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (x *Executor) TypeCheck(stmt Statement) error {
 	return stmt.TypeCheck(x.ctx)
 }
@@ -35,7 +44,7 @@ func (x *Executor) Execute(stmt Statement) error {
 	return stmt.Execute(x)
 }
 
-func (x *Executor) ExecuteBlockStatement(s BlockStatement) error {
+func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
 	log.Debug().Msgf("(executor) executing %q", s)
 	x.ctx.PushEnvironment()
 	defer func() { x.ctx.PopEnvironment() }()
@@ -53,7 +62,7 @@ func (x *Executor) ExecuteBlockStatement(s BlockStatement) error {
 	return nil
 }
 
-func (x *Executor) ExecuteExpressionStatement(s ExpressionStatement) error {
+func (x *Executor) ExecuteExpressionStatement(s *ExpressionStatement) error {
 	log.Debug().Msgf("(executor) executing %q", s)
 	_, err := s.expr.Evaluate(x.ctx)
 	if err != nil {
@@ -64,7 +73,7 @@ func (x *Executor) ExecuteExpressionStatement(s ExpressionStatement) error {
 	return nil
 }
 
-func (x *Executor) ExecutePrintStatement(s PrintStatement) error {
+func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
 	log.Debug().Msgf("(executor) executing %q", s)
 	val, err := s.expr.Evaluate(x.ctx)
 	if err == nil {
@@ -78,7 +87,7 @@ func (x *Executor) ExecutePrintStatement(s PrintStatement) error {
 	return nil
 }
 
-func (x *Executor) ExecuteDeclarationStatement(s DeclarationStatement) error {
+func (x *Executor) ExecuteDeclarationStatement(s *DeclarationStatement) error {
 	log.Debug().Msgf("(executor) executing %q", s)
 	val, err := s.expr.Evaluate(x.ctx)
 	if err == nil {
