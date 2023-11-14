@@ -202,6 +202,13 @@ func (s *runeScanner) advance() (rune, error) {
 		return -1, io.EOF
 	}
 	rune := s.runes[s.offset]
+	if rune == '\n' {
+		s.line += 1
+		s.column = 0
+	} else {
+		s.column += 1
+	}
+
 	s.offset += 1
 	return rune, nil
 }

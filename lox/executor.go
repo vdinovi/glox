@@ -18,6 +18,10 @@ func NewExecutor(printer io.Writer) *Executor {
 	}
 }
 
+func (e *Executor) TypeCheck(stmt Statement) error {
+	return stmt.TypeCheck(e.ctx)
+}
+
 func (e *Executor) Execute(stmt Statement) error {
 	return stmt.Execute(e)
 }

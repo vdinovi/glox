@@ -1,7 +1,7 @@
 var one = 1;
 var str = "str";
 var null = nil;
-var yes = true
+var yes = true;
 var undefined;
 
 print str;
