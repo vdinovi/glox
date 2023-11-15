@@ -5,6 +5,7 @@ import (
 )
 
 func (ctx *Context) TypeCheckProgram(stmts []Statement) error {
+	log.Trace().Msg("TypeCheckProgram")
 	for _, stmt := range stmts {
 		log.Debug().Msgf("(typechecker) checking statement %s", stmt)
 		err := stmt.TypeCheck(ctx)
@@ -16,6 +17,7 @@ func (ctx *Context) TypeCheckProgram(stmts []Statement) error {
 }
 
 func (ctx *Context) TypeCheckBlockStatement(s *BlockStatement) error {
+	log.Trace().Msg("TypeCheckBlockStatement")
 	log.Debug().Msgf("(typechecker) enter scope")
 	ctx.PushEnvironment()
 	defer ctx.PopEnvironment()
@@ -29,16 +31,19 @@ func (ctx *Context) TypeCheckBlockStatement(s *BlockStatement) error {
 }
 
 func (ctx *Context) TypeCheckPrintStatement(s *PrintStatement) error {
+	log.Trace().Msg("TypeCheckPrintStatement")
 	_, err := ctx.typeCheckExpression(s.expr)
 	return err
 }
 
 func (ctx *Context) TypeCheckExpressionStatement(s *ExpressionStatement) error {
+	log.Trace().Msg("TypeCheckExpressionStatement")
 	_, err := ctx.typeCheckExpression(s.expr)
 	return err
 }
 
 func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error {
+	log.Trace().Msg("TypeCheckDeclarationStatement")
 	typ, err := ctx.typeCheckExpression(s.expr)
 	if err == nil {
 		err = ctx.types.Set(s.name, typ)
@@ -59,6 +64,7 @@ func (ctx *Context) typeCheckExpression(e Expression) (typ Type, err error) {
 }
 
 func (ctx *Context) TypeCheckUnaryExpression(e *UnaryExpression) (right, result Type, err error) {
+	log.Trace().Msg("TypeCheckUnaryExpression")
 	right, err = e.right.TypeCheck(ctx)
 	if err != nil {
 		return ErrType, ErrType, err
@@ -76,6 +82,7 @@ func (ctx *Context) TypeCheckUnaryExpression(e *UnaryExpression) (right, result 
 }
 
 func (ctx *Context) TypeCheckBinaryExpression(e *BinaryExpression) (left, right, result Type, err error) {
+	log.Trace().Msg("TypeCheckBinaryExpression")
 	if left, err = e.left.TypeCheck(ctx); err != nil {
 		return ErrType, ErrType, ErrType, err
 	}
@@ -102,6 +109,7 @@ func (ctx *Context) TypeCheckBinaryExpression(e *BinaryExpression) (left, right,
 }
 
 func (ctx *Context) TypeCheckGroupingExpression(e *GroupingExpression) (inner, result Type, err error) {
+	log.Trace().Msg("TypeCheckGroupingExpression")
 	inner, err = e.expr.TypeCheck(ctx)
 	if err != nil {
 		return ErrType, ErrType, err
@@ -110,6 +118,7 @@ func (ctx *Context) TypeCheckGroupingExpression(e *GroupingExpression) (inner, r
 }
 
 func (ctx *Context) TypeCheckAssignmentExpression(e *AssignmentExpression) (right, result Type, err error) {
+	log.Trace().Msg("TypeCheckAssignmentExpression")
 	right, err = e.right.TypeCheck(ctx)
 	if err == nil {
 		err = ctx.types.Set(e.name, right)
@@ -121,6 +130,7 @@ func (ctx *Context) TypeCheckAssignmentExpression(e *AssignmentExpression) (righ
 }
 
 func (ctx *Context) TypeCheckVariableExpression(e *VariableExpression) (result Type, err error) {
+	log.Trace().Msg("TypeCheckVariableExpression")
 	typ := ctx.types.Lookup(e.name)
 	if typ == nil {
 		return ErrType, NewTypeError(NewUndefinedVariableError(e.name), e.Position())

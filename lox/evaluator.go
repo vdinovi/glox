@@ -5,6 +5,7 @@ import (
 )
 
 func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ Type, err error) {
+	log.Trace().Msg("EvaluateUnaryExpression")
 	switch typ := e.Type(); typ {
 	case TypeNumeric:
 		val, err = e.right.Evaluate(ctx)
@@ -19,11 +20,13 @@ func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ 
 	if err != nil {
 		return nil, ErrType, err
 	}
+	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
 	return val, typ, nil
 
 }
 
 func (ctx *Context) EvaluateBinaryExpression(e *BinaryExpression) (val Value, typ Type, err error) {
+	log.Trace().Msg("EvaluateBinaryExpression")
 	switch typ := e.Type(); typ {
 	case TypeString:
 		val, err = ctx.evalBinaryString(e)
@@ -36,51 +39,50 @@ func (ctx *Context) EvaluateBinaryExpression(e *BinaryExpression) (val Value, ty
 		unreachable("prevented by prior type check")
 	}
 	if err != nil {
-		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
 		return nil, ErrType, err
 	}
-	log.Debug().Msgf("(evaluator) binary expr %q evaluates to %s", e, val)
+	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
 	return val, typ, nil
 }
 
 func (ctx *Context) EvaluateGroupingExpression(e *GroupingExpression) (val Value, typ Type, err error) {
+	log.Trace().Msg("EvaluateGroupingExpression")
 	typ = e.Type()
 	if val, err = e.expr.Evaluate(ctx); err != nil {
-		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
 		return nil, ErrType, err
 	}
-	log.Debug().Msgf("(evaluator) grouping expr %q evaluates to %s", e, val)
+	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
 	return val, typ, nil
 }
 
 func (ctx *Context) EvaluateAssignmentExpression(e *AssignmentExpression) (val Value, typ Type, err error) {
+	log.Trace().Msg("EvaluateAssignmentExpression")
 	if val, err = e.right.Evaluate(ctx); err == nil {
 		err = ctx.values.Set(e.name, val)
 	}
 	if err != nil {
-		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
 		return nil, ErrType, err
 	}
-	log.Debug().Msgf("(evaluator) assignment expr %q evaluates to %s", e, val)
+	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
 	return val, typ, nil
 }
 
 func (ctx *Context) EvaluateVariableExpression(e *VariableExpression) (val Value, typ Type, err error) {
+	log.Trace().Msg("EvaluateVariableExpression")
 	typ = e.Type()
 	v := ctx.values.Lookup(e.name)
-	if val == nil {
+	if val != nil {
 		err := NewRuntimeError(NewUndefinedVariableError(e.name), e.Position())
-		log.Error().Msgf("(evaluator) error in %q: %s", e, err)
 		return nil, ErrType, err
 	}
 	val = *v
-	log.Debug().Msgf("(evaluator) variable expr %q evaluates to %s", e, val)
+	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
 	return val, typ, nil
 }
 
 func (ctx *Context) evalUnaryNumeric(op Operator, right Value) (val Value, err error) {
 	num, ok := right.Unwrap().(float64)
-	if ok {
+	if !ok {
 		return nil, NewRuntimeError(NewDowncastError(right, "float64"), Position{})
 	}
 	switch op.Type {

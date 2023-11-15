@@ -47,6 +47,7 @@ func (x *Executor) Execute(stmt Statement) error {
 }
 
 func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
+	log.Trace().Msg("ExecuteBlockStatement")
 	log.Debug().Msgf("(executor) enter scope")
 	x.ctx.PushEnvironment()
 	defer x.ctx.PopEnvironment()
@@ -60,11 +61,13 @@ func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
 }
 
 func (x *Executor) ExecuteExpressionStatement(s *ExpressionStatement) error {
+	log.Trace().Msg("ExecuteExpressionStatement")
 	_, err := s.expr.Evaluate(x.ctx)
 	return err
 }
 
 func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
+	log.Trace().Msg("ExecutePrintStatement")
 	val, err := s.expr.Evaluate(x.ctx)
 	if err == nil {
 		err = x.runtime.Print(val.String())
@@ -73,6 +76,7 @@ func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
 }
 
 func (x *Executor) ExecuteDeclarationStatement(s *DeclarationStatement) error {
+	log.Trace().Msg("ExecuteDeclarationStatement")
 	log.Debug().Msgf("(executor) executing %q", s)
 	val, err := s.expr.Evaluate(x.ctx)
 	if err == nil {
