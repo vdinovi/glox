@@ -31,6 +31,6 @@ func ExitErr(err error) {
 	Exit(ExitCodeErr)
 }
 
-func unreachable(note string) {
-	panic("unreachable: " + note)
-}
+// func unreachable(note string) {
+// 	panic("unreachable: " + note)
+// }

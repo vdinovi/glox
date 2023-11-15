@@ -6,16 +6,16 @@ import (
 
 func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ Type, err error) {
 	log.Trace().Msg("EvaluateUnaryExpression")
-	switch typ := e.Type(); typ {
+	var right Value
+	right, err = e.right.Evaluate(ctx)
+	if err != nil {
+		return nil, ErrType, err
+	}
+	switch typ := right.Type(); typ {
 	case TypeNumeric:
-		val, err = e.right.Evaluate(ctx)
-		if err != nil {
-			return nil, ErrType, err
-		}
-		val, err = ctx.evalUnaryNumeric(e.op, val)
+		val, err = ctx.evalUnaryNumeric(e, right)
 	default:
-		// TODO: replace with runtime type error
-		unreachable("prevented by prior type check")
+		err = NewTypeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right.Type()), e.Position())
 	}
 	if err != nil {
 		return nil, ErrType, err
@@ -27,16 +27,26 @@ func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ 
 
 func (ctx *Context) EvaluateBinaryExpression(e *BinaryExpression) (val Value, typ Type, err error) {
 	log.Trace().Msg("EvaluateBinaryExpression")
-	switch typ := e.Type(); typ {
+	var left, right Value
+	left, err = e.left.Evaluate(ctx)
+	if err == nil {
+		right, err = e.right.Evaluate(ctx)
+	}
+	if err != nil {
+		return nil, ErrType, err
+	}
+	if left.Type() != right.Type() {
+		return nil, ErrType, NewTypeError(NewTypeMismatchError(left.Type(), right.Type()), e.Position())
+	}
+	switch typ := left.Type(); typ {
 	case TypeString:
-		val, err = ctx.evalBinaryString(e)
+		val, err = ctx.evalBinaryString(e, left, right)
 	case TypeNumeric:
-		val, err = ctx.evalBinaryNumeric(e)
+		val, err = ctx.evalBinaryNumeric(e, left, right)
 	case TypeBoolean:
-		val, err = ctx.evalBinaryBoolean(e)
+		val, err = ctx.evalBinaryBoolean(e, left, right)
 	default:
-		// TODO: replace with runtime type error
-		unreachable("prevented by prior type check")
+		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
 	}
 	if err != nil {
 		return nil, ErrType, err
@@ -80,31 +90,22 @@ func (ctx *Context) EvaluateVariableExpression(e *VariableExpression) (val Value
 	return val, typ, nil
 }
 
-func (ctx *Context) evalUnaryNumeric(op Operator, right Value) (val Value, err error) {
+func (ctx *Context) evalUnaryNumeric(e *UnaryExpression, right Value) (val Value, err error) {
 	num, ok := right.Unwrap().(float64)
 	if !ok {
 		return nil, NewRuntimeError(NewDowncastError(right, "float64"), Position{})
 	}
-	switch op.Type {
+	switch e.op.Type {
 	case OpSubtract:
 		val = ValueNumeric(-num)
 	default:
-		// TODO: replace with runtime type error
-		unreachable("prevented by prior type check")
+		err = NewTypeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right.Type()), e.Position())
 	}
 	return val, nil
 }
 
-func (ctx *Context) evalBinaryString(e *BinaryExpression) (val Value, err error) {
-	var left, right Value
+func (ctx *Context) evalBinaryString(e *BinaryExpression, left, right Value) (val Value, err error) {
 	var ok bool
-	left, err = e.left.Evaluate(ctx)
-	if err == nil {
-		right, err = e.right.Evaluate(ctx)
-	}
-	if err != nil {
-		return nil, err
-	}
 	var l, r string
 	if l, ok = left.Unwrap().(string); !ok {
 		err = NewRuntimeError(NewDowncastError(left, "string"), e.Position())
@@ -125,22 +126,13 @@ func (ctx *Context) evalBinaryString(e *BinaryExpression) (val Value, err error)
 	case OpNotEqualTo:
 		val = ValueBoolean(l != r)
 	default:
-		// TODO: replace with runtime type error
-		unreachable("prevented by prior type check")
+		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
 	}
 	return val, nil
 }
 
-func (ctx *Context) evalBinaryNumeric(e *BinaryExpression) (val Value, err error) {
-	var left, right Value
+func (ctx *Context) evalBinaryNumeric(e *BinaryExpression, left, right Value) (val Value, err error) {
 	var ok bool
-	left, err = e.left.Evaluate(ctx)
-	if err == nil {
-		right, err = e.right.Evaluate(ctx)
-	}
-	if err != nil {
-		return nil, err
-	}
 	var l, r float64
 	if l, ok = left.Unwrap().(float64); !ok {
 		err = NewRuntimeError(NewDowncastError(left, "float64"), e.Position())
@@ -175,23 +167,14 @@ func (ctx *Context) evalBinaryNumeric(e *BinaryExpression) (val Value, err error
 	case OpGreaterThanOrEqualTo:
 		val = ValueBoolean(l >= r)
 	default:
-		// TODO: replace with runtime type error
-		unreachable("prevented by prior type check")
+		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
 	}
 	return val, nil
 }
 
-func (ctx *Context) evalBinaryBoolean(e *BinaryExpression) (val Value, err error) {
-	var left, right Value
-	var ok bool
-	left, err = e.left.Evaluate(ctx)
-	if err == nil {
-		right, err = e.right.Evaluate(ctx)
-	}
-	if err != nil {
-		return nil, err
-	}
+func (ctx *Context) evalBinaryBoolean(e *BinaryExpression, left, right Value) (val Value, err error) {
 	var l, r bool
+	var ok bool
 	if l, ok = left.Unwrap().(bool); !ok {
 		err = NewRuntimeError(NewDowncastError(left, "bool"), e.Position())
 	}
@@ -209,8 +192,7 @@ func (ctx *Context) evalBinaryBoolean(e *BinaryExpression) (val Value, err error
 	case OpNotEqualTo:
 		val = ValueBoolean(l != r)
 	default:
-		// TODO: replace with runtime type error
-		unreachable("prevented by prior type check")
+		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
 	}
 	return val, nil
 }

@@ -1,6 +1,8 @@
 package lox
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Container for all type-related errors
 type TypeError struct {
@@ -25,32 +27,53 @@ func NewTypeError(err error, pos Position) TypeError {
 
 // Error indicating that the types do not match
 type TypeMismatchError struct {
-	Types []Type
+	Left  Type
+	Right Type
 }
 
 func (e TypeMismatchError) Error() string {
-	return fmt.Sprintf("types do not match %v", e.Types)
+	return fmt.Sprintf("types %s does not match %s", e.Left, e.Right)
 }
 
-func NewTypeMismatchError(types ...Type) TypeMismatchError {
+func NewTypeMismatchError(left, right Type) TypeMismatchError {
 	return TypeMismatchError{
-		Types: types,
+		Left:  left,
+		Right: right,
 	}
 }
 
 // Error indicating that the operation cannot be applied to the types
-type InvalidOperatorForTypeError struct {
+type InvalidUnaryOperatorForTypeError struct {
 	OperatorType
-	Types []Type
+	Right Type
 }
 
-func (e InvalidOperatorForTypeError) Error() string {
-	return fmt.Sprintf("operator %s can't be applied to types %v", e.OperatorType, e.Types)
+func (e InvalidUnaryOperatorForTypeError) Error() string {
+	return fmt.Sprintf("unary operator %s can't be applied to type %v", e.OperatorType, e.Right)
 }
 
-func NewInvalidOperatorForTypeError(opType OperatorType, types ...Type) InvalidOperatorForTypeError {
-	return InvalidOperatorForTypeError{
+func NewInvalidUnaryOperatorForTypeError(opType OperatorType, right Type) InvalidUnaryOperatorForTypeError {
+	return InvalidUnaryOperatorForTypeError{
 		OperatorType: opType,
-		Types:        types,
+		Right:        right,
+	}
+}
+
+// Error indicating that the binary operation cannot be applied to the types
+type InvalidBinaryOperatorForTypeError struct {
+	OperatorType
+	Left  Type
+	Right Type
+}
+
+func (e InvalidBinaryOperatorForTypeError) Error() string {
+	return fmt.Sprintf("binary operator %s can't be applied to types %v and %v", e.OperatorType, e.Left, e.Right)
+}
+
+func NewInvalidBinaryOperatorForTypeError(opType OperatorType, left, right Type) InvalidBinaryOperatorForTypeError {
+	return InvalidBinaryOperatorForTypeError{
+		OperatorType: opType,
+		Left:         left,
+		Right:        right,
 	}
 }

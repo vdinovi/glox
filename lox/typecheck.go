@@ -32,19 +32,19 @@ func (ctx *Context) TypeCheckBlockStatement(s *BlockStatement) error {
 
 func (ctx *Context) TypeCheckPrintStatement(s *PrintStatement) error {
 	log.Trace().Msg("TypeCheckPrintStatement")
-	_, err := ctx.typeCheckExpression(s.expr)
+	_, err := ctx.TypeCheckExpression(s.expr)
 	return err
 }
 
 func (ctx *Context) TypeCheckExpressionStatement(s *ExpressionStatement) error {
 	log.Trace().Msg("TypeCheckExpressionStatement")
-	_, err := ctx.typeCheckExpression(s.expr)
+	_, err := ctx.TypeCheckExpression(s.expr)
 	return err
 }
 
 func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error {
 	log.Trace().Msg("TypeCheckDeclarationStatement")
-	typ, err := ctx.typeCheckExpression(s.expr)
+	typ, err := ctx.TypeCheckExpression(s.expr)
 	if err == nil {
 		err = ctx.types.Set(s.name, typ)
 	}
@@ -54,7 +54,7 @@ func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error
 	return err
 }
 
-func (ctx *Context) typeCheckExpression(e Expression) (typ Type, err error) {
+func (ctx *Context) TypeCheckExpression(e Expression) (typ Type, err error) {
 	typ, err = e.TypeCheck(ctx)
 	if err != nil {
 		return ErrType, err
@@ -71,9 +71,9 @@ func (ctx *Context) TypeCheckUnaryExpression(e *UnaryExpression) (right, result 
 	}
 	switch right {
 	case TypeNumeric:
-		result, err = ctx.typeCheckUnaryNumeric(e.op, right)
+		result, err = ctx.typeCheckUnaryNumeric(e, right)
 	default:
-		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, right), e.Position())
+		err = NewTypeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right), e.Position())
 	}
 	if err != nil {
 		return ErrType, ErrType, err
@@ -90,17 +90,17 @@ func (ctx *Context) TypeCheckBinaryExpression(e *BinaryExpression) (left, right,
 		return ErrType, ErrType, ErrType, err
 	}
 	if left != right {
-		return ErrType, ErrType, ErrType, NewTypeError(NewTypeMismatchError(left, right), e.Position())
+		return ErrType, ErrType, ErrType, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 	switch left {
 	case TypeNumeric:
-		result, err = ctx.typeCheckBinaryNumeric(e.op, left, right)
+		result, err = ctx.typeCheckBinaryNumeric(e, left, right)
 	case TypeString:
-		result, err = ctx.typeCheckBinaryString(e.op, left, right)
+		result, err = ctx.typeCheckBinaryString(e, left, right)
 	case TypeBoolean:
-		result, err = ctx.typeCheckBinaryBoolean(e.op, left, right)
+		result, err = ctx.typeCheckBinaryBoolean(e, left, right)
 	default:
-		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, left, right), e.Position())
+		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 	if err != nil {
 		return ErrType, ErrType, ErrType, err
@@ -138,42 +138,42 @@ func (ctx *Context) TypeCheckVariableExpression(e *VariableExpression) (result T
 	return *typ, nil
 }
 
-func (ctx *Context) typeCheckUnaryNumeric(op Operator, typ Type) (Type, error) {
-	switch op.Type {
+func (ctx *Context) typeCheckUnaryNumeric(e *UnaryExpression, right Type) (Type, error) {
+	switch e.op.Type {
 	case OpSubtract, OpAdd:
 		return TypeNumeric, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, typ), ErrPosition)
+		return ErrType, NewTypeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right), e.Position())
 	}
 }
 
-func (ctx *Context) typeCheckBinaryNumeric(op Operator, left, right Type) (Type, error) {
-	switch op.Type {
+func (ctx *Context) typeCheckBinaryNumeric(e *BinaryExpression, left, right Type) (Type, error) {
+	switch e.op.Type {
 	case OpAdd, OpSubtract, OpMultiply, OpDivide:
 		return TypeNumeric, nil
 	case OpEqualTo, OpNotEqualTo, OpLessThan, OpLessThanOrEqualTo, OpGreaterThan, OpGreaterThanOrEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), ErrPosition)
+		return ErrType, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 }
 
-func (ctx *Context) typeCheckBinaryString(op Operator, left, right Type) (Type, error) {
-	switch op.Type {
+func (ctx *Context) typeCheckBinaryString(e *BinaryExpression, left, right Type) (Type, error) {
+	switch e.op.Type {
 	case OpAdd:
 		return TypeString, nil
 	case OpEqualTo, OpNotEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), ErrPosition)
+		return ErrType, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 }
 
-func (ctx *Context) typeCheckBinaryBoolean(op Operator, left, right Type) (Type, error) {
-	switch op.Type {
+func (ctx *Context) typeCheckBinaryBoolean(e *BinaryExpression, left, right Type) (Type, error) {
+	switch e.op.Type {
 	case OpEqualTo, OpNotEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidOperatorForTypeError(op.Type, left, right), ErrPosition)
+		return ErrType, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 }
