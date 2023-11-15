@@ -40,21 +40,6 @@ var bMulExpr = makeBinaryExpr(mulOp)
 var bDivExpr = makeBinaryExpr(divOp)
 var groupExpr = makeGroupingExpr
 
-// func pos(line, column int) Position {
-// 	return Position{Line: line, Column: column}
-// }
-
-// var sub = Operator{Type: OpSubtract, Lexem: "-"}
-// var add = Operator{Type: OpAdd, Lexem: "+"}
-
-// func exprStmt(e Expression) func(Position) func() ExpressionStatement {
-// 	return func(pos Position) func() ExpressionStatement {
-// 		return func() ExpressionStatement {
-// 			return ExpressionStatement{expr: e, pos: pos}
-// 		}
-// 	}
-// }
-
 func makeNumericExpr(n float64) func() *NumericExpression {
 	return func() *NumericExpression {
 		return &NumericExpression{value: n}

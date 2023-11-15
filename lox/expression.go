@@ -4,6 +4,28 @@ import (
 	"fmt"
 )
 
+type OperatorType int
+
+//go:generate stringer -type OperatorType -trimprefix=Op
+const (
+	ErrOp OperatorType = iota
+	OpAdd
+	OpSubtract
+	OpMultiply
+	OpDivide
+	OpEqualTo
+	OpNotEqualTo
+	OpLessThan
+	OpLessThanOrEqualTo
+	OpGreaterThan
+	OpGreaterThanOrEqualTo
+)
+
+type Operator struct {
+	Type  OperatorType // type of the operator
+	Lexem string       // associated string
+}
+
 type Expression interface {
 	Position() Position
 	Type() Type
