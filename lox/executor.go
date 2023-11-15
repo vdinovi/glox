@@ -69,10 +69,14 @@ func (x *Executor) ExecuteExpressionStatement(s *ExpressionStatement) error {
 func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
 	log.Trace().Msg("ExecutePrintStatement")
 	val, err := s.expr.Evaluate(x.ctx)
-	if err == nil {
-		err = x.runtime.Print(val.String())
+	if err != nil {
+		return err
 	}
-	return err
+	err = x.runtime.Print(val.String())
+	if err != nil {
+		return NewRuntimeError(err, s.Position())
+	}
+	return nil
 }
 
 func (x *Executor) ExecuteDeclarationStatement(s *DeclarationStatement) error {

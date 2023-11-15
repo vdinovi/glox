@@ -68,6 +68,59 @@ func TestValueUnwrap(t *testing.T) {
 	}
 }
 
+func TestValueEquals(t *testing.T) {
+	tests := []struct {
+		eq bool
+		a  Value
+		b  Value
+	}{
+		// numeric
+		{eq: true, a: ValueNumeric(0), b: ValueNumeric(0)},
+		{eq: true, a: ValueNumeric(1), b: ValueNumeric(1)},
+		{eq: true, a: ValueNumeric(-1), b: ValueNumeric(-1)},
+		{eq: true, a: ValueNumeric(3.14), b: ValueNumeric(3.14)},
+		{eq: true, a: ValueNumeric(-3.14), b: ValueNumeric(-3.14)},
+		{eq: false, a: ValueNumeric(1), b: ValueNumeric(0)},
+		{eq: false, a: ValueNumeric(1), b: ValueNumeric(3.14)},
+		{eq: false, a: ValueNumeric(1), b: ValueString("")},
+		{eq: false, a: ValueNumeric(1), b: ValueBoolean(true)},
+		{eq: false, a: ValueNumeric(1), b: ValueBoolean(false)},
+		{eq: false, a: ValueNumeric(1), b: ValueNil{}},
+		// string
+		{eq: true, a: ValueString(""), b: ValueString("")},
+		{eq: true, a: ValueString("str"), b: ValueString("str")},
+		{eq: false, a: ValueString("str"), b: ValueString("")},
+		{eq: false, a: ValueString("str"), b: ValueNumeric(1)},
+		{eq: false, a: ValueString("str"), b: ValueBoolean(true)},
+		{eq: false, a: ValueString("str"), b: ValueBoolean(false)},
+		{eq: false, a: ValueString("str"), b: ValueNil{}},
+		// boolean
+		{eq: true, a: ValueBoolean(true), b: ValueBoolean(true)},
+		{eq: true, a: ValueBoolean(false), b: ValueBoolean(false)},
+		{eq: false, a: ValueBoolean(true), b: ValueBoolean(false)},
+		{eq: false, a: ValueBoolean(true), b: ValueNumeric(1)},
+		{eq: false, a: ValueBoolean(true), b: ValueString("")},
+		{eq: false, a: ValueBoolean(true), b: ValueNil{}},
+		// nil
+		{eq: true, a: ValueNil{}, b: ValueNil{}},
+		{eq: false, a: ValueNil{}, b: ValueNumeric(1)},
+		{eq: false, a: ValueNil{}, b: ValueString("")},
+		{eq: false, a: ValueNil{}, b: ValueBoolean(true)},
+		{eq: false, a: ValueNil{}, b: ValueBoolean(false)},
+	}
+	for _, test := range tests {
+		if test.eq {
+			if !test.a.Equals(test.b) {
+				t.Errorf("Expected %s to equal %s but does not", test.a, test.b)
+			}
+		} else {
+			if test.a.Equals(test.b) {
+				t.Errorf("Expected %s to not equal %s but does", test.a, test.b)
+			}
+		}
+	}
+}
+
 func TestValueSentinels(t *testing.T) {
 	tests := []struct {
 		val  Value

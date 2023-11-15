@@ -49,6 +49,15 @@ func (v ValueString) Equals(other Value) bool {
 	return string(v) == string(str)
 }
 
+func (v ValueString) Concat(other Value) (ValueString, error) {
+	var ok bool
+	var str ValueString
+	if str, ok = other.(ValueString); !ok {
+		return v, NewValueError(fmt.Sprintf("can't concat %s and %s", v.String(), other.String()))
+	}
+	return ValueString(string(v) + string(str)), nil
+}
+
 type ValueNumeric float64
 
 func (v ValueNumeric) String() string {
@@ -78,6 +87,51 @@ func (v ValueNumeric) Equals(other Value) bool {
 
 func (v ValueNumeric) approxEqual(other ValueNumeric, err float64) bool {
 	return math.Abs(float64(v)-float64(other)) <= err
+}
+
+func (v ValueNumeric) Negative() (ValueNumeric, error) {
+	return ValueNumeric(-float64(v)), nil
+}
+
+func (v ValueNumeric) Add(other Value) (ValueNumeric, error) {
+	var ok bool
+	var num ValueNumeric
+	if num, ok = other.(ValueNumeric); !ok {
+		return v, NewValueError(fmt.Sprintf("can't add %s and %s", v.String(), other.String()))
+	}
+	return ValueNumeric(float64(v) + float64(num)), nil
+}
+
+func (v ValueNumeric) Subtract(other Value) (ValueNumeric, error) {
+	var ok bool
+	var num ValueNumeric
+	if num, ok = other.(ValueNumeric); !ok {
+		return v, NewValueError(fmt.Sprintf("can't subtract %s and %s", v.String(), other.String()))
+	}
+	return ValueNumeric(float64(v) - float64(num)), nil
+}
+
+func (v ValueNumeric) Multiply(other Value) (ValueNumeric, error) {
+	var ok bool
+	var num ValueNumeric
+	if num, ok = other.(ValueNumeric); !ok {
+		return v, NewValueError(fmt.Sprintf("can't multiply %s and %s", v.String(), other.String()))
+	}
+	return ValueNumeric(float64(v) * float64(num)), nil
+}
+
+func (v ValueNumeric) Divide(other Value) (ValueNumeric, error) {
+	var ok bool
+	var denom ValueNumeric
+	if denom, ok = other.(ValueNumeric); !ok {
+		return v, NewValueError(fmt.Sprintf("can't divide %s and %s", v.String(), other.String()))
+	}
+	n := float64(v)
+	d := float64(denom)
+	if d == 0 && n != 0 {
+		return v, NewDivideByZeroError(v, denom)
+	}
+	return ValueNumeric(n / d), nil
 }
 
 type ValueBoolean bool

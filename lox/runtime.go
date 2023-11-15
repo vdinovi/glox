@@ -17,9 +17,5 @@ func NewRuntime(printer io.Writer) *Runtime {
 
 func (r *Runtime) Print(s string) error {
 	_, err := fmt.Println(s)
-	if err != nil {
-		// TODO: feed line and column
-		return NewRuntimeError(err, Position{})
-	}
-	return nil
+	return err
 }

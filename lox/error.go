@@ -283,3 +283,15 @@ func (e DivideByZeroError) Error() string {
 func NewDivideByZeroError(num, denom ValueNumeric) DivideByZeroError {
 	return DivideByZeroError{Numerator: num, Denominator: denom}
 }
+
+type ValueError struct {
+	Message string
+}
+
+func (v ValueError) Error() string {
+	return fmt.Sprintf("Value Error: %s", v.Message)
+}
+
+func NewValueError(message string) ValueError {
+	return ValueError{Message: message}
+}

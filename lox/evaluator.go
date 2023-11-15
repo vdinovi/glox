@@ -91,118 +91,79 @@ func (ctx *Context) EvaluateVariableExpression(e *VariableExpression) (val Value
 }
 
 func (ctx *Context) evalUnaryNumeric(e *UnaryExpression, right Value) (val Value, err error) {
-	num, ok := right.Unwrap().(float64)
-	if !ok {
-		return nil, NewRuntimeError(NewDowncastError(right, "float64"), Position{})
+	var num ValueNumeric
+	var ok bool
+	if num, ok = right.(ValueNumeric); !ok {
+		return nil, NewRuntimeError(NewDowncastError(right, "Numeric"), Position{})
 	}
 	switch e.op.Type {
 	case OpSubtract:
-		val = ValueNumeric(-num)
+		val, err = num.Negative()
 	case OpAdd:
-		val = ValueNumeric(num)
+		val = num
 	default:
-		err = NewRuntimeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right.Type()), e.Position())
+		err = NewInvalidUnaryOperatorForTypeError(e.op.Type, right.Type())
+	}
+	if err != nil {
+		err = NewRuntimeError(err, e.Position())
 	}
 	return val, err
 }
 
 func (ctx *Context) evalBinaryString(e *BinaryExpression, left, right Value) (val Value, err error) {
+	var l, r ValueString
 	var ok bool
-	var l, r string
-	if l, ok = left.Unwrap().(string); !ok {
-		err = NewRuntimeError(NewDowncastError(left, "string"), e.Position())
+	if l, ok = left.(ValueString); !ok {
+		return nil, NewRuntimeError(NewDowncastError(left, "String"), Position{})
 	}
-	if ok {
-		if r, ok = right.Unwrap().(string); !ok {
-			err = NewRuntimeError(NewDowncastError(right, "string"), e.Position())
-		}
-	}
-	if err != nil {
-		return nil, err
+	if r, ok = right.(ValueString); !ok {
+		return nil, NewRuntimeError(NewDowncastError(right, "String"), Position{})
 	}
 	switch e.op.Type {
 	case OpAdd:
-		val = ValueString(l + r)
-	case OpEqualTo:
-		val = ValueBoolean(l == r)
-	case OpNotEqualTo:
-		val = ValueBoolean(l != r)
+		val, err = l.Concat(r)
 	default:
-		err = NewRuntimeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
+		err = NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type())
+	}
+	if err != nil {
+		err = NewRuntimeError(err, e.Position())
 	}
 	return val, err
 }
 
 func (ctx *Context) evalBinaryNumeric(e *BinaryExpression, left, right Value) (val Value, err error) {
+	var l, r ValueNumeric
 	var ok bool
-	var l, r float64
-	if l, ok = left.Unwrap().(float64); !ok {
-		err = NewRuntimeError(NewDowncastError(left, "float64"), e.Position())
+	if l, ok = left.(ValueNumeric); !ok {
+		return nil, NewRuntimeError(NewDowncastError(left, "Numeric"), Position{})
 	}
-	if ok {
-		if r, ok = right.Unwrap().(float64); !ok {
-			err = NewRuntimeError(NewDowncastError(right, "float64"), e.Position())
-		}
-	}
-	if err != nil {
-		return nil, err
+	if r, ok = right.(ValueNumeric); !ok {
+		return nil, NewRuntimeError(NewDowncastError(right, "Numeric"), Position{})
 	}
 	switch e.op.Type {
 	case OpAdd:
-		val = ValueNumeric(l + r)
+		val, err = l.Add(r)
 	case OpSubtract:
-		val = ValueNumeric(l - r)
+		val, err = l.Subtract(r)
 	case OpMultiply:
-		val = ValueNumeric(l * r)
+		val, err = l.Multiply(r)
 	case OpDivide:
-		if r == 0 {
-			if l == 0 {
-				val = ValueNumeric(0)
-			} else {
-				err = NewRuntimeError(NewDivideByZeroError(ValueNumeric(l), ValueNumeric(r)), e.Position())
-			}
-		} else {
-			val = ValueNumeric(l / r)
-		}
-	case OpEqualTo:
-		val = ValueBoolean(l == r)
-	case OpNotEqualTo:
-		val = ValueBoolean(l != r)
-	case OpLessThan:
-		val = ValueBoolean(l < r)
-	case OpLessThanOrEqualTo:
-		val = ValueBoolean(l <= r)
-	case OpGreaterThan:
-		val = ValueBoolean(l > r)
-	case OpGreaterThanOrEqualTo:
-		val = ValueBoolean(l >= r)
+		val, err = l.Divide(r)
 	default:
-		err = NewRuntimeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
+		err = NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type())
+	}
+	if err != nil {
+		err = NewRuntimeError(err, e.Position())
 	}
 	return val, err
 }
 
 func (ctx *Context) evalBinaryBoolean(e *BinaryExpression, left, right Value) (val Value, err error) {
-	var l, r bool
-	var ok bool
-	if l, ok = left.Unwrap().(bool); !ok {
-		err = NewRuntimeError(NewDowncastError(left, "bool"), e.Position())
-	}
-	if ok {
-		if r, ok = right.Unwrap().(bool); !ok {
-			err = NewRuntimeError(NewDowncastError(right, "bool"), e.Position())
-		}
-	}
-	if err != nil {
-		return nil, err
-	}
 	switch e.op.Type {
-	case OpEqualTo:
-		val = ValueBoolean(l == r)
-	case OpNotEqualTo:
-		val = ValueBoolean(l != r)
 	default:
-		err = NewRuntimeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
+		err = NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type())
 	}
+	//if err != nil {}
+	err = NewRuntimeError(err, e.Position())
 	return val, err
 }

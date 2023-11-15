@@ -99,7 +99,7 @@ func TestSimpleExpression(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		//t.Log(test.expr)
+		t.Log(test.expr)
 		ctx := NewContext()
 		// _, err := test.expr.TypeCheck(ctx)
 		// if err != nil {
