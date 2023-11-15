@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestParseExpressionStatement(t *testing.T) {
+func TestParserExpressionStatement(t *testing.T) {
 	tests := []struct {
 		text  string
 		stmts []ExpressionStatement
@@ -61,7 +61,7 @@ func TestParseExpressionStatement(t *testing.T) {
 	}
 }
 
-func TestParsePrintStatement(t *testing.T) {
+func TestParserPrintStatement(t *testing.T) {
 	tests := []struct {
 		text  string
 		stmts []PrintStatement
@@ -106,7 +106,7 @@ func TestParsePrintStatement(t *testing.T) {
 	}
 }
 
-func TestParseDeclarationStatement(t *testing.T) {
+func TestParserDeclarationStatement(t *testing.T) {
 	tests := []struct {
 		text  string
 		stmts []DeclarationStatement
@@ -150,7 +150,7 @@ func TestParseDeclarationStatement(t *testing.T) {
 	}
 }
 
-func TestParseBlockStatement(t *testing.T) {
+func TestParserBlockStatement(t *testing.T) {
 	tests := []struct {
 		text  string
 		stmts []BlockStatement
@@ -184,6 +184,106 @@ func TestParseBlockStatement(t *testing.T) {
 				t.Errorf("Expected %q to be %s, but got %s", test.text, want.String(), got.String())
 				break
 			}
+		}
+	}
+}
+
+func TestParserConditionalStatement(t *testing.T) {
+	tests := []struct {
+		text string
+		stmt ConditionalStatement
+		err  error
+	}{
+		// if/else without braces
+		{
+			text: "if (true) 1; else 3.14;",
+			stmt: ConditionalStatement{
+				expr:       trueExpr(),
+				thenBranch: &ExpressionStatement{expr: oneExpr()},
+				elseBranch: &ExpressionStatement{expr: piExpr()},
+			},
+		},
+		// if without else
+		{
+			text: "if (true) 1;",
+			stmt: ConditionalStatement{
+				expr:       trueExpr(),
+				thenBranch: &ExpressionStatement{expr: oneExpr()},
+				elseBranch: nil,
+			},
+		},
+		// if with braces without else
+		{
+			text: "if (true) {1;}",
+			stmt: ConditionalStatement{
+				expr: trueExpr(),
+				thenBranch: &BlockStatement{
+					stmts: []Statement{
+						&ExpressionStatement{expr: oneExpr()},
+					},
+				},
+				elseBranch: nil,
+			},
+		},
+		// nested if without braces (else binds to closest if)
+		{
+			text: "if (true) if (false) 1; else 3.14; else 1;",
+			stmt: ConditionalStatement{
+				expr: trueExpr(),
+				thenBranch: &ConditionalStatement{
+					expr:       falseExpr(),
+					thenBranch: &ExpressionStatement{expr: oneExpr()},
+					elseBranch: &ExpressionStatement{expr: piExpr()},
+				},
+				elseBranch: &ExpressionStatement{
+					expr: oneExpr(),
+				},
+			},
+		},
+		// nested if with braces (changes else binding)
+		{
+			text: "if (true) { if (false) 1; else 3.14;} else {1;}",
+			stmt: ConditionalStatement{
+				expr: trueExpr(),
+				thenBranch: &BlockStatement{
+					stmts: []Statement{
+						&ConditionalStatement{
+							expr:       falseExpr(),
+							thenBranch: &ExpressionStatement{expr: oneExpr()},
+							elseBranch: &ExpressionStatement{expr: piExpr()},
+						},
+					},
+				},
+				elseBranch: &BlockStatement{
+					stmts: []Statement{
+						&ExpressionStatement{expr: oneExpr()},
+					},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		tokens, err := Scan(strings.NewReader(test.text))
+		if err != nil {
+			t.Errorf("Unexpected error in %q: %s", test.text, err)
+			continue
+		}
+		program, err := Parse(tokens)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Errorf("Unexpected error in %q: %s", test.text, err)
+			continue
+		}
+		if len(program) != 1 {
+			t.Errorf("Expected %q to produce 1 statement but got %d", test.text, len(program))
+		}
+		stmt := program[0]
+		if !stmt.Equals(&test.stmt) {
+			t.Errorf("Expected %q to be %q, but got %q", test.text, test.stmt.String(), stmt.String())
 		}
 	}
 }

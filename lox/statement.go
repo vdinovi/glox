@@ -55,6 +55,46 @@ func (s *BlockStatement) Equals(other Statement) bool {
 	return true
 }
 
+type ConditionalStatement struct {
+	expr       Expression
+	thenBranch Statement
+	elseBranch Statement
+	pos        Position
+}
+
+func (s *ConditionalStatement) Position() Position {
+	return s.pos
+}
+
+func (s *ConditionalStatement) TypeCheck(ctx *Context) error {
+	return nil
+	//return ctx.TypeCheckConditionalStatement(s)
+}
+
+func (s *ConditionalStatement) Execute(ctx *Executor) error {
+	return nil
+	//return ctx.ExecuteConditionalStatement(s)
+}
+
+func (s *ConditionalStatement) String() string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "if %s %s", s.expr, s.thenBranch)
+	if s.elseBranch != nil {
+		fmt.Fprintf(&sb, "else %s", s.elseBranch)
+	}
+	return sb.String()
+}
+
+func (s *ConditionalStatement) Equals(other Statement) bool {
+	cond, ok := other.(*ConditionalStatement)
+	if !ok {
+		return false
+	}
+	return s.expr.Equals(cond.expr) &&
+		s.thenBranch.Equals(cond.thenBranch) &&
+		(s.elseBranch == nil && cond.elseBranch == nil || s.elseBranch.Equals(cond.elseBranch))
+}
+
 type ExpressionStatement struct {
 	expr Expression
 	pos  Position

@@ -83,13 +83,48 @@ func (p *Parser) varDeclaration() (Statement, error) {
 }
 
 func (p *Parser) statement() (Statement, error) {
-	if token, ok := p.scan.match(TokenPrint); ok {
-		return p.printStatement(token.Position)
+	if if_, ok := p.scan.match(TokenIf); ok {
+		return p.ifStatement(if_.Position)
 	}
-	if token, ok := p.scan.match(TokenLeftBrace); ok {
-		return p.blockStatement(token.Position)
+	if print, ok := p.scan.match(TokenPrint); ok {
+		return p.printStatement(print.Position)
+	}
+	if lbrace, ok := p.scan.match(TokenLeftBrace); ok {
+		return p.blockStatement(lbrace.Position)
 	}
 	return p.expressionStatement()
+}
+
+func (p *Parser) ifStatement(pos Position) (Statement, error) {
+	var err error
+	stmt := ConditionalStatement{pos: pos}
+	if lparen, ok := p.scan.match(TokenLeftParen); !ok {
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenLeftParen.String(), lparen), lparen.Position,
+		)
+	}
+	stmt.expr, err = p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if rparen, ok := p.scan.match(TokenRightParen); !ok {
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenLeftParen.String(), rparen), rparen.Position,
+		)
+	}
+	stmt.thenBranch, err = p.statement()
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := p.scan.match(TokenElse); !ok {
+		stmt.elseBranch = nil
+		return &stmt, nil
+	}
+	stmt.elseBranch, err = p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return &stmt, nil
 }
 
 func (p *Parser) printStatement(pos Position) (Statement, error) {
