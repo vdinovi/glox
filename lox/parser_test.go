@@ -7,32 +7,33 @@ import (
 )
 
 func TestParseExpressionStatement(t *testing.T) {
-	type exprStmts []ExpressionStatement
 	tests := []struct {
 		text  string
 		stmts []ExpressionStatement
 		err   error
 	}{
-		{text: "1;", stmts: exprStmts{{expr: oneExpr()}}},
-		{text: "3.14;", stmts: exprStmts{{expr: piExpr()}}},
-		{text: "\"str\";", stmts: exprStmts{{expr: strExpr()}}},
-		{text: "true;", stmts: exprStmts{{expr: trueExpr()}}},
-		{text: "false;", stmts: exprStmts{{expr: falseExpr()}}},
-		{text: "nil;", stmts: exprStmts{{expr: nilExpr()}}},
-		{text: "//comment\n1;", stmts: exprStmts{{expr: oneExpr()}}},
-		{text: "1;//comment\n", stmts: exprStmts{{expr: oneExpr()}}},
-		{text: "foo;", stmts: exprStmts{{expr: fooExpr()}}},
-		{text: "-1;", stmts: exprStmts{{expr: uSubExpr(oneExpr())()}}},
-		{text: "--1;", stmts: exprStmts{{expr: uSubExpr(uSubExpr(oneExpr())())()}}},
-		{text: "(1);", stmts: exprStmts{{expr: groupExpr(oneExpr())()}}},
-		{text: "(-1);", stmts: exprStmts{{expr: groupExpr(uSubExpr(oneExpr())())()}}},
-		{text: "1 + 3.14;", stmts: exprStmts{{expr: bAddExpr(oneExpr())(piExpr())()}}},
-		{text: "1 - -3.14;", stmts: exprStmts{{expr: bSubExpr(oneExpr())(uSubExpr(piExpr())())()}}},
-		{text: "-1 * 3.14;", stmts: exprStmts{{expr: bMulExpr(uSubExpr(oneExpr())())(piExpr())()}}},
-		{text: "-1 / -3.14;", stmts: exprStmts{{expr: bDivExpr(uSubExpr(oneExpr())())(uSubExpr(piExpr())())()}}},
-		{text: "(1 + 3.14);", stmts: exprStmts{{expr: groupExpr(bAddExpr(oneExpr())(piExpr())())()}}},
-		{text: "1 + (1 + 3.14);", stmts: exprStmts{{expr: bAddExpr(oneExpr())(groupExpr(bAddExpr(oneExpr())(piExpr())())())()}}},
-		{text: "(1 + 3.14) + 1;", stmts: exprStmts{{expr: bAddExpr(groupExpr(bAddExpr(oneExpr())(piExpr())())())(oneExpr())()}}},
+		{text: "1;", stmts: []ExpressionStatement{{expr: oneExpr()}}},
+		{text: "3.14;", stmts: []ExpressionStatement{{expr: piExpr()}}},
+		{text: "\"str\";", stmts: []ExpressionStatement{{expr: strExpr()}}},
+		{text: "true;", stmts: []ExpressionStatement{{expr: trueExpr()}}},
+		{text: "false;", stmts: []ExpressionStatement{{expr: falseExpr()}}},
+		{text: "nil;", stmts: []ExpressionStatement{{expr: nilExpr()}}},
+		{text: "//comment\n1;", stmts: []ExpressionStatement{{expr: oneExpr()}}},
+		{text: "1;//comment\n", stmts: []ExpressionStatement{{expr: oneExpr()}}},
+		{text: "foo;", stmts: []ExpressionStatement{{expr: fooExpr()}}},
+		{text: "-1;", stmts: []ExpressionStatement{{expr: uSubExpr(oneExpr())()}}},
+		{text: "--1;", stmts: []ExpressionStatement{{expr: uSubExpr(uSubExpr(oneExpr())())()}}},
+		{text: "+1;", stmts: []ExpressionStatement{{expr: uAddExpr(oneExpr())()}}},
+		{text: "++1;", stmts: []ExpressionStatement{{expr: uAddExpr(uAddExpr(oneExpr())())()}}},
+		{text: "(1);", stmts: []ExpressionStatement{{expr: groupExpr(oneExpr())()}}},
+		{text: "(-1);", stmts: []ExpressionStatement{{expr: groupExpr(uSubExpr(oneExpr())())()}}},
+		{text: "1 + 3.14;", stmts: []ExpressionStatement{{expr: bAddExpr(oneExpr())(piExpr())()}}},
+		{text: "1 - -3.14;", stmts: []ExpressionStatement{{expr: bSubExpr(oneExpr())(uSubExpr(piExpr())())()}}},
+		{text: "-1 * 3.14;", stmts: []ExpressionStatement{{expr: bMulExpr(uSubExpr(oneExpr())())(piExpr())()}}},
+		{text: "-1 / -3.14;", stmts: []ExpressionStatement{{expr: bDivExpr(uSubExpr(oneExpr())())(uSubExpr(piExpr())())()}}},
+		{text: "(1 + 3.14);", stmts: []ExpressionStatement{{expr: groupExpr(bAddExpr(oneExpr())(piExpr())())()}}},
+		{text: "1 + (1 + 3.14);", stmts: []ExpressionStatement{{expr: bAddExpr(oneExpr())(groupExpr(bAddExpr(oneExpr())(piExpr())())())()}}},
+		{text: "(1 + 3.14) + 1;", stmts: []ExpressionStatement{{expr: bAddExpr(groupExpr(bAddExpr(oneExpr())(piExpr())())())(oneExpr())()}}},
 	}
 	for _, test := range tests {
 		tokens, err := Scan(strings.NewReader(test.text))
@@ -61,24 +62,23 @@ func TestParseExpressionStatement(t *testing.T) {
 }
 
 func TestParsePrintStatement(t *testing.T) {
-	type printStmts []PrintStatement
 	tests := []struct {
 		text  string
 		stmts []PrintStatement
 		err   error
 	}{
-		{text: "print 1;", stmts: printStmts{{expr: oneExpr()}}},
-		{text: "print 3.14;", stmts: printStmts{{expr: piExpr()}}},
-		{text: "print \"str\";", stmts: printStmts{{expr: strExpr()}}},
-		{text: "print true;", stmts: printStmts{{expr: trueExpr()}}},
-		{text: "print false;", stmts: printStmts{{expr: falseExpr()}}},
-		{text: "print nil;", stmts: printStmts{{expr: nilExpr()}}},
-		{text: "//comment\nprint 1;", stmts: printStmts{{expr: oneExpr()}}},
-		{text: "print 1;//comment\n", stmts: printStmts{{expr: oneExpr()}}},
-		{text: "print foo;", stmts: printStmts{{expr: fooExpr()}}},
-		{text: "print -1;", stmts: printStmts{{expr: uSubExpr(oneExpr())()}}},
-		{text: "print 1 + 3.14;", stmts: printStmts{{expr: bAddExpr(oneExpr())(piExpr())()}}},
-		{text: "print (1);", stmts: printStmts{{expr: groupExpr(oneExpr())()}}},
+		{text: "print 1;", stmts: []PrintStatement{{expr: oneExpr()}}},
+		{text: "print 3.14;", stmts: []PrintStatement{{expr: piExpr()}}},
+		{text: "print \"str\";", stmts: []PrintStatement{{expr: strExpr()}}},
+		{text: "print true;", stmts: []PrintStatement{{expr: trueExpr()}}},
+		{text: "print false;", stmts: []PrintStatement{{expr: falseExpr()}}},
+		{text: "print nil;", stmts: []PrintStatement{{expr: nilExpr()}}},
+		{text: "//comment\nprint 1;", stmts: []PrintStatement{{expr: oneExpr()}}},
+		{text: "print 1;//comment\n", stmts: []PrintStatement{{expr: oneExpr()}}},
+		{text: "print foo;", stmts: []PrintStatement{{expr: fooExpr()}}},
+		{text: "print -1;", stmts: []PrintStatement{{expr: uSubExpr(oneExpr())()}}},
+		{text: "print 1 + 3.14;", stmts: []PrintStatement{{expr: bAddExpr(oneExpr())(piExpr())()}}},
+		{text: "print (1);", stmts: []PrintStatement{{expr: groupExpr(oneExpr())()}}},
 	}
 	for _, test := range tests {
 		tokens, err := Scan(strings.NewReader(test.text))
@@ -107,23 +107,22 @@ func TestParsePrintStatement(t *testing.T) {
 }
 
 func TestParseDeclarationStatement(t *testing.T) {
-	type declStmts []DeclarationStatement
 	tests := []struct {
 		text  string
 		stmts []DeclarationStatement
 		err   error
 	}{
-		{text: "var foo;", stmts: declStmts{{name: "foo", expr: nilExpr()}}},
-		{text: "var foo = 1;", stmts: declStmts{{name: "foo", expr: oneExpr()}}},
-		{text: "var foo = 3.14;", stmts: declStmts{{name: "foo", expr: piExpr()}}},
-		{text: "var foo = \"str\";", stmts: declStmts{{name: "foo", expr: strExpr()}}},
-		{text: "var foo = true;", stmts: declStmts{{name: "foo", expr: trueExpr()}}},
-		{text: "var foo = false;", stmts: declStmts{{name: "foo", expr: falseExpr()}}},
-		{text: "var foo = nil;", stmts: declStmts{{name: "foo", expr: nilExpr()}}},
-		{text: "//comment\nvar foo;", stmts: declStmts{{name: "foo", expr: nilExpr()}}},
-		{text: "var foo;//comment\n", stmts: declStmts{{name: "foo", expr: nilExpr()}}},
-		{text: "var foo = 1 + 3.14;", stmts: declStmts{{name: "foo", expr: bAddExpr(oneExpr())(piExpr())()}}},
-		{text: "var foo = (1);", stmts: declStmts{{name: "foo", expr: groupExpr(oneExpr())()}}},
+		{text: "var foo;", stmts: []DeclarationStatement{{name: "foo", expr: nilExpr()}}},
+		{text: "var foo = 1;", stmts: []DeclarationStatement{{name: "foo", expr: oneExpr()}}},
+		{text: "var foo = 3.14;", stmts: []DeclarationStatement{{name: "foo", expr: piExpr()}}},
+		{text: "var foo = \"str\";", stmts: []DeclarationStatement{{name: "foo", expr: strExpr()}}},
+		{text: "var foo = true;", stmts: []DeclarationStatement{{name: "foo", expr: trueExpr()}}},
+		{text: "var foo = false;", stmts: []DeclarationStatement{{name: "foo", expr: falseExpr()}}},
+		{text: "var foo = nil;", stmts: []DeclarationStatement{{name: "foo", expr: nilExpr()}}},
+		{text: "//comment\nvar foo;", stmts: []DeclarationStatement{{name: "foo", expr: nilExpr()}}},
+		{text: "var foo;//comment\n", stmts: []DeclarationStatement{{name: "foo", expr: nilExpr()}}},
+		{text: "var foo = 1 + 3.14;", stmts: []DeclarationStatement{{name: "foo", expr: bAddExpr(oneExpr())(piExpr())()}}},
+		{text: "var foo = (1);", stmts: []DeclarationStatement{{name: "foo", expr: groupExpr(oneExpr())()}}},
 	}
 	for _, test := range tests {
 		tokens, err := Scan(strings.NewReader(test.text))
