@@ -25,7 +25,9 @@ func (p *Parser) Parse() ([]Statement, error) {
 	log.Debug().Msgf("(parser) scanning %d tokens", len(p.scan.tokens))
 	stmts := []Statement{}
 	for !p.done() {
-		p.skipComments()
+		if p.skipComments(); p.done() {
+			break
+		}
 		stmt, err := p.declaration()
 		if err != nil {
 			log.Error().Msgf("(parser) error: %s", err)

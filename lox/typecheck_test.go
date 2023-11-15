@@ -1,7 +1,6 @@
 package lox
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -29,22 +28,29 @@ print a = "test";
 }
 
 func TestTypecheckPrintStatement(t *testing.T) {
-	start := Position{1, 1}
 	tests := []struct {
-		err  error
+		text string
 		stmt PrintStatement
+		err  error
 	}{
-		{stmt: PrintStatement{expr: &NumericExpression{value: 1, pos: start}, pos: start}},
-		{stmt: PrintStatement{expr: &StringExpression{value: "str", pos: start}, pos: start}},
-		{stmt: PrintStatement{expr: &BooleanExpression{value: true, pos: start}, pos: start}},
-		{stmt: PrintStatement{expr: &BooleanExpression{value: false, pos: start}, pos: start}},
-		{stmt: PrintStatement{expr: &NilExpression{pos: start}, pos: start}},
-		//{stmt: PrintStatement{expr: VariableExpression{name: "foo", pos: start}, pos: start}},
+		{text: "print 1;", stmt: PrintStatement{expr: oneExpr()}},
+		{text: "print \"str\";", stmt: PrintStatement{expr: strExpr()}},
+		{text: "print true;", stmt: PrintStatement{expr: trueExpr()}},
+		{text: "print false;", stmt: PrintStatement{expr: falseExpr()}},
+		{text: "print nil;", stmt: PrintStatement{expr: nilExpr()}},
+		{text: "print foo;", err: NewTypeError(NewUndefinedVariableError("foo"), Position{1, 7})},
 	}
 
 	for _, test := range tests {
+		program := typecheckTestParse(t, test.text, 1)
+		var print *PrintStatement
+		var ok bool
+		if print, ok = program[0].(*PrintStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, program[0])
+			continue
+		}
 		ctx := NewContext()
-		err := ctx.TypeCheckPrintStatement(&test.stmt)
+		err := ctx.TypeCheckPrintStatement(print)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck of statement %v to produce error %q, but got %q", test.stmt, test.err, err)
@@ -58,23 +64,66 @@ func TestTypecheckPrintStatement(t *testing.T) {
 }
 
 func TestTypeCheckExpressionStatement(t *testing.T) {
-	// TODO: Update to use new test helpers
-	start := Position{1, 1}
 	tests := []struct {
-		err  error
+		text string
 		stmt ExpressionStatement
+		err  error
 	}{
-		{stmt: ExpressionStatement{expr: &NumericExpression{value: 1, pos: start}, pos: start}},
-		{stmt: ExpressionStatement{expr: &StringExpression{value: "str", pos: start}, pos: start}},
-		{stmt: ExpressionStatement{expr: &BooleanExpression{value: true, pos: start}, pos: start}},
-		{stmt: ExpressionStatement{expr: &BooleanExpression{value: false, pos: start}, pos: start}},
-		{stmt: ExpressionStatement{expr: &NilExpression{pos: start}, pos: start}},
-		//{stmt: ExpressionStatement{expr: VariableExpression{name: "foo", pos: start}, pos: start}},
+		{text: "1;", stmt: ExpressionStatement{expr: oneExpr()}},
+		{text: "\"str\";", stmt: ExpressionStatement{expr: strExpr()}},
+		{text: "true;", stmt: ExpressionStatement{expr: trueExpr()}},
+		{text: "false;", stmt: ExpressionStatement{expr: falseExpr()}},
+		{text: "nil;", stmt: ExpressionStatement{expr: nilExpr()}},
+		{text: "foo;", err: NewTypeError(NewUndefinedVariableError("foo"), Position{1, 1})},
 	}
 
 	for _, test := range tests {
+		program := typecheckTestParse(t, test.text, 1)
+		var expr *ExpressionStatement
+		var ok bool
+		if expr, ok = program[0].(*ExpressionStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, program[0])
+			continue
+		}
 		ctx := NewContext()
-		err := ctx.TypeCheckExpressionStatement(&test.stmt)
+		err := ctx.TypeCheckExpressionStatement(expr)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected typecheck of statement %v to produce error %q, but got %q", test.stmt, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Error(err)
+			continue
+		}
+	}
+}
+
+func TestTypeBlockStatement(t *testing.T) {
+	tests := []struct {
+		text string
+		stmt BlockStatement
+		err  error
+	}{
+		{text: "{1;}", stmt: BlockStatement{stmts: []Statement{&ExpressionStatement{expr: oneExpr()}}}},
+		{text: "{\"str\";}", stmt: BlockStatement{stmts: []Statement{&ExpressionStatement{expr: strExpr()}}}},
+		{text: "{true;}", stmt: BlockStatement{stmts: []Statement{&ExpressionStatement{expr: trueExpr()}}}},
+		{text: "{false;}", stmt: BlockStatement{stmts: []Statement{&ExpressionStatement{expr: falseExpr()}}}},
+		{text: "{nil;}", stmt: BlockStatement{stmts: []Statement{&ExpressionStatement{expr: nilExpr()}}}},
+		{text: "{foo;}", err: NewTypeError(NewUndefinedVariableError("foo"), Position{1, 2})},
+		{text: "{var foo = 1; print foo;}", stmt: BlockStatement{stmts: []Statement{&DeclarationStatement{name: "foo", expr: oneExpr()}, &ExpressionStatement{expr: nilExpr()}}}},
+	}
+
+	for _, test := range tests {
+		program := typecheckTestParse(t, test.text, 1)
+		var block *BlockStatement
+		var ok bool
+		if block, ok = program[0].(*BlockStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, program[0])
+			continue
+		}
+		ctx := NewContext()
+		err := ctx.TypeCheckBlockStatement(block)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck of statement %v to produce error %q, but got %q", test.stmt, test.err, err)
@@ -88,45 +137,6 @@ func TestTypeCheckExpressionStatement(t *testing.T) {
 }
 
 func TestTypeCheckUnaryExpression(t *testing.T) {
-	add := Operator{Type: OpAdd, Lexem: "+"}
-	sub := Operator{Type: OpSubtract, Lexem: "+"}
-	pos := Position{1, 1}
-	one := numExpr(1)
-	pi := numExpr(3.14)
-	tests := []struct {
-		typ  Type
-		err  error
-		expr UnaryExpression
-	}{
-		{typ: TypeNumeric, expr: UnaryExpression{op: sub, pos: pos, right: one()}},
-		{typ: TypeNumeric, expr: UnaryExpression{op: sub, pos: pos, right: pi()}},
-		{typ: TypeNumeric, expr: UnaryExpression{op: add, pos: pos, right: one()}},
-		{typ: TypeNumeric, expr: UnaryExpression{op: add, pos: pos, right: pi()}},
-		// panic: runtime error: comparing uncomparable type lox.InvalidOperatorForTypeError
-		// 	{err: NewTypeError(NewInvalidOperatorForTypeError(sub.Type, TypeString), pos), expr: UnaryExpression{op: sub, pos: pos, right: str}},
-		// 	{err: NewTypeError(NewInvalidOperatorForTypeError(add.Type, TypeString), pos), expr: UnaryExpression{op: add, pos: pos, right: str}},
-		// 	{err: NewTypeError(NewInvalidOperatorForTypeError(sub.Type, TypeBoolean), pos), expr: UnaryExpression{op: sub, pos: pos, right: yes}},
-		// 	{err: NewTypeError(NewInvalidOperatorForTypeError(add.Type, TypeBoolean), pos), expr: UnaryExpression{op: add, pos: pos, right: yes}},
-	}
-
-	for _, test := range tests {
-		ctx := NewContext()
-		_, typ, err := ctx.TypeCheckUnaryExpression(&test.expr)
-		if test.err != nil {
-			if err != test.err {
-				t.Errorf("Expected typecheck of %v to produce error %q, but got %q", test.expr, test.err, err)
-				continue
-			}
-		} else if err != nil {
-			t.Error(err)
-			continue
-		}
-
-		if !reflect.DeepEqual(typ, test.typ) {
-			t.Errorf("Expected typecheck of %v to produce type %s, but got %s", test.expr, test.typ, typ)
-		}
-	}
-
 	// TODO
 }
 
@@ -140,4 +150,23 @@ func TypeCheckGroupingExpression(t *testing.T) {
 
 func TypeCheckVariableExpression(t *testing.T) {
 	// TODO
+}
+
+func typecheckTestParse(t *testing.T, text string, numStatements int) []Statement {
+	t.Helper()
+	tokens, err := Scan(strings.NewReader(text))
+	if err != nil {
+		t.Errorf("Unexpected error in %q: %s", text, err)
+		return nil
+	}
+	program, err := Parse(tokens)
+	if err != nil {
+		t.Errorf("Unexpected error in %q: %s", text, err)
+		return nil
+	}
+	if len(program) != numStatements {
+		t.Errorf("%q should have parsed to %d statements, but got %d", text, numStatements, len(program))
+		return nil
+	}
+	return program
 }

@@ -8,44 +8,31 @@ import (
 
 func TestParseExpressionStatement(t *testing.T) {
 	type exprStmts []ExpressionStatement
-	one := numExpr(1)
-	pi := numExpr(3.14)
-	str := strExpr("str")
-	yes := boolExpr(true)
-	no := boolExpr(false)
-	none := nilExpr()
-	foo := varExpr("foo")
-	neg := unaryExpr(Operator{Type: OpSubtract, Lexem: "-"})
-	bAdd := binaryExpr(Operator{Type: OpAdd, Lexem: "+"})
-	bSub := binaryExpr(Operator{Type: OpSubtract, Lexem: "-"})
-	bMul := binaryExpr(Operator{Type: OpMultiply, Lexem: "*"})
-	bDiv := binaryExpr(Operator{Type: OpDivide, Lexem: "/"})
-	group := groupExpr
 	tests := []struct {
 		text  string
 		stmts []ExpressionStatement
 		err   error
 	}{
-		{text: "1;", stmts: exprStmts{{expr: one()}}},
-		{text: "3.14;", stmts: exprStmts{{expr: pi()}}},
-		{text: "\"str\";", stmts: exprStmts{{expr: str()}}},
-		{text: "true;", stmts: exprStmts{{expr: yes()}}},
-		{text: "false;", stmts: exprStmts{{expr: no()}}},
-		{text: "nil;", stmts: exprStmts{{expr: none()}}},
-		{text: "//comment\n1;", stmts: exprStmts{{expr: one()}}},
-		{text: "1;//comment\n", stmts: exprStmts{{expr: one()}}},
-		{text: "foo;", stmts: exprStmts{{expr: foo()}}},
-		{text: "-1;", stmts: exprStmts{{expr: neg(one())()}}},
-		{text: "--1;", stmts: exprStmts{{expr: neg(neg(one())())()}}},
-		{text: "(1);", stmts: exprStmts{{expr: group(one())()}}},
-		{text: "(-1);", stmts: exprStmts{{expr: group(neg(one())())()}}},
-		{text: "1 + 3.14;", stmts: exprStmts{{expr: bAdd(one())(pi())()}}},
-		{text: "1 - -3.14;", stmts: exprStmts{{expr: bSub(one())(neg(pi())())()}}},
-		{text: "-1 * 3.14;", stmts: exprStmts{{expr: bMul(neg(one())())(pi())()}}},
-		{text: "-1 / -3.14;", stmts: exprStmts{{expr: bDiv(neg(one())())(neg(pi())())()}}},
-		{text: "(1 + 3.14);", stmts: exprStmts{{expr: group(bAdd(one())(pi())())()}}},
-		{text: "1 + (1 + 3.14);", stmts: exprStmts{{expr: bAdd(one())(group(bAdd(one())(pi())())())()}}},
-		{text: "(1 + 3.14) + 1;", stmts: exprStmts{{expr: bAdd(group(bAdd(one())(pi())())())(one())()}}},
+		{text: "1;", stmts: exprStmts{{expr: oneExpr()}}},
+		{text: "3.14;", stmts: exprStmts{{expr: piExpr()}}},
+		{text: "\"str\";", stmts: exprStmts{{expr: strExpr()}}},
+		{text: "true;", stmts: exprStmts{{expr: trueExpr()}}},
+		{text: "false;", stmts: exprStmts{{expr: falseExpr()}}},
+		{text: "nil;", stmts: exprStmts{{expr: nilExpr()}}},
+		{text: "//comment\n1;", stmts: exprStmts{{expr: oneExpr()}}},
+		{text: "1;//comment\n", stmts: exprStmts{{expr: oneExpr()}}},
+		{text: "foo;", stmts: exprStmts{{expr: fooExpr()}}},
+		{text: "-1;", stmts: exprStmts{{expr: uSubExpr(oneExpr())()}}},
+		{text: "--1;", stmts: exprStmts{{expr: uSubExpr(uSubExpr(oneExpr())())()}}},
+		{text: "(1);", stmts: exprStmts{{expr: groupExpr(oneExpr())()}}},
+		{text: "(-1);", stmts: exprStmts{{expr: groupExpr(uSubExpr(oneExpr())())()}}},
+		{text: "1 + 3.14;", stmts: exprStmts{{expr: bAddExpr(oneExpr())(piExpr())()}}},
+		{text: "1 - -3.14;", stmts: exprStmts{{expr: bSubExpr(oneExpr())(uSubExpr(piExpr())())()}}},
+		{text: "-1 * 3.14;", stmts: exprStmts{{expr: bMulExpr(uSubExpr(oneExpr())())(piExpr())()}}},
+		{text: "-1 / -3.14;", stmts: exprStmts{{expr: bDivExpr(uSubExpr(oneExpr())())(uSubExpr(piExpr())())()}}},
+		{text: "(1 + 3.14);", stmts: exprStmts{{expr: groupExpr(bAddExpr(oneExpr())(piExpr())())()}}},
+		{text: "1 + (1 + 3.14);", stmts: exprStmts{{expr: bAddExpr(oneExpr())(groupExpr(bAddExpr(oneExpr())(piExpr())())())()}}},
+		{text: "(1 + 3.14) + 1;", stmts: exprStmts{{expr: bAddExpr(groupExpr(bAddExpr(oneExpr())(piExpr())())())(oneExpr())()}}},
 	}
 	for _, test := range tests {
 		tokens, err := Scan(strings.NewReader(test.text))
@@ -66,7 +53,7 @@ func TestParseExpressionStatement(t *testing.T) {
 
 		for i, want := range test.stmts {
 			if got := program[i]; !got.Equals(&want) {
-				t.Errorf("Expected %q to be %v, but got %v", test.text, want, got)
+				t.Errorf("Expected %q to be %q, but got %q", test.text, want.String(), got.String())
 				break
 			}
 		}
@@ -75,34 +62,23 @@ func TestParseExpressionStatement(t *testing.T) {
 
 func TestParsePrintStatement(t *testing.T) {
 	type printStmts []PrintStatement
-	one := numExpr(1)
-	pi := numExpr(3.14)
-	str := strExpr("str")
-	yes := boolExpr(true)
-	no := boolExpr(false)
-	none := nilExpr()
-	foo := varExpr("foo")
-	neg := unaryExpr(Operator{Type: OpSubtract, Lexem: "-"})
-	bAdd := binaryExpr(Operator{Type: OpAdd, Lexem: "+"})
-	group := groupExpr
-
 	tests := []struct {
 		text  string
 		stmts []PrintStatement
 		err   error
 	}{
-		{text: "print 1;", stmts: printStmts{{expr: one()}}},
-		{text: "print 3.14;", stmts: printStmts{{expr: pi()}}},
-		{text: "print \"str\";", stmts: printStmts{{expr: str()}}},
-		{text: "print true;", stmts: printStmts{{expr: yes()}}},
-		{text: "print false;", stmts: printStmts{{expr: no()}}},
-		{text: "print nil;", stmts: printStmts{{expr: none()}}},
-		{text: "//comment\nprint 1;", stmts: printStmts{{expr: one()}}},
-		{text: "print 1;//comment\n", stmts: printStmts{{expr: one()}}},
-		{text: "print foo;", stmts: printStmts{{expr: foo()}}},
-		{text: "print -1;", stmts: printStmts{{expr: neg(one())()}}},
-		{text: "print 1 + 3.14;", stmts: printStmts{{expr: bAdd(one())(pi())()}}},
-		{text: "print (1);", stmts: printStmts{{expr: group(one())()}}},
+		{text: "print 1;", stmts: printStmts{{expr: oneExpr()}}},
+		{text: "print 3.14;", stmts: printStmts{{expr: piExpr()}}},
+		{text: "print \"str\";", stmts: printStmts{{expr: strExpr()}}},
+		{text: "print true;", stmts: printStmts{{expr: trueExpr()}}},
+		{text: "print false;", stmts: printStmts{{expr: falseExpr()}}},
+		{text: "print nil;", stmts: printStmts{{expr: nilExpr()}}},
+		{text: "//comment\nprint 1;", stmts: printStmts{{expr: oneExpr()}}},
+		{text: "print 1;//comment\n", stmts: printStmts{{expr: oneExpr()}}},
+		{text: "print foo;", stmts: printStmts{{expr: fooExpr()}}},
+		{text: "print -1;", stmts: printStmts{{expr: uSubExpr(oneExpr())()}}},
+		{text: "print 1 + 3.14;", stmts: printStmts{{expr: bAddExpr(oneExpr())(piExpr())()}}},
+		{text: "print (1);", stmts: printStmts{{expr: groupExpr(oneExpr())()}}},
 	}
 	for _, test := range tests {
 		tokens, err := Scan(strings.NewReader(test.text))
@@ -123,7 +99,7 @@ func TestParsePrintStatement(t *testing.T) {
 
 		for i, want := range test.stmts {
 			if got := program[i]; !got.Equals(&want) {
-				t.Errorf("Expected %q to be %v, but got %v", test.text, want, got)
+				t.Errorf("Expected %q to be %q, but got %q", test.text, want.String(), got.String())
 				break
 			}
 		}
@@ -132,32 +108,22 @@ func TestParsePrintStatement(t *testing.T) {
 
 func TestParseDeclarationStatement(t *testing.T) {
 	type declStmts []DeclarationStatement
-	one := numExpr(1)
-	pi := numExpr(3.14)
-	str := strExpr("str")
-	yes := boolExpr(true)
-	no := boolExpr(false)
-	none := nilExpr()
-	bAdd := binaryExpr(Operator{Type: OpAdd, Lexem: "+"})
-	group := groupExpr
-
 	tests := []struct {
 		text  string
 		stmts []DeclarationStatement
 		err   error
 	}{
-		{text: "var foo;", stmts: declStmts{{name: "foo", expr: none()}}},
-		{text: "var foo = 1;", stmts: declStmts{{name: "foo", expr: one()}}},
-		{text: "var foo = 3.14;", stmts: declStmts{{name: "foo", expr: pi()}}},
-		{text: "var foo = \"str\";", stmts: declStmts{{name: "foo", expr: str()}}},
-		{text: "var foo = true;", stmts: declStmts{{name: "foo", expr: yes()}}},
-		{text: "var foo = false;", stmts: declStmts{{name: "foo", expr: no()}}},
-		{text: "var foo = nil;", stmts: declStmts{{name: "foo", expr: none()}}},
-		{text: "//comment\nvar foo;", stmts: declStmts{{name: "foo", expr: none()}}},
-		// TODO: Fixme
-		//{text: "var foo;//comment\n", stmts: declStmts{{name: "foo", expr: one()}}},
-		{text: "var foo = 1 + 3.14;", stmts: declStmts{{name: "foo", expr: bAdd(one())(pi())()}}},
-		{text: "var foo = (1);", stmts: declStmts{{name: "foo", expr: group(one())()}}},
+		{text: "var foo;", stmts: declStmts{{name: "foo", expr: nilExpr()}}},
+		{text: "var foo = 1;", stmts: declStmts{{name: "foo", expr: oneExpr()}}},
+		{text: "var foo = 3.14;", stmts: declStmts{{name: "foo", expr: piExpr()}}},
+		{text: "var foo = \"str\";", stmts: declStmts{{name: "foo", expr: strExpr()}}},
+		{text: "var foo = true;", stmts: declStmts{{name: "foo", expr: trueExpr()}}},
+		{text: "var foo = false;", stmts: declStmts{{name: "foo", expr: falseExpr()}}},
+		{text: "var foo = nil;", stmts: declStmts{{name: "foo", expr: nilExpr()}}},
+		{text: "//comment\nvar foo;", stmts: declStmts{{name: "foo", expr: nilExpr()}}},
+		{text: "var foo;//comment\n", stmts: declStmts{{name: "foo", expr: nilExpr()}}},
+		{text: "var foo = 1 + 3.14;", stmts: declStmts{{name: "foo", expr: bAddExpr(oneExpr())(piExpr())()}}},
+		{text: "var foo = (1);", stmts: declStmts{{name: "foo", expr: groupExpr(oneExpr())()}}},
 	}
 	for _, test := range tests {
 		tokens, err := Scan(strings.NewReader(test.text))
@@ -178,7 +144,7 @@ func TestParseDeclarationStatement(t *testing.T) {
 
 		for i, want := range test.stmts {
 			if got := program[i]; !got.Equals(&want) {
-				t.Errorf("Expected %q to be %v, but got %v", test.text, want, got)
+				t.Errorf("Expected %q to be %q, but got %q", test.text, want.String(), got.String())
 				break
 			}
 		}
@@ -186,7 +152,41 @@ func TestParseDeclarationStatement(t *testing.T) {
 }
 
 func TestParseBlockStatement(t *testing.T) {
-	// TODO: Tests
+	tests := []struct {
+		text  string
+		stmts []BlockStatement
+		err   error
+	}{
+		{text: "{var foo;}", stmts: []BlockStatement{{stmts: []Statement{&DeclarationStatement{name: "foo", expr: nilExpr()}}}}},
+		{text: "{1;}", stmts: []BlockStatement{{stmts: []Statement{&ExpressionStatement{expr: oneExpr()}}}}},
+		{text: "{print 1;}", stmts: []BlockStatement{{stmts: []Statement{&PrintStatement{expr: oneExpr()}}}}},
+		{text: "{1; 1;}", stmts: []BlockStatement{{stmts: []Statement{&ExpressionStatement{expr: oneExpr()}, &ExpressionStatement{expr: oneExpr()}}}}},
+		{text: "{1; {1;}}", stmts: []BlockStatement{{stmts: []Statement{&ExpressionStatement{expr: oneExpr()}, &BlockStatement{stmts: []Statement{&ExpressionStatement{expr: oneExpr()}}}}}}},
+	}
+	for _, test := range tests {
+		tokens, err := Scan(strings.NewReader(test.text))
+		if err != nil {
+			t.Errorf("Unexpected error in %q: %s", test.text, err)
+			continue
+		}
+		program, err := Parse(tokens)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Errorf("Unexpected error in %q: %s", test.text, err)
+			continue
+		}
+
+		for i, want := range test.stmts {
+			if got := program[i]; !got.Equals(&want) {
+				t.Errorf("Expected %q to be %s, but got %s", test.text, want.String(), got.String())
+				break
+			}
+		}
+	}
 }
 
 func TestParserProgram(t *testing.T) {
