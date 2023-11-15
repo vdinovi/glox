@@ -23,6 +23,7 @@ var subOp = Operator{Type: OpSubtract, Lexem: "-"}
 var mulOp = Operator{Type: OpMultiply, Lexem: "*"}
 var divOp = Operator{Type: OpDivide, Lexem: "/"}
 
+var zeroExpr = makeNumericExpr(0)
 var oneExpr = makeNumericExpr(1)
 var piExpr = makeNumericExpr(3.14)
 var strExpr = makeStringExpr("str")

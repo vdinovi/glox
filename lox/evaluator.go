@@ -15,13 +15,13 @@ func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ 
 	case TypeNumeric:
 		val, err = ctx.evalUnaryNumeric(e, right)
 	default:
-		err = NewTypeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right.Type()), e.Position())
+		err = NewRuntimeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right.Type()), e.Position())
 	}
 	if err != nil {
 		return nil, ErrType, err
 	}
 	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
-	return val, typ, nil
+	return val, typ, err
 
 }
 
@@ -36,7 +36,7 @@ func (ctx *Context) EvaluateBinaryExpression(e *BinaryExpression) (val Value, ty
 		return nil, ErrType, err
 	}
 	if left.Type() != right.Type() {
-		return nil, ErrType, NewTypeError(NewTypeMismatchError(left.Type(), right.Type()), e.Position())
+		return nil, ErrType, NewRuntimeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
 	}
 	switch typ := left.Type(); typ {
 	case TypeString:
@@ -46,7 +46,7 @@ func (ctx *Context) EvaluateBinaryExpression(e *BinaryExpression) (val Value, ty
 	case TypeBoolean:
 		val, err = ctx.evalBinaryBoolean(e, left, right)
 	default:
-		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
+		err = NewRuntimeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
 	}
 	if err != nil {
 		return nil, ErrType, err
@@ -98,10 +98,12 @@ func (ctx *Context) evalUnaryNumeric(e *UnaryExpression, right Value) (val Value
 	switch e.op.Type {
 	case OpSubtract:
 		val = ValueNumeric(-num)
+	case OpAdd:
+		val = ValueNumeric(num)
 	default:
-		err = NewTypeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right.Type()), e.Position())
+		err = NewRuntimeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right.Type()), e.Position())
 	}
-	return val, nil
+	return val, err
 }
 
 func (ctx *Context) evalBinaryString(e *BinaryExpression, left, right Value) (val Value, err error) {
@@ -126,9 +128,9 @@ func (ctx *Context) evalBinaryString(e *BinaryExpression, left, right Value) (va
 	case OpNotEqualTo:
 		val = ValueBoolean(l != r)
 	default:
-		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
+		err = NewRuntimeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
 	}
-	return val, nil
+	return val, err
 }
 
 func (ctx *Context) evalBinaryNumeric(e *BinaryExpression, left, right Value) (val Value, err error) {
@@ -153,7 +155,15 @@ func (ctx *Context) evalBinaryNumeric(e *BinaryExpression, left, right Value) (v
 	case OpMultiply:
 		val = ValueNumeric(l * r)
 	case OpDivide:
-		val = ValueNumeric(l / r)
+		if r == 0 {
+			if l == 0 {
+				val = ValueNumeric(0)
+			} else {
+				err = NewRuntimeError(NewDivideByZeroError(ValueNumeric(l), ValueNumeric(r)), e.Position())
+			}
+		} else {
+			val = ValueNumeric(l / r)
+		}
 	case OpEqualTo:
 		val = ValueBoolean(l == r)
 	case OpNotEqualTo:
@@ -167,9 +177,9 @@ func (ctx *Context) evalBinaryNumeric(e *BinaryExpression, left, right Value) (v
 	case OpGreaterThanOrEqualTo:
 		val = ValueBoolean(l >= r)
 	default:
-		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
+		err = NewRuntimeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
 	}
-	return val, nil
+	return val, err
 }
 
 func (ctx *Context) evalBinaryBoolean(e *BinaryExpression, left, right Value) (val Value, err error) {
@@ -192,7 +202,7 @@ func (ctx *Context) evalBinaryBoolean(e *BinaryExpression, left, right Value) (v
 	case OpNotEqualTo:
 		val = ValueBoolean(l != r)
 	default:
-		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
+		err = NewRuntimeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left.Type(), right.Type()), e.Position())
 	}
-	return val, nil
+	return val, err
 }

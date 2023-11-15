@@ -69,3 +69,17 @@ func (e UndefinedVariableError) Error() string {
 func NewUndefinedVariableError(name string) UndefinedVariableError {
 	return UndefinedVariableError{Name: name}
 }
+
+// Error indicating division by zero
+type DivideByZeroError struct {
+	Numerator   ValueNumeric
+	Denominator ValueNumeric
+}
+
+func (e DivideByZeroError) Error() string {
+	return fmt.Sprintf("Divide by zero (%s / %s)", e.Numerator, e.Denominator)
+}
+
+func NewDivideByZeroError(num, denom ValueNumeric) DivideByZeroError {
+	return DivideByZeroError{Numerator: num, Denominator: denom}
+}

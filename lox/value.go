@@ -2,6 +2,7 @@ package lox
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 )
 
@@ -18,6 +19,7 @@ type Value interface {
 	Unwrap() any
 	Truthy() bool
 	Type() Type
+	Equals(Value) bool
 }
 
 type ValueString string
@@ -38,6 +40,15 @@ func (v ValueString) Truthy() bool {
 	return true
 }
 
+func (v ValueString) Equals(other Value) bool {
+	var ok bool
+	var str ValueString
+	if str, ok = other.(ValueString); !ok {
+		return false
+	}
+	return string(v) == string(str)
+}
+
 type ValueNumeric float64
 
 func (v ValueNumeric) String() string {
@@ -54,6 +65,19 @@ func (v ValueNumeric) Unwrap() any {
 
 func (v ValueNumeric) Truthy() bool {
 	return true
+}
+
+func (v ValueNumeric) Equals(other Value) bool {
+	var ok bool
+	var num ValueNumeric
+	if num, ok = other.(ValueNumeric); !ok {
+		return false
+	}
+	return v.approxEqual(num, 1e-9)
+}
+
+func (v ValueNumeric) approxEqual(other ValueNumeric, err float64) bool {
+	return math.Abs(float64(v)-float64(other)) <= err
 }
 
 type ValueBoolean bool
@@ -77,6 +101,15 @@ func (v ValueBoolean) Truthy() bool {
 	return bool(v)
 }
 
+func (v ValueBoolean) Equals(other Value) bool {
+	var ok bool
+	var b ValueBoolean
+	if b, ok = other.(ValueBoolean); !ok {
+		return false
+	}
+	return bool(v) == bool(b)
+}
+
 type ValueNil struct{}
 
 func (v ValueNil) String() string {
@@ -93,4 +126,9 @@ func (v ValueNil) Unwrap() any {
 
 func (v ValueNil) Truthy() bool {
 	return false
+}
+
+func (v ValueNil) Equals(other Value) bool {
+	_, ok := other.(ValueNil)
+	return ok
 }
