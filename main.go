@@ -88,5 +88,8 @@ func execute(executor *lox.Executor, reader io.Reader) error {
 	if err != nil {
 		return err
 	}
+	if err = executor.TypeCheckProgram(stmts); err != nil {
+		return err
+	}
 	return executor.ExecuteProgram(stmts)
 }

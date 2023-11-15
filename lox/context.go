@@ -1,6 +1,8 @@
 package lox
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Environment[T any] struct {
 	parent   *Environment[T]

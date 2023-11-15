@@ -21,6 +21,7 @@ func NewExecutor(printer io.Writer) *Executor {
 func (x *Executor) TypeCheckProgram(stmts []Statement) error {
 	for _, stmt := range stmts {
 		if err := x.TypeCheck(stmt); err != nil {
+			log.Error().Msgf("(typechecker) error in statement %q: %s", stmt, err)
 			return err
 		}
 	}
@@ -34,6 +35,7 @@ func (x *Executor) TypeCheck(stmt Statement) error {
 func (x *Executor) ExecuteProgram(stmts []Statement) error {
 	for _, stmt := range stmts {
 		if err := x.Execute(stmt); err != nil {
+			log.Error().Msgf("(executor) error in statement %q: %s", stmt, err)
 			return err
 		}
 	}
@@ -45,46 +47,29 @@ func (x *Executor) Execute(stmt Statement) error {
 }
 
 func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
-	log.Debug().Msgf("(executor) executing %q", s)
+	log.Debug().Msgf("(executor) enter scope")
 	x.ctx.PushEnvironment()
-	defer func() { x.ctx.PopEnvironment() }()
+	defer x.ctx.PopEnvironment()
+	defer log.Debug().Msgf("(executor) exit scope")
 	for _, stmt := range s.stmts {
-		if err := stmt.TypeCheck(x.ctx); err != nil {
-			log.Error().Msgf("(executor) error in %q: %s", s, err)
-			return err
-		}
 		if err := stmt.Execute(x); err != nil {
-			log.Error().Msgf("(executor) error in %q: %s", s, err)
 			return err
 		}
 	}
-	log.Debug().Msg("(executor) success")
 	return nil
 }
 
 func (x *Executor) ExecuteExpressionStatement(s *ExpressionStatement) error {
-	log.Debug().Msgf("(executor) executing %q", s)
 	_, err := s.expr.Evaluate(x.ctx)
-	if err != nil {
-		log.Error().Msgf("(executor) error in %q: %s", s, err)
-		return err
-	}
-	log.Debug().Msg("(executor) success")
-	return nil
+	return err
 }
 
 func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
-	log.Debug().Msgf("(executor) executing %q", s)
 	val, err := s.expr.Evaluate(x.ctx)
 	if err == nil {
 		err = x.runtime.Print(val.String())
 	}
-	if err != nil {
-		log.Error().Msgf("(executor) error in %q: %s", s, err)
-		return err
-	}
-	log.Debug().Msgf("(executor) success: printed %s", val)
-	return nil
+	return err
 }
 
 func (x *Executor) ExecuteDeclarationStatement(s *DeclarationStatement) error {
@@ -92,14 +77,6 @@ func (x *Executor) ExecuteDeclarationStatement(s *DeclarationStatement) error {
 	val, err := s.expr.Evaluate(x.ctx)
 	if err == nil {
 		err = x.ctx.values.Set(s.name, val)
-		if err == nil {
-			err = x.ctx.types.Set(s.name, val.Type())
-		}
 	}
-	if err != nil {
-		log.Error().Msgf("(executor) error in %q: %s", s, err)
-		return err
-	}
-	log.Debug().Msgf("(executor) success: %q = %s", s.name, val)
-	return nil
+	return err
 }

@@ -188,7 +188,7 @@ func (e *VariableExpression) Position() Position {
 }
 
 func (e *VariableExpression) String() string {
-	return e.name
+	return fmt.Sprintf("Var(%s)", e.name)
 }
 
 func (e *VariableExpression) Type() Type {
@@ -224,7 +224,7 @@ func (e *StringExpression) Position() Position {
 }
 
 func (e *StringExpression) String() string {
-	return e.value
+	return fmt.Sprintf("\"%s\"", string(e.value))
 }
 
 func (e *StringExpression) Type() Type {

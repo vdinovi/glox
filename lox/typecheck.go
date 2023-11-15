@@ -16,8 +16,10 @@ func (ctx *Context) TypeCheckProgram(stmts []Statement) error {
 }
 
 func (ctx *Context) TypeCheckBlockStatement(s *BlockStatement) error {
-	ctx.types = NewEnvironment(ctx.types)
-	defer func() { ctx.types = ctx.types.parent }()
+	log.Debug().Msgf("(typechecker) enter scope")
+	ctx.PushEnvironment()
+	defer ctx.PopEnvironment()
+	defer log.Debug().Msgf("(typechecker) exit scope")
 	for _, stmt := range s.stmts {
 		if err := stmt.TypeCheck(ctx); err != nil {
 			return err
@@ -27,33 +29,33 @@ func (ctx *Context) TypeCheckBlockStatement(s *BlockStatement) error {
 }
 
 func (ctx *Context) TypeCheckPrintStatement(s *PrintStatement) error {
-	_, err := s.expr.TypeCheck(ctx)
-	if err != nil {
-		log.Error().Msgf("(typechecker) error in %q: %s", s, err)
-		return err
-	}
-	return nil
+	_, err := ctx.typeCheckExpression(s.expr)
+	return err
 }
 
 func (ctx *Context) TypeCheckExpressionStatement(s *ExpressionStatement) error {
-	_, err := s.expr.TypeCheck(ctx)
-	if err != nil {
-		log.Error().Msgf("(typechecker) error in %q: %s", s, err)
-		return err
-	}
-	return nil
+	_, err := ctx.typeCheckExpression(s.expr)
+	return err
 }
 
 func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error {
-	typ, err := s.expr.TypeCheck(ctx)
+	typ, err := ctx.typeCheckExpression(s.expr)
 	if err == nil {
 		err = ctx.types.Set(s.name, typ)
 	}
-	if err != nil {
-		log.Error().Msgf("(typechecker) error in %q: %s", s, err)
-		return err
+	if err == nil {
+		log.Debug().Msgf("(typechecker) type(%s) <- %s", s.name, typ)
 	}
-	return nil
+	return err
+}
+
+func (ctx *Context) typeCheckExpression(e Expression) (typ Type, err error) {
+	typ, err = e.TypeCheck(ctx)
+	if err != nil {
+		return ErrType, err
+	}
+	log.Debug().Msgf("(typechecker) type(%s) => %s", e, typ)
+	return typ, nil
 }
 
 func (ctx *Context) TypeCheckUnaryExpression(e *UnaryExpression) (right, result Type, err error) {
@@ -68,11 +70,9 @@ func (ctx *Context) TypeCheckUnaryExpression(e *UnaryExpression) (right, result 
 		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, right), e.Position())
 	}
 	if err != nil {
-		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
 		return ErrType, ErrType, err
 	}
-	log.Debug().Msgf("(typechecker) %q => %s", e, result)
-	return right, result, nil
+	return right, result, err
 }
 
 func (ctx *Context) TypeCheckBinaryExpression(e *BinaryExpression) (left, right, result Type, err error) {
@@ -96,21 +96,17 @@ func (ctx *Context) TypeCheckBinaryExpression(e *BinaryExpression) (left, right,
 		err = NewTypeError(NewInvalidOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 	if err != nil {
-		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
 		return ErrType, ErrType, ErrType, err
 	}
-	log.Debug().Msgf("(typechecker) %q => %s", e, result)
 	return left, right, result, nil
 }
 
 func (ctx *Context) TypeCheckGroupingExpression(e *GroupingExpression) (inner, result Type, err error) {
 	inner, err = e.expr.TypeCheck(ctx)
 	if err != nil {
-		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
 		return ErrType, ErrType, err
 	}
-	log.Debug().Msgf("(typechecker) %q => %s", e, result)
-	return inner, result, nil
+	return inner, inner, nil
 }
 
 func (ctx *Context) TypeCheckAssignmentExpression(e *AssignmentExpression) (right, result Type, err error) {
@@ -119,24 +115,17 @@ func (ctx *Context) TypeCheckAssignmentExpression(e *AssignmentExpression) (righ
 		err = ctx.types.Set(e.name, right)
 	}
 	if err != nil {
-		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
 		return ErrType, ErrType, err
 	}
-	result = right
-	log.Debug().Msgf("(typechecker) %q => %s", e, result)
-	return right, result, nil
+	return right, right, nil
 }
 
 func (ctx *Context) TypeCheckVariableExpression(e *VariableExpression) (result Type, err error) {
 	typ := ctx.types.Lookup(e.name)
 	if typ == nil {
-		err := NewTypeError(NewUndefinedVariableError(e.name), e.Position())
-		log.Error().Msgf("(typechecker) error in %q: %s", e, err)
-		return ErrType, err
+		return ErrType, NewTypeError(NewUndefinedVariableError(e.name), e.Position())
 	}
-	result = *typ
-	log.Debug().Msgf("(typechecker) %q => %s", e, typ)
-	return result, nil
+	return *typ, nil
 }
 
 func (ctx *Context) typeCheckUnaryNumeric(op Operator, typ Type) (Type, error) {

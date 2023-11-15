@@ -31,7 +31,7 @@ func (p *Parser) Parse() ([]Statement, error) {
 			log.Error().Msgf("(parser) error: %s", err)
 			return nil, err
 		}
-		log.Debug().Msgf("(parser) produced statement: %s", stmt)
+		log.Debug().Msgf("(parser) statement <- %s", stmt)
 		stmts = append(stmts, stmt)
 	}
 	return stmts, nil
@@ -43,8 +43,7 @@ func (p *Parser) done() bool {
 }
 
 func (p *Parser) declaration() (Statement, error) {
-	if token, ok := p.scan.match(TokenVar); ok {
-		log.Debug().Msgf("(parser) %s ... ;", token.Lexem)
+	if _, ok := p.scan.match(TokenVar); ok {
 		return p.varDeclaration()
 	}
 	return p.statement()
@@ -69,6 +68,7 @@ func (p *Parser) varDeclaration() (Statement, error) {
 		}
 	} else {
 		stmt.expr = &NilExpression{pos: stmt.pos}
+		log.Debug().Msgf("(parser) expr <- %s", stmt.expr)
 	}
 
 	if token, ok := p.scan.match(TokenSemicolon); !ok {
@@ -82,11 +82,9 @@ func (p *Parser) varDeclaration() (Statement, error) {
 
 func (p *Parser) statement() (Statement, error) {
 	if token, ok := p.scan.match(TokenPrint); ok {
-		log.Debug().Msgf("(parser) %s ... ;", token.Lexem)
 		return p.printStatement(token.Position)
 	}
 	if token, ok := p.scan.match(TokenLeftBrace); ok {
-		log.Debug().Msg("(parser) { ... } ;")
 		return p.blockStatement(token.Position)
 	}
 	return p.expressionStatement()
@@ -124,7 +122,6 @@ func (p *Parser) blockStatement(pos Position) (Statement, error) {
 }
 
 func (p *Parser) expressionStatement() (Statement, error) {
-	log.Debug().Msg("(parser) ... ;")
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
@@ -140,7 +137,8 @@ func (p *Parser) expressionStatement() (Statement, error) {
 }
 
 func (p *Parser) expression() (Expression, error) {
-	return p.assignment()
+	expr, err := p.assignment()
+	return expr, err
 }
 
 func (p *Parser) assignment() (Expression, error) {
@@ -176,7 +174,7 @@ func (p *Parser) equality() (Expression, error) {
 			// TODO: should this be a syntax error?
 			return nil, err
 		}
-		log.Debug().Msgf("(parser) %s %s ...", expr, op)
+		//log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.comparison()
 		if err != nil {
 			return nil, err
@@ -201,7 +199,7 @@ func (p *Parser) comparison() (Expression, error) {
 			// TODO: should this be a syntax error?
 			return nil, err
 		}
-		log.Debug().Msgf("(parser) %s %s ...", expr, op)
+		//log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.term()
 		if err != nil {
 			return nil, err
@@ -226,7 +224,7 @@ func (p *Parser) term() (Expression, error) {
 			// TODO: should this be a syntax error?
 			return nil, err
 		}
-		log.Debug().Msgf("(parser) %s %s ...", expr, op)
+		//log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.factor()
 		if err != nil {
 			return nil, err
@@ -251,7 +249,7 @@ func (p *Parser) factor() (Expression, error) {
 			// TODO: should this be a syntax error?
 			return nil, err
 		}
-		log.Debug().Msgf("(parser) %s %s ...", expr, op)
+		//log.Debug().Msgf("(parser) %s %s ...", expr, op)
 		right, err := p.unary()
 		if err != nil {
 			return nil, err
@@ -268,7 +266,7 @@ func (p *Parser) unary() (Expression, error) {
 			// TODO: should this be a syntax error?
 			return nil, err
 		}
-		log.Debug().Msgf("(parser) %s ...", op)
+		//log.Debug().Msgf("(parser) %s ...", op)
 		right, err := p.unary()
 		if err != nil {
 			return nil, err
@@ -297,26 +295,26 @@ func (p *Parser) primary() (Expression, error) {
 
 func (p *Parser) literal() (Expression, error) {
 	if token, ok := p.scan.match(TokenNumber); ok {
-		log.Debug().Msgf("(parser) terminal: %s", token)
+		//log.Debug().Msgf("(parser) terminal: %s", token)
 		n, err := strconv.ParseFloat(token.Lexem, 64)
 		if err != nil {
 			return nil, NewSyntaxError(NewNumberConversionError(err, token), token.Position)
 		}
 		return &NumericExpression{value: n, pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenString); ok {
-		log.Debug().Msgf("(parser) terminal: %s", token)
+		//log.Debug().Msgf("(parser) terminal: %s", token)
 		return &StringExpression{value: token.Lexem, pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenTrue); ok {
-		log.Debug().Msgf("(parser) terminal: %s", token)
+		//log.Debug().Msgf("(parser) terminal: %s", token)
 		return &BooleanExpression{value: true, pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenFalse); ok {
-		log.Debug().Msgf("(parser) terminal: %s", token)
+		//log.Debug().Msgf("(parser) terminal: %s", token)
 		return &BooleanExpression{value: false, pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenNil); ok {
-		log.Debug().Msgf("(parser) terminal: %s", token)
+		//log.Debug().Msgf("(parser) terminal: %s", token)
 		return &NilExpression{pos: token.Position}, nil
 	} else if token, ok := p.scan.match(TokenIdentifier); ok {
-		log.Debug().Msgf("(parser) terminal: %s", token)
+		//log.Debug().Msgf("(parser) terminal: %s", token)
 		return &VariableExpression{name: token.Lexem, pos: token.Position}, nil
 	}
 
@@ -325,8 +323,8 @@ func (p *Parser) literal() (Expression, error) {
 
 func (p *Parser) skipComments() {
 	for {
-		if token, ok := p.scan.match(TokenComment); ok {
-			log.Debug().Msgf("(parser) skip: %s", token)
+		if _, ok := p.scan.match(TokenComment); ok {
+			//log.Debug().Msgf("(parser) skip: %s", token)
 			continue
 		}
 		break
@@ -335,7 +333,7 @@ func (p *Parser) skipComments() {
 
 func (p *Parser) grouping() (Expression, error) {
 	if token, ok := p.scan.match(TokenLeftParen); ok {
-		log.Debug().Msg("(parser) ( ... )")
+		//log.Debug().Msg("(parser) ( ... )")
 		expr, err := p.expression()
 		if err != nil {
 			return nil, err
