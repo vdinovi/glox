@@ -128,7 +128,10 @@ func (v ValueNumeric) Divide(other Value) (ValueNumeric, error) {
 	}
 	n := float64(v)
 	d := float64(denom)
-	if d == 0 && n != 0 {
+	if d == 0 {
+		if n == 0 {
+			return ValueNumeric(0), nil
+		}
 		return v, NewDivideByZeroError(v, denom)
 	}
 	return ValueNumeric(n / d), nil

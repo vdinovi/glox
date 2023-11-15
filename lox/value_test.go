@@ -137,3 +137,122 @@ func TestValueSentinels(t *testing.T) {
 		}
 	}
 }
+
+func TestValueNumericBinaryOps(t *testing.T) {
+	tests := []struct {
+		op  string
+		a   float64
+		b   float64
+		val ValueNumeric
+		err error
+	}{
+		{op: "Add", a: 0, b: 1, val: ValueNumeric(1)},
+		{op: "Add", a: 1, b: 1, val: ValueNumeric(2)},
+		{op: "Add", a: 0, b: -1, val: ValueNumeric(-1)},
+		{op: "Add", a: -1, b: -1, val: ValueNumeric(-2)},
+		{op: "Add", a: 0, b: 3.14, val: ValueNumeric(3.14)},
+		{op: "Add", a: 3.14, b: 3.14, val: ValueNumeric(6.28)},
+		{op: "Add", a: 0, b: -3.14, val: ValueNumeric(-3.14)},
+		{op: "Add", a: -3.14, b: -3.14, val: ValueNumeric(-6.28)},
+		{op: "Subtract", a: 0, b: 1, val: ValueNumeric(-1)},
+		{op: "Subtract", a: 1, b: 1, val: ValueNumeric(0)},
+		{op: "Subtract", a: 0, b: -1, val: ValueNumeric(1)},
+		{op: "Subtract", a: -1, b: -1, val: ValueNumeric(0)},
+		{op: "Subtract", a: 0, b: 3.14, val: ValueNumeric(-3.14)},
+		{op: "Subtract", a: 3.14, b: 3.14, val: ValueNumeric(0)},
+		{op: "Subtract", a: 0, b: -3.14, val: ValueNumeric(3.14)},
+		{op: "Subtract", a: -3.14, b: -3.14, val: ValueNumeric(0)},
+		{op: "Multiply", a: 0, b: 1, val: ValueNumeric(0)},
+		{op: "Multiply", a: 1, b: 1, val: ValueNumeric(1)},
+		{op: "Multiply", a: 0, b: -1, val: ValueNumeric(0)},
+		{op: "Multiply", a: -1, b: -1, val: ValueNumeric(1)},
+		{op: "Multiply", a: 0, b: 3.14, val: ValueNumeric(0)},
+		{op: "Multiply", a: 3.14, b: 3.14, val: ValueNumeric(9.8596)},
+		{op: "Multiply", a: 0, b: -3.14, val: ValueNumeric(0)},
+		{op: "Multiply", a: -3.14, b: -3.14, val: ValueNumeric(9.8596)},
+		{op: "Divide", a: 0, b: 1, val: ValueNumeric(0)},
+		{op: "Divide", a: 1, b: 1, val: ValueNumeric(1)},
+		{op: "Divide", a: 0, b: -1, val: ValueNumeric(0)},
+		{op: "Divide", a: -1, b: -1, val: ValueNumeric(1)},
+		{op: "Divide", a: 0, b: 3.14, val: ValueNumeric(0)},
+		{op: "Divide", a: 3.14, b: 3.14, val: ValueNumeric(1)},
+		{op: "Divide", a: 0, b: -3.14, val: ValueNumeric(0)},
+		{op: "Divide", a: -3.14, b: -3.14, val: ValueNumeric(1)},
+		{op: "Divide", a: 0, b: 0, val: ValueNumeric(0)},
+		{op: "Divide", a: 1, b: 0, err: NewDivideByZeroError(ValueNumeric(1), ValueNumeric(0))},
+		{op: "Divide", a: 3.14, b: 0, err: NewDivideByZeroError(ValueNumeric(3.14), ValueNumeric(0))},
+		{op: "Divide", a: -3.14, b: 0, err: NewDivideByZeroError(ValueNumeric(-3.14), ValueNumeric(0))},
+	}
+	for _, test := range tests {
+		t.Log(test.op, test.a, test.b)
+		var err error
+		var val ValueNumeric
+		a := ValueNumeric(test.a)
+		b := ValueNumeric(test.b)
+		switch test.op {
+		case "Add":
+			val, err = a.Add(b)
+		case "Subtract":
+			val, err = a.Subtract(b)
+		case "Multiply":
+			val, err = a.Multiply(b)
+		case "Divide":
+			val, err = a.Divide(b)
+		default:
+			t.Errorf("Unexpected operation %s", test.op)
+			continue
+		}
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected (%s).%s(%s) to yield error %q, but got %q", a, test.op, b, test.err, err)
+			}
+			continue
+		} else if err != nil {
+			t.Errorf("Unexpected error in (%s).%s(%s): %s", a, test.op, b, err)
+			continue
+		}
+		if val != test.val {
+			t.Errorf("Expected (%s).%s(%s) to yield value %s, but got %s", a, test.op, b, test.val, val)
+		}
+	}
+}
+
+func TestValueStringBinaryOps(t *testing.T) {
+	tests := []struct {
+		op  string
+		a   string
+		b   string
+		val ValueString
+		err error
+	}{
+		{op: "Concat", a: "", b: "", val: ValueString("")},
+		{op: "Concat", a: "x", b: "", val: ValueString("x")},
+		{op: "Concat", a: "x", b: "y", val: ValueString("xy")},
+	}
+	for _, test := range tests {
+		t.Log(test.op, test.a, test.b)
+		var err error
+		var val ValueString
+		a := ValueString(test.a)
+		b := ValueString(test.b)
+		switch test.op {
+		case "Concat":
+			val, err = a.Concat(b)
+		default:
+			t.Errorf("Unexpected operation %s", test.op)
+			continue
+		}
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected (%s).%s(%s) to yield error %q, but got %q", a, test.op, b, test.err, err)
+			}
+			continue
+		} else if err != nil {
+			t.Errorf("Unexpected error in (%s).%s(%s): %s", a, test.op, b, err)
+			continue
+		}
+		if val != test.val {
+			t.Errorf("Expected (%s).%s(%s) to yield value %s, but got %s", a, test.op, b, test.val, val)
+		}
+	}
+}
