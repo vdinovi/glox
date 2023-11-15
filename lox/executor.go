@@ -60,6 +60,24 @@ func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
 	return nil
 }
 
+func (x *Executor) ExecuteConditionalStatement(s *ConditionalStatement) error {
+	log.Trace().Msg("ExecuteConditionalStatement")
+	cond, err := s.expr.Evaluate(x.ctx)
+	if err != nil {
+		return err
+	}
+	if cond.Truthy() {
+		if err := s.thenBranch.Execute(x); err != nil {
+			return err
+		}
+	} else if s.elseBranch != nil {
+		if err := s.elseBranch.Execute(x); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (x *Executor) ExecuteExpressionStatement(s *ExpressionStatement) error {
 	log.Trace().Msg("ExecuteExpressionStatement")
 	_, err := s.expr.Evaluate(x.ctx)

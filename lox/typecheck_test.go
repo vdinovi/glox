@@ -30,14 +30,13 @@ print a = "test";
 func TestTypecheckPrintStatement(t *testing.T) {
 	tests := []struct {
 		text string
-		stmt PrintStatement
 		err  error
 	}{
-		{text: "print 1;", stmt: PrintStatement{expr: oneExpr()}},
-		{text: "print \"str\";", stmt: PrintStatement{expr: strExpr()}},
-		{text: "print true;", stmt: PrintStatement{expr: trueExpr()}},
-		{text: "print false;", stmt: PrintStatement{expr: falseExpr()}},
-		{text: "print nil;", stmt: PrintStatement{expr: nilExpr()}},
+		{text: "print 1;"},
+		{text: "print \"str\";"},
+		{text: "print true;"},
+		{text: "print false;"},
+		{text: "print nil;"},
 		{text: "print foo;", err: NewTypeError(NewUndefinedVariableError("foo"), Position{1, 7})},
 	}
 
@@ -53,7 +52,7 @@ func TestTypecheckPrintStatement(t *testing.T) {
 		err := ctx.TypeCheckPrintStatement(print)
 		if test.err != nil {
 			if err != test.err {
-				t.Errorf("Expected typecheck of statement %v to produce error %q, but got %q", test.stmt, test.err, err)
+				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", print, test.err, err)
 				continue
 			}
 		} else if err != nil {
@@ -66,14 +65,13 @@ func TestTypecheckPrintStatement(t *testing.T) {
 func TestTypeCheckExpressionStatement(t *testing.T) {
 	tests := []struct {
 		text string
-		stmt ExpressionStatement
 		err  error
 	}{
-		{text: "1;", stmt: ExpressionStatement{expr: oneExpr()}},
-		{text: "\"str\";", stmt: ExpressionStatement{expr: strExpr()}},
-		{text: "true;", stmt: ExpressionStatement{expr: trueExpr()}},
-		{text: "false;", stmt: ExpressionStatement{expr: falseExpr()}},
-		{text: "nil;", stmt: ExpressionStatement{expr: nilExpr()}},
+		{text: "1;"},
+		{text: "\"str\";"},
+		{text: "true;"},
+		{text: "false;"},
+		{text: "nil;"},
 		{text: "foo;", err: NewTypeError(NewUndefinedVariableError("foo"), Position{1, 1})},
 	}
 
@@ -89,7 +87,7 @@ func TestTypeCheckExpressionStatement(t *testing.T) {
 		err := ctx.TypeCheckExpressionStatement(expr)
 		if test.err != nil {
 			if err != test.err {
-				t.Errorf("Expected typecheck of statement %v to produce error %q, but got %q", test.stmt, test.err, err)
+				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", expr, test.err, err)
 				continue
 			}
 		} else if err != nil {
@@ -102,16 +100,15 @@ func TestTypeCheckExpressionStatement(t *testing.T) {
 func TestTypeCheckBlockStatement(t *testing.T) {
 	tests := []struct {
 		text string
-		stmt BlockStatement
 		err  error
 	}{
-		{text: "{1;}", stmt: BlockStatement{stmts: []Statement{&ExpressionStatement{expr: oneExpr()}}}},
-		{text: "{\"str\";}", stmt: BlockStatement{stmts: []Statement{&ExpressionStatement{expr: strExpr()}}}},
-		{text: "{true;}", stmt: BlockStatement{stmts: []Statement{&ExpressionStatement{expr: trueExpr()}}}},
-		{text: "{false;}", stmt: BlockStatement{stmts: []Statement{&ExpressionStatement{expr: falseExpr()}}}},
-		{text: "{nil;}", stmt: BlockStatement{stmts: []Statement{&ExpressionStatement{expr: nilExpr()}}}},
+		{text: "{1;}"},
+		{text: "{\"str\";}"},
+		{text: "{true;}"},
+		{text: "{false;}"},
+		{text: "{nil;}"},
+		{text: "{var foo = 1; print foo;}"},
 		{text: "{foo;}", err: NewTypeError(NewUndefinedVariableError("foo"), Position{1, 2})},
-		{text: "{var foo = 1; print foo;}", stmt: BlockStatement{stmts: []Statement{&DeclarationStatement{name: "foo", expr: oneExpr()}, &ExpressionStatement{expr: nilExpr()}}}},
 	}
 
 	for _, test := range tests {
@@ -126,7 +123,41 @@ func TestTypeCheckBlockStatement(t *testing.T) {
 		err := ctx.TypeCheckBlockStatement(block)
 		if test.err != nil {
 			if err != test.err {
-				t.Errorf("Expected typecheck of statement %v to produce error %q, but got %q", test.stmt, test.err, err)
+				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", block, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Error(err)
+			continue
+		}
+	}
+}
+
+func TestTypeCheckConditionalStatement(t *testing.T) {
+	tests := []struct {
+		text string
+		err  error
+	}{
+		{text: "if (true) 1; else 3.14;"},
+		{text: "if (true) 1;"},
+		{text: "if (true) {1;}"},
+		{text: "if (true) if (false) 1; else 3.14; else 1;"},
+		{text: "if (true) { if (false) 1; else 3.14;} else {1;}"},
+	}
+
+	for _, test := range tests {
+		program := typecheckTestParse(t, test.text, 1)
+		var cond *ConditionalStatement
+		var ok bool
+		if cond, ok = program[0].(*ConditionalStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, program[0])
+			continue
+		}
+		ctx := NewContext()
+		err := ctx.TypeCheckConditionalStatement(cond)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", cond, test.err, err)
 				continue
 			}
 		} else if err != nil {

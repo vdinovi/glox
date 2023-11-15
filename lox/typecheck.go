@@ -30,6 +30,19 @@ func (ctx *Context) TypeCheckBlockStatement(s *BlockStatement) error {
 	return nil
 }
 
+func (ctx *Context) TypeCheckConditionalStatement(s *ConditionalStatement) error {
+	log.Trace().Msg("TypeCheckConditionalStatement")
+	if err := s.thenBranch.TypeCheck(ctx); err != nil {
+		return err
+	}
+	if s.elseBranch != nil {
+		if err := s.elseBranch.TypeCheck(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (ctx *Context) TypeCheckPrintStatement(s *PrintStatement) error {
 	log.Trace().Msg("TypeCheckPrintStatement")
 	_, err := ctx.TypeCheckExpression(s.expr)

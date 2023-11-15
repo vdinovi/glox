@@ -67,13 +67,11 @@ func (s *ConditionalStatement) Position() Position {
 }
 
 func (s *ConditionalStatement) TypeCheck(ctx *Context) error {
-	return nil
-	//return ctx.TypeCheckConditionalStatement(s)
+	return ctx.TypeCheckConditionalStatement(s)
 }
 
 func (s *ConditionalStatement) Execute(ctx *Executor) error {
-	return nil
-	//return ctx.ExecuteConditionalStatement(s)
+	return ctx.ExecuteConditionalStatement(s)
 }
 
 func (s *ConditionalStatement) String() string {
