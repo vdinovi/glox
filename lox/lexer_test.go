@@ -10,12 +10,6 @@ import (
 	"testing"
 )
 
-//go:embed fixtures/program.lox
-var program string
-
-//go:embed fixtures/program_tokens.json
-var program_tokens string
-
 func TestLexerBasic(t *testing.T) {
 	tests := []struct {
 		text  string
@@ -207,14 +201,14 @@ func TestUnexpectedCharacter(t *testing.T) {
 	}
 }
 
-func TestLexerProgram(t *testing.T) {
+func TestLexerFixtureProgram(t *testing.T) {
 	var want []Token
-	err := json.Unmarshal([]byte(program_tokens), &want)
+	err := json.Unmarshal([]byte(fixtureProgramTokens), &want)
 	if err != nil {
 		t.Fatalf("Failed to deserialize tokens")
 	}
 
-	lexer, err := NewLexer(strings.NewReader(program))
+	lexer, err := NewLexer(strings.NewReader(fixtureProgram))
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
@@ -229,6 +223,15 @@ func TestLexerProgram(t *testing.T) {
 	for i, w := range want {
 		if tok := tokens[i]; tok != w {
 			t.Fatalf("Expected tokens[%d] to be %v, but got %v", i, w, tok)
+		}
+	}
+}
+
+func BenchmarkLexerFixtureProgram(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, err := Scan(strings.NewReader(fixtureProgram))
+		if err != nil {
+			b.Errorf("Unexpected error lexing fixture 'program': %s", err)
 		}
 	}
 }

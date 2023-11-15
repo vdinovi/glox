@@ -193,7 +193,7 @@ func TestParserProgram(t *testing.T) {
 	// TODO: Needs to serialize AST to golden file for this test to work
 	t.Skip()
 	var tokens []Token
-	err := json.Unmarshal([]byte(program_tokens), &tokens)
+	err := json.Unmarshal([]byte(fixtureProgramTokens), &tokens)
 	if err != nil {
 		t.Fatalf("Failed to deserialize tokens")
 	}
@@ -206,5 +206,19 @@ func TestParserProgram(t *testing.T) {
 	_, err = parser.Parse()
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
+	}
+}
+
+func BenchmarkParserFixturePrograms(b *testing.B) {
+	tokens, err := Scan(strings.NewReader(fixtureProgram))
+	if err != nil {
+		b.Errorf("Unexpected error lexing fixture 'program': %s", err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := Parse(tokens)
+		if err != nil {
+			b.Errorf("Unexpected error parsing fixture 'program': %s", err)
+		}
 	}
 }

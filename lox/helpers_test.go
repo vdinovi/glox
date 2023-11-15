@@ -1,6 +1,7 @@
 package lox
 
 import (
+	_ "embed"
 	"os"
 	"testing"
 )
@@ -10,6 +11,12 @@ func TestMain(m *testing.M) {
 	//SetLogLevel("debug")
 	os.Exit(m.Run())
 }
+
+//go:embed fixtures/program.lox
+var fixtureProgram string
+
+//go:embed fixtures/program_tokens.json
+var fixtureProgramTokens string
 
 var addOp = Operator{Type: OpAdd, Lexem: "+"}
 var subOp = Operator{Type: OpSubtract, Lexem: "-"}

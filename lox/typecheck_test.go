@@ -152,6 +152,25 @@ func TypeCheckVariableExpression(t *testing.T) {
 	// TODO
 }
 
+func BenchmarkTypecheckFixtureProgram(b *testing.B) {
+	tokens, err := Scan(strings.NewReader(fixtureProgram))
+	if err != nil {
+		b.Errorf("Unexpected error lexing fixture 'program': %s", err)
+	}
+	program, err := Parse(tokens)
+	if err != nil {
+		b.Errorf("Unexpected error parsing fixture 'program': %s", err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ctx := NewContext()
+		err := ctx.TypeCheckProgram(program)
+		if err != nil {
+			b.Errorf("Unexpected error typechecking fixture 'program': %s", err)
+		}
+	}
+}
+
 func typecheckTestParse(t *testing.T, text string, numStatements int) []Statement {
 	t.Helper()
 	tokens, err := Scan(strings.NewReader(text))
