@@ -141,7 +141,9 @@ func (td *TestDriver) TypeCheck() {
 	if len(td.Program) < 1 {
 		td.Err = fmt.Errorf("no program to typecheck (ensure Parse has been called)")
 	}
-	td.Exec = NewExecutor(&td.Printer)
+	if td.Exec == nil {
+		td.Exec = NewExecutor(&td.Printer)
+	}
 	td.Err = td.Exec.TypeCheckProgram(td.Program)
 }
 

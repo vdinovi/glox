@@ -41,11 +41,17 @@ func TestTypecheckPrintStatement(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		program := typecheckTestParse(t, test.text, 1)
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		td.Parse()
+		td.Fatal()
+		if len(td.Program) != 1 {
+			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+		}
 		var print *PrintStatement
 		var ok bool
-		if print, ok = program[0].(*PrintStatement); !ok {
-			t.Errorf("%q yielded unexpected statment %v", test.text, program[0])
+		if print, ok = td.Program[0].(*PrintStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
 		ctx := NewContext()
@@ -76,11 +82,17 @@ func TestTypeCheckExpressionStatement(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		program := typecheckTestParse(t, test.text, 1)
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		td.Parse()
+		td.Fatal()
+		if len(td.Program) != 1 {
+			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+		}
 		var expr *ExpressionStatement
 		var ok bool
-		if expr, ok = program[0].(*ExpressionStatement); !ok {
-			t.Errorf("%q yielded unexpected statment %v", test.text, program[0])
+		if expr, ok = td.Program[0].(*ExpressionStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
 		ctx := NewContext()
@@ -112,11 +124,17 @@ func TestTypeCheckBlockStatement(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		program := typecheckTestParse(t, test.text, 1)
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		td.Parse()
+		td.Fatal()
+		if len(td.Program) != 1 {
+			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+		}
 		var block *BlockStatement
 		var ok bool
-		if block, ok = program[0].(*BlockStatement); !ok {
-			t.Errorf("%q yielded unexpected statment %v", test.text, program[0])
+		if block, ok = td.Program[0].(*BlockStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
 		ctx := NewContext()
@@ -146,11 +164,17 @@ func TestTypeCheckConditionalStatement(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		program := typecheckTestParse(t, test.text, 1)
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		td.Parse()
+		td.Fatal()
+		if len(td.Program) != 1 {
+			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+		}
 		var cond *ConditionalStatement
 		var ok bool
-		if cond, ok = program[0].(*ConditionalStatement); !ok {
-			t.Errorf("%q yielded unexpected statment %v", test.text, program[0])
+		if cond, ok = td.Program[0].(*ConditionalStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
 		ctx := NewContext()
@@ -335,23 +359,4 @@ func BenchmarkTypecheckFixtureProgram(b *testing.B) {
 			b.Errorf("Unexpected error typechecking fixture 'program': %s", err)
 		}
 	}
-}
-
-func typecheckTestParse(t *testing.T, text string, numStatements int) []Statement {
-	t.Helper()
-	tokens, err := Scan(strings.NewReader(text))
-	if err != nil {
-		t.Errorf("Unexpected error in %q: %s", text, err)
-		return nil
-	}
-	program, err := Parse(tokens)
-	if err != nil {
-		t.Errorf("Unexpected error in %q: %s", text, err)
-		return nil
-	}
-	if len(program) != numStatements {
-		t.Errorf("%q should have parsed to %d statements, but got %d", text, numStatements, len(program))
-		return nil
-	}
-	return program
 }

@@ -25,8 +25,8 @@ type Value interface {
 type ValueString string
 
 func (v ValueString) String() string {
-	//return fmt.Sprintf("\"%s\"", string(v))
-	return string(v)
+	return fmt.Sprintf("\"%s\"", string(v))
+	//return string(v)
 }
 
 func (ValueString) Type() Type {

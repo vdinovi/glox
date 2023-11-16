@@ -2,6 +2,7 @@ package lox
 
 import (
 	"io"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 )
@@ -93,7 +94,7 @@ func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
 	if err != nil {
 		return err
 	}
-	err = x.runtime.Print(val.String())
+	err = x.runtime.Print(deparenthesize(val.String()))
 	if err != nil {
 		return NewRuntimeError(err, s.Position())
 	}
@@ -117,4 +118,8 @@ func (x *Executor) ExecuteDeclarationStatement(s *DeclarationStatement) error {
 		log.Debug().Msgf("(executor) %s <- %s (prev %s)", s.name, val, prev)
 	}
 	return err
+}
+
+func deparenthesize(s string) string {
+	return strings.Trim(s, "\"")
 }

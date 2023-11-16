@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -57,26 +56,18 @@ func TestLexerBasic(t *testing.T) {
 
 	for _, test := range tests {
 		test.token.Position = Position{1, 1}
-
-		t.Run(fmt.Sprintf("%q yields %s", test.text, test.token.Type.String()), func(t *testing.T) {
-			lexer, err := NewLexer(strings.NewReader(test.text))
-			if err != nil {
-				t.Fatalf("Unexpected error: %s", err)
-			}
-			tokens, err := lexer.Scan()
-			if err != nil {
-				t.Fatalf("Unexpected error: %s", err)
-			}
-			if len(tokens) != 2 {
-				t.Fatalf("Expected %q to yield %d tokens, got %d", test.text, 1, len(tokens))
-			}
-			if token := tokens[0]; token != test.token {
-				t.Fatalf("Expected %q to yield token %+v, got %+v ", test.text, test.token, token)
-			}
-			if token := tokens[1]; token != eofToken {
-				t.Errorf("Expected %q to yield implicit token %+v, got %+v ", test.text, eofToken, token)
-			}
-		})
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		td.Fatal()
+		if len(td.Tokens) != 2 {
+			t.Fatalf("Expected %q to yield %d tokens, got %d", test.text, 1, len(td.Tokens))
+		}
+		if token := td.Tokens[0]; token != test.token {
+			t.Fatalf("Expected %q to yield token %+v, got %+v ", test.text, test.token, token)
+		}
+		if token := td.Tokens[1]; token != eofToken {
+			t.Errorf("Expected %q to yield implicit token %+v, got %+v ", test.text, eofToken, token)
+		}
 	}
 }
 
@@ -122,27 +113,20 @@ func TestLexerIgnore(t *testing.T) {
 	tests := []struct {
 		text string
 	}{
-		{" "},
-		{"\t"},
-		{"\n"},
+		{text: " "},
+		{text: "\t"},
+		{text: "\n"},
 	}
 
 	for _, test := range tests {
-		lexer, err := NewLexer(strings.NewReader(test.text))
-		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		td.Fatal()
+		if len(td.Tokens) != 1 {
+			t.Errorf("Expected %q to yield %d tokens but got %d", test.text, 1, len(td.Tokens))
 			continue
 		}
-		tokens, err := lexer.Scan()
-		if err != nil {
-			t.Errorf("Unexpected error: %s", err)
-			continue
-		}
-		if len(tokens) != 1 {
-			t.Errorf("Expected %q to yield %d tokens but got %d", test.text, 1, len(tokens))
-			continue
-		}
-		if token := tokens[0]; token != eofToken {
+		if token := td.Tokens[0]; token != eofToken {
 			t.Errorf("Expected %q to yield implicit token %+v but got %+v ", test.text, eofToken, token)
 		}
 	}
@@ -152,21 +136,24 @@ func TestUnterminatedString(t *testing.T) {
 	var SyntaxError SyntaxError
 	var unterminatedStringError UnterminatedStringError
 
-	tests := []string{
-		"\"string",
+	tests := []struct {
+		text string
+	}{
+		{text: "\"string"},
 	}
-	for _, text := range tests {
-		_, err := Scan(strings.NewReader(text))
-		if err == nil {
-			t.Error("Expected error but got none")
+	for _, test := range tests {
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		if td.Err == nil {
+			t.Errorf("Expected lexing %q to yield an error but did not", test.text)
 			continue
 		}
-		if !errors.As(err, &SyntaxError) {
-			t.Errorf("Unexpected error: %s", err)
+		if !errors.As(td.Err, &SyntaxError) {
+			t.Errorf("Unexpected error: %s", td.Err)
 			continue
 		}
-		if !errors.As(err, &unterminatedStringError) {
-			t.Errorf("Unexpected error: %s", err)
+		if !errors.As(td.Err, &unterminatedStringError) {
+			t.Errorf("Unexpected error: %s", td.Err)
 		}
 	}
 }
@@ -182,17 +169,17 @@ func TestUnexpectedCharacter(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := Scan(strings.NewReader(test.text))
-		if err == nil {
-			t.Error("Expected error but got none")
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		if td.Err == nil {
+			t.Errorf("Expected lexing %q to yield an error but did not", test.text)
+		}
+		if !errors.As(td.Err, &syntaxError) {
+			t.Errorf("Unexpected error %s", td.Err)
 			continue
 		}
-		if !errors.As(err, &syntaxError) {
-			t.Errorf("Unexpected error %s", err)
-			continue
-		}
-		if !errors.As(err, &unexpectedCharacterError) {
-			t.Errorf("Unexpected error %s", err)
+		if !errors.As(td.Err, &unexpectedCharacterError) {
+			t.Errorf("Unexpected error %s", td.Err)
 			continue
 		}
 		if unexpectedCharacterError.Actual != '?' {
