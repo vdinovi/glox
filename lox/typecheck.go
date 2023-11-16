@@ -111,6 +111,13 @@ func (ctx *Context) TypeCheckBinaryExpression(e *BinaryExpression) (left, right,
 	if right, err = e.right.TypeCheck(ctx); err != nil {
 		return TypeAny, TypeAny, TypeAny, err
 	}
+	switch e.op.Type {
+	case OpAnd, OpOr:
+		if left == right {
+			return left, right, left, nil
+		}
+		return left, right, TypeAny, nil
+	}
 	if left != right {
 		return TypeAny, TypeAny, TypeAny, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}

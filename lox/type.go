@@ -9,6 +9,7 @@ const (
 	TypeNumeric
 	TypeString
 	TypeBoolean
+	TypeTruthy
 )
 
 type TypeSet struct {

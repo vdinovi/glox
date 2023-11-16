@@ -23,6 +23,12 @@ fun compare(a, b, c, d) {
 
 compare(-1.23, yes, nil, undefined)
 
+print true and "hi";
+
+print false or nil;
+
+print 1 and 2 or 3;
+
 // does conditional stuff
 fun conditional(a, b, c) {
 	while (c < 5) {

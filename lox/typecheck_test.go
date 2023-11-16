@@ -264,7 +264,7 @@ func TestTypeCheckExpression(t *testing.T) {
 		{typ: TypeBoolean, expr: groupExpr(trueExpr())()},
 		{typ: TypeBoolean, expr: groupExpr(falseExpr())()},
 		{typ: TypeNil, expr: groupExpr(nilExpr())()},
-		// complex
+		// complex arith
 		// (1 + (3.14 / (-1) - -1)) + (+3.14)
 		{
 			typ:  TypeNumeric,
@@ -285,6 +285,18 @@ func TestTypeCheckExpression(t *testing.T) {
 			expr: bAddExpr(strExpr())(groupExpr(bAddExpr(strExpr())(groupExpr(bAddExpr(oneExpr())(strExpr())())())())())(),
 			err:  NewTypeError(NewInvalidBinaryOperatorForTypeError(OpAdd, TypeNumeric, TypeString), Position{}),
 		},
+		// and
+		{typ: TypeNumeric, expr: bAndExpr(oneExpr())(piExpr())()},
+		{typ: TypeString, expr: bAndExpr(strExpr())(strExpr())()},
+		{typ: TypeBoolean, expr: bAndExpr(trueExpr())(falseExpr())()},
+		{typ: TypeNil, expr: bAndExpr(nilExpr())(nilExpr())()},
+		{typ: TypeAny, expr: bAndExpr(oneExpr())(strExpr())()},
+		// or
+		{typ: TypeNumeric, expr: bOrExpr(oneExpr())(piExpr())()},
+		{typ: TypeString, expr: bOrExpr(strExpr())(strExpr())()},
+		{typ: TypeBoolean, expr: bOrExpr(trueExpr())(falseExpr())()},
+		{typ: TypeNil, expr: bOrExpr(nilExpr())(nilExpr())()},
+		{typ: TypeAny, expr: bOrExpr(oneExpr())(strExpr())()},
 	}
 	for _, test := range tests {
 		ctx := NewContext()

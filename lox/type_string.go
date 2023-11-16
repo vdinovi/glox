@@ -13,11 +13,12 @@ func _() {
 	_ = x[TypeNumeric-2]
 	_ = x[TypeString-3]
 	_ = x[TypeBoolean-4]
+	_ = x[TypeTruthy-5]
 }
 
-const _Type_name = "AnyNilNumericStringBoolean"
+const _Type_name = "AnyNilNumericStringBooleanTruthy"
 
-var _Type_index = [...]uint8{0, 3, 6, 13, 19, 26}
+var _Type_index = [...]uint8{0, 3, 6, 13, 19, 26, 32}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {

@@ -13,17 +13,19 @@ func _() {
 	_ = x[OpSubtract-2]
 	_ = x[OpMultiply-3]
 	_ = x[OpDivide-4]
-	_ = x[OpEqualTo-5]
-	_ = x[OpNotEqualTo-6]
-	_ = x[OpLessThan-7]
-	_ = x[OpLessThanOrEqualTo-8]
-	_ = x[OpGreaterThan-9]
-	_ = x[OpGreaterThanOrEqualTo-10]
+	_ = x[OpAnd-5]
+	_ = x[OpOr-6]
+	_ = x[OpEqualTo-7]
+	_ = x[OpNotEqualTo-8]
+	_ = x[OpLessThan-9]
+	_ = x[OpLessThanOrEqualTo-10]
+	_ = x[OpGreaterThan-11]
+	_ = x[OpGreaterThanOrEqualTo-12]
 }
 
-const _OperatorType_name = "ErrOpAddSubtractMultiplyDivideEqualToNotEqualToLessThanLessThanOrEqualToGreaterThanGreaterThanOrEqualTo"
+const _OperatorType_name = "ErrOpAddSubtractMultiplyDivideAndOrEqualToNotEqualToLessThanLessThanOrEqualToGreaterThanGreaterThanOrEqualTo"
 
-var _OperatorType_index = [...]uint8{0, 5, 8, 16, 24, 30, 37, 47, 55, 72, 83, 103}
+var _OperatorType_index = [...]uint8{0, 5, 8, 16, 24, 30, 33, 35, 42, 52, 60, 77, 88, 108}
 
 func (i OperatorType) String() string {
 	if i < 0 || i >= OperatorType(len(_OperatorType_index)-1) {

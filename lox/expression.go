@@ -13,6 +13,8 @@ const (
 	OpSubtract
 	OpMultiply
 	OpDivide
+	OpAnd
+	OpOr
 	OpEqualTo
 	OpNotEqualTo
 	OpLessThan

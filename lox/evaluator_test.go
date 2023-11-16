@@ -97,9 +97,19 @@ func TestSimpleExpression(t *testing.T) {
 			expr: bAddExpr(strExpr())(groupExpr(bAddExpr(strExpr())(groupExpr(bAddExpr(oneExpr())(strExpr())())())())())(),
 			err:  NewRuntimeError(NewInvalidBinaryOperatorForTypeError(OpAdd, TypeNumeric, TypeString), Position{}),
 		},
+		// bAnd
+		{val: ValueNumeric(3.14), expr: bAndExpr(oneExpr())(piExpr())()},
+		{val: ValueBoolean(false), expr: bAndExpr(falseExpr())(oneExpr())()},
+		{val: ValueString("str"), expr: bAndExpr(trueExpr())(strExpr())()},
+		{val: ValueNil{}, expr: bAndExpr(nilExpr())(falseExpr())()},
+		// bAnd
+		{val: ValueNumeric(1), expr: bOrExpr(oneExpr())(piExpr())()},
+		{val: ValueNumeric(1), expr: bOrExpr(falseExpr())(oneExpr())()},
+		{val: ValueBoolean(true), expr: bOrExpr(trueExpr())(strExpr())()},
+		{val: ValueBoolean(false), expr: bOrExpr(nilExpr())(falseExpr())()},
 	}
 	for _, test := range tests {
-		t.Log(test.expr)
+		// t.Log(test.expr)
 		ctx := NewContext()
 		// _, err := test.expr.TypeCheck(ctx)
 		// if err != nil {

@@ -27,6 +27,12 @@ func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ 
 
 func (ctx *Context) EvaluateBinaryExpression(e *BinaryExpression) (val Value, typ Type, err error) {
 	log.Trace().Msg("EvaluateBinaryExpression")
+	switch e.op.Type {
+	case OpAnd:
+		return ctx.evalBinaryAnd(e)
+	case OpOr:
+		return ctx.evalBinaryOr(e)
+	}
 	var left, right Value
 	left, err = e.left.Evaluate(ctx)
 	if err == nil {
@@ -171,4 +177,37 @@ func (ctx *Context) evalBinaryBoolean(e *BinaryExpression, left, right Value) (v
 	//if err != nil {}
 	err = NewRuntimeError(err, e.Position())
 	return val, err
+}
+
+func (ctx *Context) evalBinaryAnd(e *BinaryExpression) (val Value, typ Type, err error) {
+	var left, right Value
+	left, err = e.left.Evaluate(ctx)
+	if err != nil {
+		return nil, TypeAny, err
+	}
+	if !left.Truthy() {
+		return left, typ, nil
+	}
+	right, err = e.right.Evaluate(ctx)
+	if err != nil {
+		return nil, TypeAny, err
+	}
+	return right, typ, nil
+
+}
+
+func (ctx *Context) evalBinaryOr(e *BinaryExpression) (val Value, typ Type, err error) {
+	var left, right Value
+	left, err = e.left.Evaluate(ctx)
+	if err != nil {
+		return nil, TypeAny, err
+	}
+	if left.Truthy() {
+		return left, typ, nil
+	}
+	right, err = e.right.Evaluate(ctx)
+	if err != nil {
+		return nil, TypeAny, err
+	}
+	return right, typ, nil
 }

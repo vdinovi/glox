@@ -24,6 +24,8 @@ var addOp = Operator{Type: OpAdd, Lexem: "+"}
 var subOp = Operator{Type: OpSubtract, Lexem: "-"}
 var mulOp = Operator{Type: OpMultiply, Lexem: "*"}
 var divOp = Operator{Type: OpDivide, Lexem: "/"}
+var andOp = Operator{Type: OpAnd, Lexem: "and"}
+var orOp = Operator{Type: OpOr, Lexem: "or"}
 
 var zeroExpr = makeNumericExpr(0)
 var oneExpr = makeNumericExpr(1)
@@ -41,6 +43,8 @@ var bSubExpr = makeBinaryExpr(subOp)
 var bMulExpr = makeBinaryExpr(mulOp)
 var bDivExpr = makeBinaryExpr(divOp)
 var groupExpr = makeGroupingExpr
+var bAndExpr = makeBinaryExpr(andOp)
+var bOrExpr = makeBinaryExpr(orOp)
 
 func makeNumericExpr(n float64) func() *NumericExpression {
 	return func() *NumericExpression {
