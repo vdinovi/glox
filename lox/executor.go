@@ -50,12 +50,11 @@ func (x *Executor) Execute(stmt Statement) error {
 
 func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
 	x.ctx.PushEnvironment()
-	log.Debug().Msgf("(executor) entering scope {%s}", x.ctx.values.String())
+	log.Debug().Msgf("(executor) enter %s", x.ctx.values.String())
 	defer func() {
 		x.ctx.PopEnvironment()
-		log.Debug().Msgf("(executor) entering scope {%s}", x.ctx.values.String())
+		log.Debug().Msgf("(executor) enter %s", x.ctx.values.String())
 	}()
-	defer log.Debug().Msgf("(executor) exit scope")
 	for _, stmt := range s.stmts {
 		if err := stmt.Execute(x); err != nil {
 			return err
@@ -148,15 +147,11 @@ func (x *Executor) ExecuteDeclarationStatement(s *DeclarationStatement) error {
 	if err != nil {
 		return err
 	}
-	prev := x.ctx.values.Get(s.name, nil)
-	err = x.ctx.values.Set(s.name, val)
-	if err != nil {
-		return err
-	}
+	prev, err := x.ctx.values.Set(s.name, val)
 	if prev == nil {
-		log.Debug().Msgf("(executor) initialized %s to %s", s.name, val)
+		log.Debug().Msgf("(executor) (%d) %s := %s", x.ctx.values.depth, s.name, val)
 	} else {
-		log.Debug().Msgf("(executor) %s <- %s (prev %s)", s.name, val, prev)
+		log.Debug().Msgf("(executor) (%d) %s = %s (was %s)", x.ctx.values.depth, s.name, val, *prev)
 	}
 	return err
 }

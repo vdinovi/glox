@@ -5,7 +5,6 @@ import (
 )
 
 func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ Type, err error) {
-	log.Trace().Msg("EvaluateUnaryExpression")
 	var right Value
 	right, err = e.right.Evaluate(ctx)
 	if err != nil {
@@ -20,13 +19,11 @@ func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ 
 	if err != nil {
 		return nil, TypeAny, err
 	}
-	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
 	return val, typ, err
 
 }
 
 func (ctx *Context) EvaluateBinaryExpression(e *BinaryExpression) (val Value, typ Type, err error) {
-	log.Trace().Msg("EvaluateBinaryExpression")
 	switch e.op.Type {
 	case OpAnd:
 		return ctx.evalBinaryAnd(e)
@@ -57,22 +54,18 @@ func (ctx *Context) EvaluateBinaryExpression(e *BinaryExpression) (val Value, ty
 	if err != nil {
 		return nil, TypeAny, err
 	}
-	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
 	return val, typ, nil
 }
 
 func (ctx *Context) EvaluateGroupingExpression(e *GroupingExpression) (val Value, typ Type, err error) {
-	log.Trace().Msg("EvaluateGroupingExpression")
 	typ = e.Type()
 	if val, err = e.expr.Evaluate(ctx); err != nil {
 		return nil, TypeAny, err
 	}
-	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
 	return val, typ, nil
 }
 
 func (ctx *Context) EvaluateAssignmentExpression(e *AssignmentExpression) (val Value, typ Type, err error) {
-	log.Trace().Msg("EvaluateAssignmentExpression")
 	if val, err = e.right.Evaluate(ctx); err != nil {
 		return nil, TypeAny, err
 	}
@@ -80,16 +73,15 @@ func (ctx *Context) EvaluateAssignmentExpression(e *AssignmentExpression) (val V
 	if prev == nil {
 		return nil, TypeAny, NewRuntimeError(NewUndefinedVariableError(e.name), e.Position())
 	}
-	err = env.Set(e.name, val)
+	_, err = env.Set(e.name, val)
 	if err != nil {
 		return nil, TypeAny, err
 	}
-	log.Debug().Msgf("(evaluator) %s <- %s (prev %s)", e.name, val, *prev)
+	log.Debug().Msgf("(executor) (%d) %s = %s (prev %s)", env.depth, e.name, val, *prev)
 	return val, typ, nil
 }
 
 func (ctx *Context) EvaluateVariableExpression(e *VariableExpression) (val Value, typ Type, err error) {
-	log.Trace().Msg("EvaluateVariableExpression")
 	typ = e.Type()
 	v, _ := ctx.values.Lookup(e.name)
 	if val != nil {
@@ -97,7 +89,6 @@ func (ctx *Context) EvaluateVariableExpression(e *VariableExpression) (val Value
 		return nil, TypeAny, err
 	}
 	val = *v
-	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
 	return val, typ, nil
 }
 

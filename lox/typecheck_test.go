@@ -432,7 +432,7 @@ func TestTypeCheckVariableExpression(t *testing.T) {
 	for _, test := range tests {
 		ctx := NewContext()
 		for name, typ := range test.bindings {
-			err := ctx.types.Set(name, typ)
+			_, err := ctx.types.Set(name, typ)
 			if err != nil {
 				t.Errorf("Unexpected error while setting bindings for %q: %s", test.expr, err)
 			}

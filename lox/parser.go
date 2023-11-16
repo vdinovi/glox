@@ -24,8 +24,9 @@ func NewParser(tokens []Token) Parser {
 func (p *Parser) Parse() ([]Statement, error) {
 	log.Debug().Msgf("(parser) scanning %d tokens", len(p.scan.tokens))
 	stmts := []Statement{}
-	for !p.done() {
+	for {
 		if p.skipComments(); p.done() {
+			log.Debug().Msg("(parser) done")
 			break
 		}
 		stmt, err := p.declaration()
@@ -34,7 +35,7 @@ func (p *Parser) Parse() ([]Statement, error) {
 			log.Error().Msgf("(parser) error: %s", err)
 			return nil, err
 		}
-		log.Debug().Msgf("(parser) statement <- %s", stmt)
+		log.Debug().Msgf("(parser) statement: %s", stmt)
 		stmts = append(stmts, stmt)
 	}
 	return stmts, nil
@@ -71,7 +72,6 @@ func (p *Parser) varDeclaration(pos Position) (Statement, error) {
 		}
 	} else {
 		stmt.expr = &NilExpression{pos: stmt.pos}
-		log.Debug().Msgf("(parser) expr <- %s", stmt.expr)
 	}
 
 	if token, ok := p.scan.match(TokenSemicolon); !ok {

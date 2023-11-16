@@ -34,11 +34,12 @@ func (l *Lexer) Scan() ([]Token, error) {
 	for {
 		token, err := l.next()
 		if err == nil {
-			log.Debug().Msgf("(lexer) token <- %s", token)
+			log.Debug().Msgf("(lexer) token: %s", token)
 			tokens = append(tokens, *token)
 		} else if err == io.EOF {
-			log.Debug().Msgf("(lexer) reached EOF")
 			tokens = append(tokens, eofToken)
+			log.Debug().Msgf("(lexer) token: %s", eofToken)
+			log.Debug().Msg("(lexer) done")
 			break
 		} else {
 			log.Error().Msgf("(lexer) error: %s", err)

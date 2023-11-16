@@ -113,7 +113,7 @@ func (s *WhileStatement) Execute(ctx *Executor) error {
 }
 
 func (s *WhileStatement) String() string {
-	return fmt.Sprintf("while %s %s", s.expr, s.body)
+	return fmt.Sprintf("while ( %s ) %s", s.expr, s.body)
 }
 
 func (s *WhileStatement) Equals(other Statement) bool {
@@ -147,20 +147,21 @@ func (s *ForStatement) Execute(ctx *Executor) error {
 
 func (s *ForStatement) String() string {
 	var sb strings.Builder
-	fmt.Fprint(&sb, "for (")
+	fmt.Fprint(&sb, "for ( ")
 	if s.init != nil {
 		sb.WriteString(s.init.String())
 	} else {
-		sb.WriteString(";")
+		sb.WriteString(" ;")
 	}
 	if s.cond != nil {
-		sb.WriteString(s.init.String())
-	} else {
-		sb.WriteString(";")
-	}
-	if s.cond != nil {
+		sb.WriteString(" ")
 		sb.WriteString(s.cond.String())
 	}
+	sb.WriteString(" ; ")
+	if s.incr != nil {
+		sb.WriteString(s.incr.String())
+	}
+	sb.WriteString(" ) ")
 	sb.WriteString(s.body.String())
 	return sb.String()
 }

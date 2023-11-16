@@ -2,6 +2,8 @@ package lox
 
 import (
 	"fmt"
+
+	"github.com/rs/zerolog/log"
 )
 
 type OperatorType int
@@ -62,11 +64,13 @@ func (e *UnaryExpression) TypeCheck(ctx *Context) (Type, error) {
 		return TypeAny, err
 	}
 	e.typ = typ
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
 	return typ, nil
 }
 
 func (e *UnaryExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateUnaryExpression(e)
+	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
 	return val, err
 }
 
@@ -104,11 +108,13 @@ func (e *BinaryExpression) TypeCheck(ctx *Context) (Type, error) {
 		return TypeAny, err
 	}
 	e.typ = typ
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
 	return typ, nil
 }
 
 func (e *BinaryExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateBinaryExpression(e)
+	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
 	return val, err
 }
 
@@ -144,11 +150,13 @@ func (e *GroupingExpression) TypeCheck(ctx *Context) (Type, error) {
 		return TypeAny, err
 	}
 	e.typ = typ
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
 	return typ, nil
 }
 
 func (e *GroupingExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateGroupingExpression(e)
+	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
 	return val, err
 }
 
@@ -185,11 +193,13 @@ func (e *AssignmentExpression) TypeCheck(ctx *Context) (Type, error) {
 		return TypeAny, err
 	}
 	e.typ = typ
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
 	return typ, nil
 }
 
 func (e *AssignmentExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateAssignmentExpression(e)
+	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
 	return val, err
 }
 
@@ -225,11 +235,13 @@ func (e *VariableExpression) TypeCheck(ctx *Context) (Type, error) {
 		return TypeAny, err
 	}
 	e.typ = typ
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
 	return typ, nil
 }
 
 func (e *VariableExpression) Evaluate(ctx *Context) (Value, error) {
 	val, _, err := ctx.EvaluateVariableExpression(e)
+	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
 	return val, err
 }
 
@@ -256,11 +268,15 @@ func (e *StringExpression) Type() Type {
 }
 
 func (e *StringExpression) TypeCheck(*Context) (Type, error) {
-	return e.Type(), nil
+	typ := e.Type()
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
+	return typ, nil
 }
 
 func (e *StringExpression) Evaluate(ctx *Context) (Value, error) {
-	return ValueString(e.value), nil
+	val := ValueString(e.value)
+	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
+	return val, nil
 }
 
 func (e *StringExpression) Equals(other Expression) bool {
@@ -286,11 +302,15 @@ func (e *NumericExpression) Type() Type {
 }
 
 func (e *NumericExpression) TypeCheck(*Context) (Type, error) {
-	return e.Type(), nil
+	typ := e.Type()
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
+	return typ, nil
 }
 
 func (e *NumericExpression) Evaluate(ctx *Context) (Value, error) {
-	return ValueNumeric(e.value), nil
+	val := ValueNumeric(e.value)
+	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
+	return val, nil
 }
 
 func (e *NumericExpression) Equals(other Expression) bool {
@@ -319,11 +339,15 @@ func (e *BooleanExpression) Type() Type {
 }
 
 func (e *BooleanExpression) TypeCheck(*Context) (Type, error) {
-	return e.Type(), nil
+	typ := e.Type()
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
+	return typ, nil
 }
 
 func (e *BooleanExpression) Evaluate(ctx *Context) (Value, error) {
-	return ValueBoolean(e.value), nil
+	val := ValueBoolean(e.value)
+	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
+	return val, nil
 }
 
 func (e *BooleanExpression) Equals(other Expression) bool {
@@ -348,11 +372,15 @@ func (e *NilExpression) Type() Type {
 }
 
 func (e *NilExpression) TypeCheck(*Context) (Type, error) {
-	return e.Type(), nil
+	typ := e.Type()
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
+	return typ, nil
 }
 
 func (e *NilExpression) Evaluate(ctx *Context) (Value, error) {
-	return Nil, nil
+	val := Nil
+	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
+	return val, nil
 }
 
 func (e *NilExpression) Equals(other Expression) bool {

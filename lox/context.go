@@ -2,15 +2,16 @@ package lox
 
 import (
 	"fmt"
+	"strings"
 )
 
-type Environment[T any] struct {
+type Environment[T fmt.Stringer] struct {
 	parent   *Environment[T]
 	bindings map[string]T
 	depth    int
 }
 
-func NewEnvironment[T any](parent *Environment[T]) *Environment[T] {
+func NewEnvironment[T fmt.Stringer](parent *Environment[T]) *Environment[T] {
 	depth := 0
 	if parent != nil {
 		depth = parent.depth + 1
@@ -41,16 +42,26 @@ func (env *Environment[T]) Get(key string, def T) T {
 	return t
 }
 
-func (env *Environment[T]) Set(key string, val T) error {
+func (env *Environment[T]) Set(key string, val T) (prev *T, err error) {
 	// if _, ok := env.bindings[key]; ok {
 	// 	return NewVariableRedeclarationError(key)
 	// }
+	p, ok := env.bindings[key]
+	if ok {
+		prev = &p
+	}
 	env.bindings[key] = val
-	return nil
+	return prev, nil
 }
 
 func (env *Environment[T]) String() string {
-	return fmt.Sprintf("(%d) %v", env.depth, env.bindings)
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Environment(%d){", env.depth)
+	for key, val := range env.bindings {
+		fmt.Fprintf(&sb, " %s=%s,", key, val)
+	}
+	sb.WriteString(" }")
+	return sb.String()
 }
 
 type Context struct {
