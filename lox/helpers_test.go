@@ -2,7 +2,9 @@ package lox
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -92,4 +94,87 @@ func makeGroupingExpr(e Expression) func() *GroupingExpression {
 	return func() *GroupingExpression {
 		return &GroupingExpression{expr: e}
 	}
+}
+
+type TestDriver struct {
+	Text    string
+	Tokens  []Token
+	Program []Statement
+	Printer PrintSpy
+	Exec    *Executor
+	Err     error
+	t       *testing.T
+}
+
+func NewTestDriver(t *testing.T, text string) *TestDriver {
+	return &TestDriver{
+		Text: text,
+		t:    t,
+	}
+}
+
+func (td *TestDriver) Fatal() {
+	td.t.Helper()
+	if td.Err != nil {
+		td.t.Fatal(td.Err)
+	}
+}
+
+func (td *TestDriver) Lex() {
+	td.Tokens, td.Err = Scan(strings.NewReader(td.Text))
+}
+
+func (td *TestDriver) Parse() {
+	if td.Err != nil {
+		return
+	}
+	if len(td.Tokens) < 1 {
+		td.Err = fmt.Errorf("no tokens to parse (ensure Lex has been called)")
+	}
+	td.Program, td.Err = Parse(td.Tokens)
+}
+
+func (td *TestDriver) TypeCheck() {
+	if td.Err != nil {
+		return
+	}
+	if len(td.Program) < 1 {
+		td.Err = fmt.Errorf("no program to typecheck (ensure Parse has been called)")
+	}
+	td.Exec = NewExecutor(&td.Printer)
+	td.Err = td.Exec.TypeCheckProgram(td.Program)
+}
+
+func (td *TestDriver) Execute() {
+	if td.Err != nil {
+		return
+	}
+	if len(td.Program) < 1 {
+		td.Err = fmt.Errorf("no program to execute (ensure Parse has been called)")
+	}
+	if td.Exec == nil {
+		td.Exec = NewExecutor(&td.Printer)
+	}
+	td.Err = td.Exec.ExecuteProgram(td.Program)
+}
+
+type PrintSpy struct {
+	Buffer strings.Builder
+	Prints []string
+}
+
+func (s *PrintSpy) Write(p []byte) (n int, err error) {
+	for _, b := range p {
+		switch b {
+		case '\n':
+			s.Prints = append(s.Prints, s.Buffer.String())
+			s.Buffer.Reset()
+		default:
+			if err := s.Buffer.WriteByte(b); err != nil {
+				return n, err
+			}
+			n += 1
+		}
+	}
+	return n, nil
 }

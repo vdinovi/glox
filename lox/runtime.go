@@ -16,6 +16,6 @@ func NewRuntime(printer io.Writer) *Runtime {
 }
 
 func (r *Runtime) Print(s string) error {
-	_, err := fmt.Println(s)
+	_, err := fmt.Fprintln(r.printer, s)
 	return err
 }

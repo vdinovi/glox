@@ -18,10 +18,12 @@ func (ctx *Context) TypeCheckProgram(stmts []Statement) error {
 
 func (ctx *Context) TypeCheckBlockStatement(s *BlockStatement) error {
 	log.Trace().Msg("TypeCheckBlockStatement")
-	log.Debug().Msgf("(typechecker) enter scope")
 	ctx.PushEnvironment()
-	defer ctx.PopEnvironment()
-	defer log.Debug().Msgf("(typechecker) exit scope")
+	log.Debug().Msgf("(typechecker) entering scope {%s}", ctx.types.String())
+	defer func() {
+		ctx.PopEnvironment()
+		log.Debug().Msgf("(typechecker) entering scope {%s}", ctx.types.String())
+	}()
 	for _, stmt := range s.stmts {
 		if err := stmt.TypeCheck(ctx); err != nil {
 			return err
@@ -58,11 +60,18 @@ func (ctx *Context) TypeCheckExpressionStatement(s *ExpressionStatement) error {
 func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error {
 	log.Trace().Msg("TypeCheckDeclarationStatement")
 	typ, err := ctx.TypeCheckExpression(s.expr)
-	if err == nil {
-		err = ctx.types.Set(s.name, typ)
+	if err != nil {
+		return err
 	}
-	if err == nil {
-		log.Debug().Msgf("(typechecker) type(%s) <- %s", s.name, typ)
+	prev := ctx.types.Get(s.name, ErrType)
+	err = ctx.types.Set(s.name, typ)
+	if err != nil {
+		return err
+	}
+	if prev == ErrType {
+		log.Debug().Msgf("(typechecker) initialized type(%s) to %s", s.name, typ)
+	} else {
+		log.Debug().Msgf("(typechecker) %s <- %s (prev %s)", s.name, typ, prev)
 	}
 	return err
 }
@@ -133,9 +142,10 @@ func (ctx *Context) TypeCheckGroupingExpression(e *GroupingExpression) (inner, r
 func (ctx *Context) TypeCheckAssignmentExpression(e *AssignmentExpression) (right, result Type, err error) {
 	log.Trace().Msg("TypeCheckAssignmentExpression")
 	right, err = e.right.TypeCheck(ctx)
-	if err == nil {
-		err = ctx.types.Set(e.name, right)
+	if err != nil {
+		return ErrType, ErrType, err
 	}
+	err = ctx.types.Set(e.name, right)
 	if err != nil {
 		return ErrType, ErrType, err
 	}
@@ -144,7 +154,7 @@ func (ctx *Context) TypeCheckAssignmentExpression(e *AssignmentExpression) (righ
 
 func (ctx *Context) TypeCheckVariableExpression(e *VariableExpression) (result Type, err error) {
 	log.Trace().Msg("TypeCheckVariableExpression")
-	typ := ctx.types.Lookup(e.name)
+	typ, _ := ctx.types.Lookup(e.name)
 	if typ == nil {
 		return ErrType, NewTypeError(NewUndefinedVariableError(e.name), e.Position())
 	}

@@ -47,10 +47,13 @@ func (x *Executor) Execute(stmt Statement) error {
 }
 
 func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
-	log.Trace().Msg("ExecuteBlockStatement")
-	log.Debug().Msgf("(executor) enter scope")
+	log.Debug().Msgf("(executor) executing %q", s)
 	x.ctx.PushEnvironment()
-	defer x.ctx.PopEnvironment()
+	log.Debug().Msgf("(executor) entering scope {%s}", x.ctx.values.String())
+	defer func() {
+		x.ctx.PopEnvironment()
+		log.Debug().Msgf("(executor) entering scope {%s}", x.ctx.values.String())
+	}()
 	defer log.Debug().Msgf("(executor) exit scope")
 	for _, stmt := range s.stmts {
 		if err := stmt.Execute(x); err != nil {
@@ -61,7 +64,7 @@ func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
 }
 
 func (x *Executor) ExecuteConditionalStatement(s *ConditionalStatement) error {
-	log.Trace().Msg("ExecuteConditionalStatement")
+	log.Debug().Msgf("(executor) executing %q", s)
 	cond, err := s.expr.Evaluate(x.ctx)
 	if err != nil {
 		return err
@@ -79,13 +82,13 @@ func (x *Executor) ExecuteConditionalStatement(s *ConditionalStatement) error {
 }
 
 func (x *Executor) ExecuteExpressionStatement(s *ExpressionStatement) error {
-	log.Trace().Msg("ExecuteExpressionStatement")
+	log.Debug().Msgf("(executor) executing %q", s)
 	_, err := s.expr.Evaluate(x.ctx)
 	return err
 }
 
 func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
-	log.Trace().Msg("ExecutePrintStatement")
+	log.Debug().Msgf("(executor) executing %q", s)
 	val, err := s.expr.Evaluate(x.ctx)
 	if err != nil {
 		return err
@@ -98,11 +101,20 @@ func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
 }
 
 func (x *Executor) ExecuteDeclarationStatement(s *DeclarationStatement) error {
-	log.Trace().Msg("ExecuteDeclarationStatement")
 	log.Debug().Msgf("(executor) executing %q", s)
 	val, err := s.expr.Evaluate(x.ctx)
-	if err == nil {
-		err = x.ctx.values.Set(s.name, val)
+	if err != nil {
+		return err
+	}
+	prev := x.ctx.values.Get(s.name, nil)
+	err = x.ctx.values.Set(s.name, val)
+	if err != nil {
+		return err
+	}
+	if prev == nil {
+		log.Debug().Msgf("(executor) initialized %s to %s", s.name, val)
+	} else {
+		log.Debug().Msgf("(executor) %s <- %s (prev %s)", s.name, val, prev)
 	}
 	return err
 }

@@ -67,20 +67,25 @@ func (ctx *Context) EvaluateGroupingExpression(e *GroupingExpression) (val Value
 
 func (ctx *Context) EvaluateAssignmentExpression(e *AssignmentExpression) (val Value, typ Type, err error) {
 	log.Trace().Msg("EvaluateAssignmentExpression")
-	if val, err = e.right.Evaluate(ctx); err == nil {
-		err = ctx.values.Set(e.name, val)
+	if val, err = e.right.Evaluate(ctx); err != nil {
+		return nil, ErrType, err
 	}
+	prev, env := ctx.values.Lookup(e.name)
+	if prev == nil {
+		return nil, ErrType, NewRuntimeError(NewUndefinedVariableError(e.name), e.Position())
+	}
+	err = env.Set(e.name, val)
 	if err != nil {
 		return nil, ErrType, err
 	}
-	log.Debug().Msgf("(evaluator) eval(%s) => %s", e, val)
+	log.Debug().Msgf("(evaluator) %s <- %s (prev %s)", e.name, val, *prev)
 	return val, typ, nil
 }
 
 func (ctx *Context) EvaluateVariableExpression(e *VariableExpression) (val Value, typ Type, err error) {
 	log.Trace().Msg("EvaluateVariableExpression")
 	typ = e.Type()
-	v := ctx.values.Lookup(e.name)
+	v, _ := ctx.values.Lookup(e.name)
 	if val != nil {
 		err := NewRuntimeError(NewUndefinedVariableError(e.name), e.Position())
 		return nil, ErrType, err

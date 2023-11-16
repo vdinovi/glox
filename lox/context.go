@@ -7,24 +7,38 @@ import (
 type Environment[T any] struct {
 	parent   *Environment[T]
 	bindings map[string]T
+	depth    int
 }
 
 func NewEnvironment[T any](parent *Environment[T]) *Environment[T] {
+	depth := 0
+	if parent != nil {
+		depth = parent.depth + 1
+	}
 	return &Environment[T]{
 		parent:   parent,
 		bindings: make(map[string]T),
+		depth:    depth,
 	}
 }
 
-func (env *Environment[T]) Lookup(name string) *T {
+func (env *Environment[T]) Lookup(name string) (*T, *Environment[T]) {
 	val, ok := env.bindings[name]
 	if ok {
-		return &val
+		return &val, env
 	}
 	if env.parent != nil {
 		return env.parent.Lookup(name)
 	}
-	return nil
+	return nil, nil
+}
+
+func (env *Environment[T]) Get(key string, def T) T {
+	t, ok := env.bindings[key]
+	if !ok {
+		return def
+	}
+	return t
 }
 
 func (env *Environment[T]) Set(key string, val T) error {
@@ -33,6 +47,10 @@ func (env *Environment[T]) Set(key string, val T) error {
 	// }
 	env.bindings[key] = val
 	return nil
+}
+
+func (env *Environment[T]) String() string {
+	return fmt.Sprintf("(%d) %v", env.depth, env.bindings)
 }
 
 type Context struct {
