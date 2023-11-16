@@ -191,6 +191,44 @@ func TestTypeCheckConditionalStatement(t *testing.T) {
 	}
 }
 
+func TestTypeCheckWhileStatement(t *testing.T) {
+	tests := []struct {
+		text string
+		err  error
+	}{
+		{text: "while (true) 1;"},
+		{text: "while (true) { 1; }"},
+		{text: "while (true) { while (false) 1;}"},
+	}
+
+	for _, test := range tests {
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		td.Parse()
+		td.Fatal()
+		if len(td.Program) != 1 {
+			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+		}
+		var cond *WhileStatement
+		var ok bool
+		if cond, ok = td.Program[0].(*WhileStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
+			continue
+		}
+		ctx := NewContext()
+		err := ctx.TypeCheckWhileStatement(cond)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", cond, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Error(err)
+			continue
+		}
+	}
+}
+
 func TestTypeCheckExpression(t *testing.T) {
 	tests := []struct {
 		typ  Type

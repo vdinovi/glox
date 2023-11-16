@@ -29,6 +29,7 @@ func (p *Parser) Parse() ([]Statement, error) {
 			break
 		}
 		stmt, err := p.declaration()
+
 		if err != nil {
 			log.Error().Msgf("(parser) error: %s", err)
 			return nil, err
@@ -89,6 +90,9 @@ func (p *Parser) statement() (Statement, error) {
 	if print, ok := p.scan.match(TokenPrint); ok {
 		return p.printStatement(print.Position)
 	}
+	if while, ok := p.scan.match(TokenWhile); ok {
+		return p.whileStatement(while.Position)
+	}
 	if lbrace, ok := p.scan.match(TokenLeftBrace); ok {
 		return p.blockStatement(lbrace.Position)
 	}
@@ -98,19 +102,9 @@ func (p *Parser) statement() (Statement, error) {
 func (p *Parser) ifStatement(pos Position) (Statement, error) {
 	var err error
 	stmt := ConditionalStatement{pos: pos}
-	if lparen, ok := p.scan.match(TokenLeftParen); !ok {
-		return nil, NewSyntaxError(
-			NewUnexpectedTokenError(TokenLeftParen.String(), lparen), lparen.Position,
-		)
-	}
-	stmt.expr, err = p.expression()
+	stmt.expr, err = p.condition()
 	if err != nil {
 		return nil, err
-	}
-	if rparen, ok := p.scan.match(TokenRightParen); !ok {
-		return nil, NewSyntaxError(
-			NewUnexpectedTokenError(TokenLeftParen.String(), rparen), rparen.Position,
-		)
 	}
 	stmt.thenBranch, err = p.statement()
 	if err != nil {
@@ -121,6 +115,20 @@ func (p *Parser) ifStatement(pos Position) (Statement, error) {
 		return &stmt, nil
 	}
 	stmt.elseBranch, err = p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return &stmt, nil
+}
+
+func (p *Parser) whileStatement(pos Position) (Statement, error) {
+	var err error
+	stmt := WhileStatement{pos: pos}
+	stmt.expr, err = p.condition()
+	if err != nil {
+		return nil, err
+	}
+	stmt.body, err = p.statement()
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +148,6 @@ func (p *Parser) printStatement(pos Position) (Statement, error) {
 		)
 	}
 
-	p.skipComments()
 	return &stmt, nil
 }
 
@@ -169,8 +176,25 @@ func (p *Parser) expressionStatement() (Statement, error) {
 			NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Position,
 		)
 	}
-	p.skipComments()
 	return &stmt, nil
+}
+
+func (p *Parser) condition() (expr Expression, err error) {
+	if lparen, ok := p.scan.match(TokenLeftParen); !ok {
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenLeftParen.String(), lparen), lparen.Position,
+		)
+	}
+	expr, err = p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if rparen, ok := p.scan.match(TokenRightParen); !ok {
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenLeftParen.String(), rparen), rparen.Position,
+		)
+	}
+	return expr, nil
 }
 
 func (p *Parser) expression() (Expression, error) {

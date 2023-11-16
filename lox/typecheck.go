@@ -34,6 +34,9 @@ func (ctx *Context) TypeCheckBlockStatement(s *BlockStatement) error {
 
 func (ctx *Context) TypeCheckConditionalStatement(s *ConditionalStatement) error {
 	log.Trace().Msg("TypeCheckConditionalStatement")
+	if _, err := s.expr.TypeCheck(ctx); err != nil {
+		return err
+	}
 	if err := s.thenBranch.TypeCheck(ctx); err != nil {
 		return err
 	}
@@ -41,6 +44,17 @@ func (ctx *Context) TypeCheckConditionalStatement(s *ConditionalStatement) error
 		if err := s.elseBranch.TypeCheck(ctx); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (ctx *Context) TypeCheckWhileStatement(s *WhileStatement) error {
+	log.Trace().Msg("TypeCheckWhileStatement")
+	if _, err := s.expr.TypeCheck(ctx); err != nil {
+		return err
+	}
+	if err := s.body.TypeCheck(ctx); err != nil {
+		return err
 	}
 	return nil
 }

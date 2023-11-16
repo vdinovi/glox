@@ -90,7 +90,39 @@ func (s *ConditionalStatement) Equals(other Statement) bool {
 	}
 	return s.expr.Equals(cond.expr) &&
 		s.thenBranch.Equals(cond.thenBranch) &&
-		(s.elseBranch == nil && cond.elseBranch == nil || s.elseBranch.Equals(cond.elseBranch))
+		(s.elseBranch == nil && cond.elseBranch == nil ||
+			s.elseBranch.Equals(cond.elseBranch))
+}
+
+type WhileStatement struct {
+	expr Expression
+	body Statement
+	pos  Position
+}
+
+func (s *WhileStatement) Position() Position {
+	return s.pos
+}
+
+func (s *WhileStatement) TypeCheck(ctx *Context) error {
+	return ctx.TypeCheckWhileStatement(s)
+}
+
+func (s *WhileStatement) Execute(ctx *Executor) error {
+	return ctx.ExecuteWhileStatement(s)
+}
+
+func (s *WhileStatement) String() string {
+	return fmt.Sprintf("while %s %s", s.expr, s.body)
+}
+
+func (s *WhileStatement) Equals(other Statement) bool {
+	while, ok := other.(*WhileStatement)
+	if !ok {
+		return false
+	}
+	return s.expr.Equals(while.expr) &&
+		s.body.Equals(while.body)
 }
 
 type ExpressionStatement struct {

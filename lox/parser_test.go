@@ -288,6 +288,73 @@ func TestParserConditionalStatement(t *testing.T) {
 	}
 }
 
+func TestParserWhileStatement(t *testing.T) {
+	tests := []struct {
+		text string
+		stmt WhileStatement
+		err  error
+	}{
+		{
+			text: "while (true) 1;",
+			stmt: WhileStatement{
+				expr: trueExpr(),
+				body: &ExpressionStatement{expr: oneExpr()},
+			},
+		},
+		{
+			text: "while (true) { 1; }",
+			stmt: WhileStatement{
+				expr: trueExpr(),
+				body: &BlockStatement{
+					stmts: []Statement{
+						&ExpressionStatement{expr: oneExpr()},
+					},
+				},
+			},
+		},
+		{
+			text: "while (true) { while(false) 1; }",
+			stmt: WhileStatement{
+				expr: trueExpr(),
+				body: &BlockStatement{
+					stmts: []Statement{
+						&WhileStatement{
+							expr: falseExpr(),
+							body: &ExpressionStatement{
+								expr: oneExpr(),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		tokens, err := Scan(strings.NewReader(test.text))
+		if err != nil {
+			t.Errorf("Unexpected error in %q: %s", test.text, err)
+			continue
+		}
+		program, err := Parse(tokens)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Errorf("Unexpected error in %q: %s", test.text, err)
+			continue
+		}
+		if len(program) != 1 {
+			t.Errorf("Expected %q to produce 1 statement but got %d", test.text, len(program))
+		}
+		stmt := program[0]
+		if !stmt.Equals(&test.stmt) {
+			t.Errorf("Expected %q to be %q, but got %q", test.text, test.stmt.String(), stmt.String())
+		}
+	}
+}
+
 func TestParserProgram(t *testing.T) {
 	// TODO: Needs to serialize AST to golden file for this test to work
 	t.Skip()

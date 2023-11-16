@@ -82,6 +82,24 @@ func (x *Executor) ExecuteConditionalStatement(s *ConditionalStatement) error {
 	return nil
 }
 
+func (x *Executor) ExecuteWhileStatement(s *WhileStatement) error {
+	log.Debug().Msgf("(executor) executing %q", s)
+	for {
+		cond, err := s.expr.Evaluate(x.ctx)
+		if err != nil {
+			return err
+		}
+		if !cond.Truthy() {
+			log.Debug().Msg("(executor) break loop")
+			break
+		}
+		if err := s.body.Execute(x); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (x *Executor) ExecuteExpressionStatement(s *ExpressionStatement) error {
 	log.Debug().Msgf("(executor) executing %q", s)
 	_, err := s.expr.Evaluate(x.ctx)
