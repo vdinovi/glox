@@ -59,6 +59,10 @@ func (ctx *Context) TypeCheckWhileStatement(s *WhileStatement) error {
 	return nil
 }
 
+func (ctx *Context) TypeCheckForStatement(s *ForStatement) error {
+	return nil
+}
+
 func (ctx *Context) TypeCheckPrintStatement(s *PrintStatement) error {
 	log.Trace().Msg("TypeCheckPrintStatement")
 	_, err := ctx.TypeCheckExpression(s.expr)

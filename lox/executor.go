@@ -44,11 +44,11 @@ func (x *Executor) ExecuteProgram(stmts []Statement) error {
 }
 
 func (x *Executor) Execute(stmt Statement) error {
+	log.Debug().Msgf("(executor) executing %q", stmt)
 	return stmt.Execute(x)
 }
 
 func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
-	log.Debug().Msgf("(executor) executing %q", s)
 	x.ctx.PushEnvironment()
 	log.Debug().Msgf("(executor) entering scope {%s}", x.ctx.values.String())
 	defer func() {
@@ -65,7 +65,6 @@ func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
 }
 
 func (x *Executor) ExecuteConditionalStatement(s *ConditionalStatement) error {
-	log.Debug().Msgf("(executor) executing %q", s)
 	cond, err := s.expr.Evaluate(x.ctx)
 	if err != nil {
 		return err
@@ -83,7 +82,6 @@ func (x *Executor) ExecuteConditionalStatement(s *ConditionalStatement) error {
 }
 
 func (x *Executor) ExecuteWhileStatement(s *WhileStatement) error {
-	log.Debug().Msgf("(executor) executing %q", s)
 	for {
 		cond, err := s.expr.Evaluate(x.ctx)
 		if err != nil {
@@ -100,14 +98,40 @@ func (x *Executor) ExecuteWhileStatement(s *WhileStatement) error {
 	return nil
 }
 
+func (x *Executor) ExecuteForStatement(s *ForStatement) error {
+	if s.init != nil {
+		s.init.Execute(x)
+	}
+	for {
+		if s.cond != nil {
+			cond, err := s.cond.Evaluate(x.ctx)
+			if err != nil {
+				return err
+			}
+			if !cond.Truthy() {
+				log.Debug().Msg("(executor) break loop")
+				break
+			}
+		}
+		if err := s.body.Execute(x); err != nil {
+			return err
+		}
+		if s.incr != nil {
+			_, err := s.incr.Evaluate(x.ctx)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (x *Executor) ExecuteExpressionStatement(s *ExpressionStatement) error {
-	log.Debug().Msgf("(executor) executing %q", s)
 	_, err := s.expr.Evaluate(x.ctx)
 	return err
 }
 
 func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
-	log.Debug().Msgf("(executor) executing %q", s)
 	val, err := s.expr.Evaluate(x.ctx)
 	if err != nil {
 		return err
@@ -120,7 +144,6 @@ func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
 }
 
 func (x *Executor) ExecuteDeclarationStatement(s *DeclarationStatement) error {
-	log.Debug().Msgf("(executor) executing %q", s)
 	val, err := s.expr.Evaluate(x.ctx)
 	if err != nil {
 		return err

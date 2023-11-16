@@ -125,6 +125,57 @@ func (s *WhileStatement) Equals(other Statement) bool {
 		s.body.Equals(while.body)
 }
 
+type ForStatement struct {
+	init Statement
+	cond Expression
+	incr Expression
+	body Statement
+	pos  Position
+}
+
+func (s *ForStatement) Position() Position {
+	return s.pos
+}
+
+func (s *ForStatement) TypeCheck(ctx *Context) error {
+	return ctx.TypeCheckForStatement(s)
+}
+
+func (s *ForStatement) Execute(ctx *Executor) error {
+	return ctx.ExecuteForStatement(s)
+}
+
+func (s *ForStatement) String() string {
+	var sb strings.Builder
+	fmt.Fprint(&sb, "for (")
+	if s.init != nil {
+		sb.WriteString(s.init.String())
+	} else {
+		sb.WriteString(";")
+	}
+	if s.cond != nil {
+		sb.WriteString(s.init.String())
+	} else {
+		sb.WriteString(";")
+	}
+	if s.cond != nil {
+		sb.WriteString(s.cond.String())
+	}
+	sb.WriteString(s.body.String())
+	return sb.String()
+}
+
+func (s *ForStatement) Equals(other Statement) bool {
+	for_, ok := other.(*ForStatement)
+	if !ok {
+		return false
+	}
+	return s.body.Equals(for_.body) &&
+		(s.init == nil && for_.init == nil || s.init.Equals(for_.init)) &&
+		(s.cond == nil && for_.cond == nil || s.cond.Equals(for_.cond)) &&
+		(s.incr == nil && for_.incr == nil || s.incr.Equals(for_.incr))
+}
+
 type ExpressionStatement struct {
 	expr Expression
 	pos  Position

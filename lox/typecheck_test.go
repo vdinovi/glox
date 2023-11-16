@@ -44,9 +44,13 @@ func TestTypecheckPrintStatement(t *testing.T) {
 		td := NewTestDriver(t, test.text)
 		td.Lex()
 		td.Parse()
-		td.Fatal()
+		if td.Err != nil {
+			t.Errorf("Unexpected error in %q while %s: %s", test.text, td.Phase(), td.Err)
+			continue
+		}
 		if len(td.Program) != 1 {
 			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+			continue
 		}
 		var print *PrintStatement
 		var ok bool
@@ -85,9 +89,13 @@ func TestTypeCheckExpressionStatement(t *testing.T) {
 		td := NewTestDriver(t, test.text)
 		td.Lex()
 		td.Parse()
-		td.Fatal()
+		if td.Err != nil {
+			t.Errorf("Unexpected error in %q while %s: %s", test.text, td.Phase(), td.Err)
+			continue
+		}
 		if len(td.Program) != 1 {
 			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+			continue
 		}
 		var expr *ExpressionStatement
 		var ok bool
@@ -127,9 +135,13 @@ func TestTypeCheckBlockStatement(t *testing.T) {
 		td := NewTestDriver(t, test.text)
 		td.Lex()
 		td.Parse()
-		td.Fatal()
+		if td.Err != nil {
+			t.Errorf("Unexpected error in %q while %s: %s", test.text, td.Phase(), td.Err)
+			continue
+		}
 		if len(td.Program) != 1 {
 			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+			continue
 		}
 		var block *BlockStatement
 		var ok bool
@@ -167,9 +179,13 @@ func TestTypeCheckConditionalStatement(t *testing.T) {
 		td := NewTestDriver(t, test.text)
 		td.Lex()
 		td.Parse()
-		td.Fatal()
+		if td.Err != nil {
+			t.Errorf("Unexpected error in %q while %s: %s", test.text, td.Phase(), td.Err)
+			continue
+		}
 		if len(td.Program) != 1 {
 			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+			continue
 		}
 		var cond *ConditionalStatement
 		var ok bool
@@ -205,7 +221,10 @@ func TestTypeCheckWhileStatement(t *testing.T) {
 		td := NewTestDriver(t, test.text)
 		td.Lex()
 		td.Parse()
-		td.Fatal()
+		if td.Err != nil {
+			t.Errorf("Unexpected error in %q while %s: %s", test.text, td.Phase(), td.Err)
+			continue
+		}
 		if len(td.Program) != 1 {
 			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
 		}
@@ -217,6 +236,49 @@ func TestTypeCheckWhileStatement(t *testing.T) {
 		}
 		ctx := NewContext()
 		err := ctx.TypeCheckWhileStatement(cond)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", cond, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Error(err)
+			continue
+		}
+	}
+}
+
+func TestTypeCheckForStatement(t *testing.T) {
+	tests := []struct {
+		text string
+		err  error
+	}{
+		{text: "for (;;) 1;"},
+		{text: "for (;;) { 1; }"},
+		{text: "for (var x = 1;;) 1;"},
+		{text: "for (var x = 1; x;) 1;"},
+		{text: "for (var x = 1; x; x = x + 1) 1;"},
+	}
+	for _, test := range tests {
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		td.Parse()
+		if td.Err != nil {
+			t.Errorf("Unexpected error in %q while %s: %s", test.text, td.Phase(), td.Err)
+			continue
+		}
+		if len(td.Program) != 1 {
+			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+			continue
+		}
+		var cond *ForStatement
+		var ok bool
+		if cond, ok = td.Program[0].(*ForStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
+			continue
+		}
+		ctx := NewContext()
+		err := ctx.TypeCheckForStatement(cond)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", cond, test.err, err)

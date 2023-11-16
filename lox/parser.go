@@ -46,14 +46,14 @@ func (p *Parser) done() bool {
 }
 
 func (p *Parser) declaration() (Statement, error) {
-	if _, ok := p.scan.match(TokenVar); ok {
-		return p.varDeclaration()
+	if var_, ok := p.scan.match(TokenVar); ok {
+		return p.varDeclaration(var_.Position)
 	}
 	return p.statement()
 }
 
-func (p *Parser) varDeclaration() (Statement, error) {
-	stmt := DeclarationStatement{}
+func (p *Parser) varDeclaration(pos Position) (Statement, error) {
+	stmt := DeclarationStatement{pos: pos}
 	if token, ok := p.scan.match(TokenIdentifier); ok {
 		stmt.name = token.Lexem
 		stmt.pos = token.Position
@@ -93,6 +93,9 @@ func (p *Parser) statement() (Statement, error) {
 	if while, ok := p.scan.match(TokenWhile); ok {
 		return p.whileStatement(while.Position)
 	}
+	if for_, ok := p.scan.match(TokenFor); ok {
+		return p.forStatement(for_.Position)
+	}
 	if lbrace, ok := p.scan.match(TokenLeftBrace); ok {
 		return p.blockStatement(lbrace.Position)
 	}
@@ -127,6 +130,61 @@ func (p *Parser) whileStatement(pos Position) (Statement, error) {
 	stmt.expr, err = p.condition()
 	if err != nil {
 		return nil, err
+	}
+	stmt.body, err = p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return &stmt, nil
+}
+
+func (p *Parser) forStatement(pos Position) (Statement, error) {
+	var err error
+	stmt := ForStatement{pos: pos}
+	if lparen, ok := p.scan.match(TokenLeftParen); !ok {
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenLeftParen.String(), lparen), lparen.Position,
+		)
+	}
+	if _, ok := p.scan.match(TokenSemicolon); ok {
+		stmt.init = nil
+	} else if var_, ok := p.scan.match(TokenVar); ok {
+		stmt.init, err = p.varDeclaration(var_.Position)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		stmt.init, err = p.expressionStatement()
+		if err != nil {
+			return nil, err
+		}
+
+	}
+	if _, ok := p.scan.match(TokenSemicolon); ok {
+		stmt.cond = nil
+	} else {
+		stmt.cond, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		if semicolon, ok := p.scan.match(TokenSemicolon); !ok {
+			return nil, NewSyntaxError(
+				NewUnexpectedTokenError(TokenSemicolon.String(), semicolon), semicolon.Position,
+			)
+		}
+	}
+	if _, ok := p.scan.match(TokenRightParen); ok {
+		stmt.incr = nil
+	} else {
+		stmt.incr, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+		if rparen, ok := p.scan.match(TokenRightParen); !ok {
+			return nil, NewSyntaxError(
+				NewUnexpectedTokenError(TokenRightParen.String(), rparen), rparen.Position,
+			)
+		}
 	}
 	stmt.body, err = p.statement()
 	if err != nil {

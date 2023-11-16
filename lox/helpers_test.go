@@ -100,6 +100,16 @@ func makeGroupingExpr(e Expression) func() *GroupingExpression {
 	}
 }
 
+type testDriverPhase int
+
+const (
+	initializing = iota
+	lexing
+	parsing
+	typechecking
+	executing
+)
+
 type TestDriver struct {
 	Text    string
 	Tokens  []Token
@@ -108,6 +118,7 @@ type TestDriver struct {
 	Exec    *Executor
 	Err     error
 	t       *testing.T
+	phase   testDriverPhase
 }
 
 func NewTestDriver(t *testing.T, text string) *TestDriver {
@@ -120,11 +131,19 @@ func NewTestDriver(t *testing.T, text string) *TestDriver {
 func (td *TestDriver) Fatal() {
 	td.t.Helper()
 	if td.Err != nil {
-		td.t.Fatal(td.Err)
+		td.t.Fatalf("Unexpected error while %s: %s", td.Phase(), td.Err)
+	}
+}
+
+func (td *TestDriver) Error() {
+	td.t.Helper()
+	if td.Err != nil {
+		td.t.Errorf("Unexpected error while %s: %s", td.Phase(), td.Err)
 	}
 }
 
 func (td *TestDriver) Lex() {
+	td.phase = lexing
 	td.Tokens, td.Err = Scan(strings.NewReader(td.Text))
 }
 
@@ -135,6 +154,7 @@ func (td *TestDriver) Parse() {
 	if len(td.Tokens) < 1 {
 		td.Err = fmt.Errorf("no tokens to parse (ensure Lex has been called)")
 	}
+	td.phase = parsing
 	td.Program, td.Err = Parse(td.Tokens)
 }
 
@@ -148,6 +168,7 @@ func (td *TestDriver) TypeCheck() {
 	if td.Exec == nil {
 		td.Exec = NewExecutor(&td.Printer)
 	}
+	td.phase = parsing
 	td.Err = td.Exec.TypeCheckProgram(td.Program)
 }
 
@@ -161,7 +182,24 @@ func (td *TestDriver) Execute() {
 	if td.Exec == nil {
 		td.Exec = NewExecutor(&td.Printer)
 	}
+	td.phase = executing
 	td.Err = td.Exec.ExecuteProgram(td.Program)
+}
+
+func (td *TestDriver) Phase() string {
+	switch td.phase {
+	case initializing:
+		return "initializing"
+	case lexing:
+		return "lexing"
+	case parsing:
+		return "parsing"
+	case typechecking:
+		return "typechecking"
+	case executing:
+		return "executing"
+	}
+	panic(td.phase)
 }
 
 type PrintSpy struct {
