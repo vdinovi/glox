@@ -27,9 +27,9 @@ func TestExecutor(t *testing.T) {
 		{text: "var x = 1; if (true) { x = 2; } print x;", prints: []string{"2"}},
 		{text: "var x = 1; if (false) { x = 2; } print x;", prints: []string{"1"}},
 		{text: "while (false) print 1;", prints: nil},
-		{text: "var x = true; while (x) {print 1; x = false;}", prints: []string{"1"}},
+		{text: "var x = 1; while (x <= 3) {print x; x = x + 1;}", prints: []string{"1", "2", "3"}},
 		{text: "for (;false;) print 1;", prints: nil},
-		{text: "for (var x = true; x; x = false) print 1;", prints: []string{"1"}},
+		{text: "for (var x = 0; x < 3; x = x + 1) print x + 1;", prints: []string{"1", "2", "3"}},
 	}
 	for _, test := range tests {
 		td := NewTestDriver(t, test.text)

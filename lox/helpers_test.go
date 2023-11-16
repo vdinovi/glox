@@ -20,6 +20,12 @@ var fixtureProgram string
 //go:embed fixtures/program_tokens.json
 var fixtureProgramTokens string
 
+var eqOp = Operator{Type: OpEqualTo, Lexem: "=="}
+var neqOp = Operator{Type: OpNotEqualTo, Lexem: "!="}
+var ltOp = Operator{Type: OpLessThan, Lexem: "<"}
+var lteOp = Operator{Type: OpLessThanOrEqualTo, Lexem: "<="}
+var gtOp = Operator{Type: OpGreaterThan, Lexem: ">"}
+var gteOp = Operator{Type: OpGreaterThanOrEqualTo, Lexem: ">="}
 var addOp = Operator{Type: OpAdd, Lexem: "+"}
 var subOp = Operator{Type: OpSubtract, Lexem: "-"}
 var mulOp = Operator{Type: OpMultiply, Lexem: "*"}
@@ -38,11 +44,21 @@ var fooExpr = makeVarExpr("foo")
 
 var uSubExpr = makeUnaryExpr(subOp)
 var uAddExpr = makeUnaryExpr(addOp)
+
 var bAddExpr = makeBinaryExpr(addOp)
 var bSubExpr = makeBinaryExpr(subOp)
 var bMulExpr = makeBinaryExpr(mulOp)
 var bDivExpr = makeBinaryExpr(divOp)
+
 var groupExpr = makeGroupingExpr
+
+var eqExpr = makeBinaryExpr(eqOp)
+var neqExpr = makeBinaryExpr(neqOp)
+var ltExpr = makeBinaryExpr(ltOp)
+var lteExpr = makeBinaryExpr(lteOp)
+var gtExpr = makeBinaryExpr(gtOp)
+var gteExpr = makeBinaryExpr(gteOp)
+
 var bAndExpr = makeBinaryExpr(andOp)
 var bOrExpr = makeBinaryExpr(orOp)
 

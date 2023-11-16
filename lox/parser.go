@@ -290,7 +290,6 @@ func (p *Parser) equality() (Expression, error) {
 		}
 		op, err := token.Operator()
 		if err != nil {
-			// TODO: should this be a syntax error?
 			return nil, err
 		}
 		right, err := p.comparison()
@@ -314,7 +313,6 @@ func (p *Parser) comparison() (Expression, error) {
 		}
 		op, err := token.Operator()
 		if err != nil {
-			// TODO: should this be a syntax error?
 			return nil, err
 		}
 		right, err := p.term()
@@ -338,7 +336,6 @@ func (p *Parser) term() (Expression, error) {
 		}
 		op, err := token.Operator()
 		if err != nil {
-			// TODO: should this be a syntax error?
 			return nil, err
 		}
 		right, err := p.factor()
@@ -362,7 +359,6 @@ func (p *Parser) factor() (Expression, error) {
 		}
 		op, err := token.Operator()
 		if err != nil {
-			// TODO: should this be a syntax error?
 			return nil, err
 		}
 		right, err := p.unary()
@@ -378,7 +374,6 @@ func (p *Parser) unary() (Expression, error) {
 	if token, ok := p.scan.match(TokenBang, TokenMinus, TokenPlus); ok {
 		op, err := token.Operator()
 		if err != nil {
-			// TODO: should this be a syntax error?
 			return nil, err
 		}
 		right, err := p.unary()

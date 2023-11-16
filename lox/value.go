@@ -1,6 +1,7 @@
 package lox
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -21,6 +22,8 @@ type Value interface {
 	Type() Type
 	Equals(Value) bool
 }
+
+var ErrInvalidType = errors.New("invalid type")
 
 type ValueString string
 
@@ -54,7 +57,7 @@ func (v ValueString) Concat(other Value) (ValueString, error) {
 	var ok bool
 	var str ValueString
 	if str, ok = other.(ValueString); !ok {
-		return v, NewValueError(fmt.Sprintf("can't concat %s and %s", v.String(), other.String()))
+		return v, ErrInvalidType
 	}
 	return ValueString(string(v) + string(str)), nil
 }
@@ -98,7 +101,7 @@ func (v ValueNumeric) Add(other Value) (ValueNumeric, error) {
 	var ok bool
 	var num ValueNumeric
 	if num, ok = other.(ValueNumeric); !ok {
-		return v, NewValueError(fmt.Sprintf("can't add %s and %s", v.String(), other.String()))
+		return v, ErrInvalidType
 	}
 	return ValueNumeric(float64(v) + float64(num)), nil
 }
@@ -107,7 +110,7 @@ func (v ValueNumeric) Subtract(other Value) (ValueNumeric, error) {
 	var ok bool
 	var num ValueNumeric
 	if num, ok = other.(ValueNumeric); !ok {
-		return v, NewValueError(fmt.Sprintf("can't subtract %s and %s", v.String(), other.String()))
+		return v, ErrInvalidType
 	}
 	return ValueNumeric(float64(v) - float64(num)), nil
 }
@@ -116,7 +119,7 @@ func (v ValueNumeric) Multiply(other Value) (ValueNumeric, error) {
 	var ok bool
 	var num ValueNumeric
 	if num, ok = other.(ValueNumeric); !ok {
-		return v, NewValueError(fmt.Sprintf("can't multiply %s and %s", v.String(), other.String()))
+		return v, ErrInvalidType
 	}
 	return ValueNumeric(float64(v) * float64(num)), nil
 }
@@ -125,7 +128,7 @@ func (v ValueNumeric) Divide(other Value) (ValueNumeric, error) {
 	var ok bool
 	var denom ValueNumeric
 	if denom, ok = other.(ValueNumeric); !ok {
-		return v, NewValueError(fmt.Sprintf("can't divide %s and %s", v.String(), other.String()))
+		return v, NewInvalidBinaryOperatorForTypeError(OpDivide, v.Type(), other.Type())
 	}
 	n := float64(v)
 	d := float64(denom)
@@ -136,6 +139,23 @@ func (v ValueNumeric) Divide(other Value) (ValueNumeric, error) {
 		return v, NewDivideByZeroError(v, denom)
 	}
 	return ValueNumeric(n / d), nil
+}
+
+func (v ValueNumeric) Compare(other Value) (int, error) {
+	var ok bool
+	var num ValueNumeric
+	if num, ok = other.(ValueNumeric); !ok {
+		return 0, ErrInvalidType
+	}
+	a := float64(v)
+	b := float64(num)
+	if a == b {
+		return 0, nil
+	}
+	if a < b {
+		return -1, nil
+	}
+	return 1, nil
 }
 
 type ValueBoolean bool

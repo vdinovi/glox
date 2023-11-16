@@ -10,7 +10,7 @@ func TestSimpleExpression(t *testing.T) {
 		val  Value
 		err  error
 	}{
-		{val: ValueNumeric(1), expr: oneExpr()},
+		{expr: uSubExpr(strExpr())(), err: NewRuntimeError(NewInvalidUnaryOperatorForTypeError(OpSubtract, TypeString), Position{})},
 		{val: ValueNumeric(3.14), expr: piExpr()},
 		{val: ValueString("str"), expr: strExpr()},
 		{val: ValueBoolean(true), expr: trueExpr()},
@@ -109,7 +109,6 @@ func TestSimpleExpression(t *testing.T) {
 		{val: ValueBoolean(false), expr: bOrExpr(nilExpr())(falseExpr())()},
 	}
 	for _, test := range tests {
-		// t.Log(test.expr)
 		ctx := NewContext()
 		// _, err := test.expr.TypeCheck(ctx)
 		// if err != nil {

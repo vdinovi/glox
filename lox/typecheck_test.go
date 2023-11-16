@@ -311,6 +311,11 @@ func TestTypeCheckExpression(t *testing.T) {
 		{expr: uSubExpr(strExpr())(), err: NewTypeError(NewInvalidUnaryOperatorForTypeError(OpSubtract, TypeString), Position{})},
 		{expr: uSubExpr(trueExpr())(), err: NewTypeError(NewInvalidUnaryOperatorForTypeError(OpSubtract, TypeBoolean), Position{})},
 		{expr: uSubExpr(nilExpr())(), err: NewTypeError(NewInvalidUnaryOperatorForTypeError(OpSubtract, TypeNil), Position{})},
+		// comparison
+		{typ: TypeBoolean, expr: eqExpr(oneExpr())(piExpr())()},
+		{typ: TypeBoolean, expr: eqExpr(strExpr())(strExpr())()},
+		{typ: TypeBoolean, expr: eqExpr(trueExpr())(falseExpr())()},
+		{typ: TypeBoolean, expr: eqExpr(nilExpr())(nilExpr())()},
 		// unary add
 		{typ: TypeNumeric, expr: uAddExpr(oneExpr())()},
 		{typ: TypeNumeric, expr: uAddExpr(piExpr())()},

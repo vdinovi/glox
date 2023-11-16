@@ -9,23 +9,24 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[ErrOp-0]
-	_ = x[OpAdd-1]
-	_ = x[OpSubtract-2]
-	_ = x[OpMultiply-3]
-	_ = x[OpDivide-4]
-	_ = x[OpAnd-5]
-	_ = x[OpOr-6]
-	_ = x[OpEqualTo-7]
-	_ = x[OpNotEqualTo-8]
-	_ = x[OpLessThan-9]
-	_ = x[OpLessThanOrEqualTo-10]
-	_ = x[OpGreaterThan-11]
-	_ = x[OpGreaterThanOrEqualTo-12]
+	_ = x[OpBang-1]
+	_ = x[OpAdd-2]
+	_ = x[OpSubtract-3]
+	_ = x[OpMultiply-4]
+	_ = x[OpDivide-5]
+	_ = x[OpAnd-6]
+	_ = x[OpOr-7]
+	_ = x[OpEqualTo-8]
+	_ = x[OpNotEqualTo-9]
+	_ = x[OpLessThan-10]
+	_ = x[OpLessThanOrEqualTo-11]
+	_ = x[OpGreaterThan-12]
+	_ = x[OpGreaterThanOrEqualTo-13]
 }
 
-const _OperatorType_name = "ErrOpAddSubtractMultiplyDivideAndOrEqualToNotEqualToLessThanLessThanOrEqualToGreaterThanGreaterThanOrEqualTo"
+const _OperatorType_name = "ErrOpBangAddSubtractMultiplyDivideAndOrEqualToNotEqualToLessThanLessThanOrEqualToGreaterThanGreaterThanOrEqualTo"
 
-var _OperatorType_index = [...]uint8{0, 5, 8, 16, 24, 30, 33, 35, 42, 52, 60, 77, 88, 108}
+var _OperatorType_index = [...]uint8{0, 5, 9, 12, 20, 28, 34, 37, 39, 46, 56, 64, 81, 92, 112}
 
 func (i OperatorType) String() string {
 	if i < 0 || i >= OperatorType(len(_OperatorType_index)-1) {
