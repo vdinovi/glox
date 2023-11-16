@@ -1,0 +1,21 @@
+# Functional
+- Finish tree-walk interpreter
+- Add support for break and continue statements
+- Change type checking to verify compatible type sets rather than simple type matching
+- Add json serialization support for AST (statements and expressions)
+
+# Refactors
+- Review debug/trace logs and reorganize them
+- Cleanup tools
+
+# Tests
+- Make more use of test driver
+- Add golden file tests for parsing (requires serializable AST)
+
+# Misc
+- Move main.go to cmd
+- Terminal vizualization
+- Project versioning
+- Functional tty for interactive mode
+- Improve documentation
+- Move lox to internal
