@@ -20,6 +20,7 @@ var fixtureProgram string
 //go:embed fixtures/program_tokens.json
 var fixtureProgramTokens string
 
+var negOp = Operator{Type: OpNegate, Lexem: "!"}
 var eqOp = Operator{Type: OpEqualTo, Lexem: "=="}
 var neqOp = Operator{Type: OpNotEqualTo, Lexem: "!="}
 var ltOp = Operator{Type: OpLessThan, Lexem: "<"}
@@ -44,6 +45,7 @@ var fooExpr = makeVarExpr("foo")
 
 var uSubExpr = makeUnaryExpr(subOp)
 var uAddExpr = makeUnaryExpr(addOp)
+var uNegExpr = makeUnaryExpr(negOp)
 
 var bAddExpr = makeBinaryExpr(addOp)
 var bSubExpr = makeBinaryExpr(subOp)

@@ -173,7 +173,7 @@ func resolveUnary(e *UnaryExpression, right Type) (result Type, err error) {
 		default:
 			invalid = true
 		}
-	case OpBang:
+	case OpNegate:
 		result = TypeBoolean
 	default:
 		invalid = true

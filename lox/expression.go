@@ -11,7 +11,7 @@ type OperatorType int
 //go:generate stringer -type OperatorType -trimprefix=Op
 const (
 	ErrOp OperatorType = iota
-	OpBang
+	OpNegate
 	OpAdd
 	OpSubtract
 	OpMultiply

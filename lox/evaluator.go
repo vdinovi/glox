@@ -48,6 +48,11 @@ func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ 
 		return nil, TypeAny, err
 	}
 
+	switch e.op.Type {
+	case OpNegate:
+		return ValueBoolean(!right.Truthy()), TypeBoolean, nil
+	}
+
 	var invalid bool
 	switch right.Type() {
 	case TypeNumeric:
@@ -66,7 +71,7 @@ func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ 
 		}
 	case TypeAny:
 		switch e.op.Type {
-		case OpBang:
+		case OpNegate:
 			val = ValueBoolean(right.Truthy())
 		default:
 			invalid = true

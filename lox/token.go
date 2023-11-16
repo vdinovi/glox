@@ -69,6 +69,8 @@ func (t Token) Operator() (Operator, error) {
 	var err error
 	op := Operator{Type: ErrOp, Lexem: t.Lexem}
 	switch t.Type {
+	case TokenBang:
+		op.Type = OpNegate
 	case TokenPlus:
 		op.Type = OpAdd
 	case TokenMinus:

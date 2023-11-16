@@ -9,7 +9,7 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[ErrOp-0]
-	_ = x[OpBang-1]
+	_ = x[OpNegate-1]
 	_ = x[OpAdd-2]
 	_ = x[OpSubtract-3]
 	_ = x[OpMultiply-4]
@@ -24,9 +24,9 @@ func _() {
 	_ = x[OpGreaterThanOrEqualTo-13]
 }
 
-const _OperatorType_name = "ErrOpBangAddSubtractMultiplyDivideAndOrEqualToNotEqualToLessThanLessThanOrEqualToGreaterThanGreaterThanOrEqualTo"
+const _OperatorType_name = "ErrOpNegateAddSubtractMultiplyDivideAndOrEqualToNotEqualToLessThanLessThanOrEqualToGreaterThanGreaterThanOrEqualTo"
 
-var _OperatorType_index = [...]uint8{0, 5, 9, 12, 20, 28, 34, 37, 39, 46, 56, 64, 81, 92, 112}
+var _OperatorType_index = [...]uint8{0, 5, 11, 14, 22, 30, 36, 39, 41, 48, 58, 66, 83, 94, 114}
 
 func (i OperatorType) String() string {
 	if i < 0 || i >= OperatorType(len(_OperatorType_index)-1) {
