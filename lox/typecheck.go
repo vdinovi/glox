@@ -63,12 +63,12 @@ func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error
 	if err != nil {
 		return err
 	}
-	prev := ctx.types.Get(s.name, ErrType)
+	prev := ctx.types.Get(s.name, TypeAny)
 	err = ctx.types.Set(s.name, typ)
 	if err != nil {
 		return err
 	}
-	if prev == ErrType {
+	if prev == TypeAny {
 		log.Debug().Msgf("(typechecker) initialized type(%s) to %s", s.name, typ)
 	} else {
 		log.Debug().Msgf("(typechecker) %s <- %s (prev %s)", s.name, typ, prev)
@@ -79,7 +79,7 @@ func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error
 func (ctx *Context) TypeCheckExpression(e Expression) (typ Type, err error) {
 	typ, err = e.TypeCheck(ctx)
 	if err != nil {
-		return ErrType, err
+		return TypeAny, err
 	}
 	log.Debug().Msgf("(typechecker) type(%s) => %s", e, typ)
 	return typ, nil
@@ -89,7 +89,7 @@ func (ctx *Context) TypeCheckUnaryExpression(e *UnaryExpression) (right, result 
 	log.Trace().Msg("TypeCheckUnaryExpression")
 	right, err = e.right.TypeCheck(ctx)
 	if err != nil {
-		return ErrType, ErrType, err
+		return TypeAny, TypeAny, err
 	}
 	switch right {
 	case TypeNumeric:
@@ -98,7 +98,7 @@ func (ctx *Context) TypeCheckUnaryExpression(e *UnaryExpression) (right, result 
 		err = NewTypeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right), e.Position())
 	}
 	if err != nil {
-		return ErrType, ErrType, err
+		return TypeAny, TypeAny, err
 	}
 	return right, result, err
 }
@@ -106,13 +106,13 @@ func (ctx *Context) TypeCheckUnaryExpression(e *UnaryExpression) (right, result 
 func (ctx *Context) TypeCheckBinaryExpression(e *BinaryExpression) (left, right, result Type, err error) {
 	log.Trace().Msg("TypeCheckBinaryExpression")
 	if left, err = e.left.TypeCheck(ctx); err != nil {
-		return ErrType, ErrType, ErrType, err
+		return TypeAny, TypeAny, TypeAny, err
 	}
 	if right, err = e.right.TypeCheck(ctx); err != nil {
-		return ErrType, ErrType, ErrType, err
+		return TypeAny, TypeAny, TypeAny, err
 	}
 	if left != right {
-		return ErrType, ErrType, ErrType, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
+		return TypeAny, TypeAny, TypeAny, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 	switch left {
 	case TypeNumeric:
@@ -125,7 +125,7 @@ func (ctx *Context) TypeCheckBinaryExpression(e *BinaryExpression) (left, right,
 		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 	if err != nil {
-		return ErrType, ErrType, ErrType, err
+		return TypeAny, TypeAny, TypeAny, err
 	}
 	return left, right, result, nil
 }
@@ -134,7 +134,7 @@ func (ctx *Context) TypeCheckGroupingExpression(e *GroupingExpression) (inner, r
 	log.Trace().Msg("TypeCheckGroupingExpression")
 	inner, err = e.expr.TypeCheck(ctx)
 	if err != nil {
-		return ErrType, ErrType, err
+		return TypeAny, TypeAny, err
 	}
 	return inner, inner, nil
 }
@@ -143,11 +143,11 @@ func (ctx *Context) TypeCheckAssignmentExpression(e *AssignmentExpression) (righ
 	log.Trace().Msg("TypeCheckAssignmentExpression")
 	right, err = e.right.TypeCheck(ctx)
 	if err != nil {
-		return ErrType, ErrType, err
+		return TypeAny, TypeAny, err
 	}
 	err = ctx.types.Set(e.name, right)
 	if err != nil {
-		return ErrType, ErrType, err
+		return TypeAny, TypeAny, err
 	}
 	return right, right, nil
 }
@@ -156,7 +156,7 @@ func (ctx *Context) TypeCheckVariableExpression(e *VariableExpression) (result T
 	log.Trace().Msg("TypeCheckVariableExpression")
 	typ, _ := ctx.types.Lookup(e.name)
 	if typ == nil {
-		return ErrType, NewTypeError(NewUndefinedVariableError(e.name), e.Position())
+		return TypeAny, NewTypeError(NewUndefinedVariableError(e.name), e.Position())
 	}
 	return *typ, nil
 }
@@ -166,7 +166,7 @@ func (ctx *Context) typeCheckUnaryNumeric(e *UnaryExpression, right Type) (Type,
 	case OpSubtract, OpAdd:
 		return TypeNumeric, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right), e.Position())
+		return TypeAny, NewTypeError(NewInvalidUnaryOperatorForTypeError(e.op.Type, right), e.Position())
 	}
 }
 
@@ -177,7 +177,7 @@ func (ctx *Context) typeCheckBinaryNumeric(e *BinaryExpression, left, right Type
 	case OpEqualTo, OpNotEqualTo, OpLessThan, OpLessThanOrEqualTo, OpGreaterThan, OpGreaterThanOrEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
+		return TypeAny, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 }
 
@@ -188,7 +188,7 @@ func (ctx *Context) typeCheckBinaryString(e *BinaryExpression, left, right Type)
 	case OpEqualTo, OpNotEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
+		return TypeAny, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 }
 
@@ -197,6 +197,6 @@ func (ctx *Context) typeCheckBinaryBoolean(e *BinaryExpression, left, right Type
 	case OpEqualTo, OpNotEqualTo:
 		return TypeBoolean, nil
 	default:
-		return ErrType, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
+		return TypeAny, NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
 }

@@ -57,7 +57,7 @@ func (e *UnaryExpression) Type() Type {
 func (e *UnaryExpression) TypeCheck(ctx *Context) (Type, error) {
 	_, typ, err := ctx.TypeCheckUnaryExpression(e)
 	if err != nil {
-		return ErrType, err
+		return TypeAny, err
 	}
 	e.typ = typ
 	return typ, nil
@@ -99,7 +99,7 @@ func (e *BinaryExpression) Type() Type {
 func (e *BinaryExpression) TypeCheck(ctx *Context) (Type, error) {
 	_, _, typ, err := ctx.TypeCheckBinaryExpression(e)
 	if err != nil {
-		return ErrType, err
+		return TypeAny, err
 	}
 	e.typ = typ
 	return typ, nil
@@ -139,7 +139,7 @@ func (e *GroupingExpression) Type() Type {
 func (e *GroupingExpression) TypeCheck(ctx *Context) (Type, error) {
 	_, typ, err := ctx.TypeCheckGroupingExpression(e)
 	if err != nil {
-		return ErrType, err
+		return TypeAny, err
 	}
 	e.typ = typ
 	return typ, nil
@@ -180,7 +180,7 @@ func (e *AssignmentExpression) Type() Type {
 func (e *AssignmentExpression) TypeCheck(ctx *Context) (Type, error) {
 	_, typ, err := ctx.TypeCheckAssignmentExpression(e)
 	if err != nil {
-		return ErrType, err
+		return TypeAny, err
 	}
 	e.typ = typ
 	return typ, nil
@@ -220,7 +220,7 @@ func (e *VariableExpression) Type() Type {
 func (e *VariableExpression) TypeCheck(ctx *Context) (Type, error) {
 	typ, err := ctx.TypeCheckVariableExpression(e)
 	if err != nil {
-		return ErrType, err
+		return TypeAny, err
 	}
 	e.typ = typ
 	return typ, nil
