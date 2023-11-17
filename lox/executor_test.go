@@ -30,6 +30,14 @@ func TestExecutor(t *testing.T) {
 		{text: "var x = 1; while (x <= 3) {print x; x = x + 1;}", prints: []string{"1", "2", "3"}},
 		{text: "for (;false;) print 1;", prints: nil},
 		{text: "for (var x = 0; x < 3; x = x + 1) print x + 1;", prints: []string{"1", "2", "3"}},
+		{text: "print 1 or false;", prints: []string{"1"}},
+		{text: "print false or 1;", prints: []string{"1"}},
+		{text: "print false and 1;", prints: []string{"false"}},
+		{text: "print 1 and false;", prints: []string{"false"}},
+		{text: "print 1 and 2 or false;", prints: []string{"2"}},
+		{text: "print 1 or 2 and false;", prints: []string{"1"}},
+		{text: "var x = 1; true or (x = 2); print x;", prints: []string{"1"}},
+		{text: "var x = 1; true and (x = 2); print x;", prints: []string{"2"}},
 	}
 	for _, test := range tests {
 		td := NewTestDriver(t, test.text)

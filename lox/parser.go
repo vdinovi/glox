@@ -261,7 +261,7 @@ func (p *Parser) expression() (Expression, error) {
 }
 
 func (p *Parser) assignment() (Expression, error) {
-	expr, err := p.equality()
+	expr, err := p.or()
 	if err != nil {
 		return nil, err
 	}
@@ -274,6 +274,52 @@ func (p *Parser) assignment() (Expression, error) {
 			return &AssignmentExpression{name: left.name, right: right, pos: left.Position()}, nil
 		}
 		return nil, NewSyntaxError(NewInvalidAssignmentTargetError(expr.String()), expr.Position())
+	}
+	return expr, nil
+}
+
+func (p *Parser) or() (Expression, error) {
+	expr, err := p.and()
+	if err != nil {
+		return nil, err
+	}
+	for {
+		token, ok := p.scan.match(TokenOr)
+		if !ok {
+			break
+		}
+		right, err := p.and()
+		if err != nil {
+			return nil, err
+		}
+		op, err := token.Operator()
+		if err != nil {
+			return nil, err
+		}
+		expr = &BinaryExpression{op: op, left: expr, right: right, pos: expr.Position()}
+	}
+	return expr, nil
+}
+
+func (p *Parser) and() (Expression, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+	for {
+		token, ok := p.scan.match(TokenAnd)
+		if !ok {
+			break
+		}
+		right, err := p.and()
+		if err != nil {
+			return nil, err
+		}
+		op, err := token.Operator()
+		if err != nil {
+			return nil, err
+		}
+		expr = &BinaryExpression{op: op, left: expr, right: right, pos: expr.Position()}
 	}
 	return expr, nil
 }

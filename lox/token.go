@@ -91,6 +91,10 @@ func (t Token) Operator() (Operator, error) {
 		op.Type = OpGreaterThan
 	case TokenGreaterEqual:
 		op.Type = OpGreaterThanOrEqualTo
+	case TokenOr:
+		op.Type = OpOr
+	case TokenAnd:
+		op.Type = OpAnd
 	default:
 		err = NoOperatorForTokenError{t.Type}
 	}
