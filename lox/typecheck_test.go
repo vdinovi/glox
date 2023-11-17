@@ -408,13 +408,13 @@ func TestTypeCheckExpression(t *testing.T) {
 		{typ: TypeString, expr: bAndExpr(strExpr())(strExpr())()},
 		{typ: TypeBoolean, expr: bAndExpr(trueExpr())(falseExpr())()},
 		{typ: TypeNil, expr: bAndExpr(nilExpr())(nilExpr())()},
-		{typ: TypeAny, expr: bAndExpr(oneExpr())(strExpr())()},
+		{typ: TypeNumeric.Union(TypeString), expr: bAndExpr(oneExpr())(strExpr())()},
 		// or
 		{typ: TypeNumeric, expr: bOrExpr(oneExpr())(piExpr())()},
 		{typ: TypeString, expr: bOrExpr(strExpr())(strExpr())()},
 		{typ: TypeBoolean, expr: bOrExpr(trueExpr())(falseExpr())()},
 		{typ: TypeNil, expr: bOrExpr(nilExpr())(nilExpr())()},
-		{typ: TypeAny, expr: bOrExpr(oneExpr())(strExpr())()},
+		{typ: TypeNumeric.Union(TypeString), expr: bOrExpr(oneExpr())(strExpr())()},
 	}
 	for _, test := range tests {
 		ctx := NewContext()

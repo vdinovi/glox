@@ -167,10 +167,9 @@ func resolveUnary(e *UnaryExpression, right Type) (result Type, err error) {
 	var invalid bool
 	switch e.op.Type {
 	case OpAdd, OpSubtract:
-		switch right {
-		case TypeNumeric:
-			result = TypeNumeric
-		default:
+		if right.Within(TypeNumeric) {
+			result = right
+		} else {
 			invalid = true
 		}
 	case OpNegate:
@@ -188,46 +187,29 @@ func resolveBinary(e *BinaryExpression, left Type, right Type) (result Type, err
 	var invalid bool
 	switch e.op.Type {
 	case OpAnd, OpOr:
-		if left == right {
-			result = left
-		} else {
-			result = TypeAny
-		}
+		result = left.Union(right)
 	case OpAdd:
-		if invalid = left != right; invalid {
-			break
-		}
-		switch left {
-		case TypeNumeric:
-			result = TypeNumeric
-		case TypeString:
-			result = TypeString
-		default:
+		if left.Within(TypeNumeric, TypeString) && right.Within(TypeNumeric, TypeString) && left.Contains(right) {
+			result = left.Union(right)
+		} else {
 			invalid = true
 		}
 	case OpSubtract, OpMultiply, OpDivide:
-		if invalid = left != right; invalid {
-			break
-		}
-		switch left {
-		case TypeNumeric:
-			result = TypeNumeric
-		default:
+		if left.Within(TypeNumeric) && right.Within(TypeNumeric) && left.Contains(right) {
+			result = left.Union(right)
+		} else {
 			invalid = true
 		}
 	case OpEqualTo, OpNotEqualTo:
-		if invalid = left != right; invalid {
-			break
-		}
-		result = TypeBoolean
-	case OpLessThan, OpLessThanOrEqualTo, OpGreaterThan, OpGreaterThanOrEqualTo:
-		if invalid = left != right; invalid {
-			break
-		}
-		switch left {
-		case TypeNumeric:
+		if left.Contains(right) {
 			result = TypeBoolean
-		default:
+		} else {
+			invalid = true
+		}
+	case OpLessThan, OpLessThanOrEqualTo, OpGreaterThan, OpGreaterThanOrEqualTo:
+		if left.Within(TypeNumeric) && right.Within(TypeNumeric) && left.Contains(right) {
+			result = TypeBoolean
+		} else {
 			invalid = true
 		}
 	default:
@@ -236,5 +218,7 @@ func resolveBinary(e *BinaryExpression, left Type, right Type) (result Type, err
 	if invalid {
 		err = NewTypeError(NewInvalidBinaryOperatorForTypeError(e.op.Type, left, right), e.Position())
 	}
+	s := result.String()
+	_ = s
 	return result, err
 }

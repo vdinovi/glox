@@ -3,9 +3,8 @@ package lox
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
-
-//go:generate stringer -type Type  -trimprefix=Type
 
 const (
 	typeNilBit = 1 << iota
@@ -26,6 +25,9 @@ var TypeBoolean = Type{bits: uint(typeBooleanBit)}
 var TypeNumeric = Type{bits: uint(typeUint64Bit | typeInt64Bit | typeFloat64Bit)}
 var TypeString = Type{bits: uint(typeStringBit)}
 
+var allTypes = [4]Type{TypeNil, TypeBoolean, TypeNumeric, TypeString}
+var typeStrings = [4]string{"TypeNil", "TypeBoolean", "TypeNumeric", "TypeString"}
+
 type Type struct {
 	bits uint
 }
@@ -36,33 +38,55 @@ func (t Type) String() string {
 		return "Any"
 	case TypeNone:
 		return "None"
-	case TypeNil:
-		return "Nil"
-	case TypeBoolean:
-		return "Boolean"
-	case TypeNumeric:
-		return "Numeric"
-	case TypeString:
-		return "String"
-	default:
-		return fmt.Sprintf("Type{%s}", strconv.FormatUint(uint64(t.bits), 2))
 	}
+	rem := t
+	ts := []string{}
+	for i, v := range allTypes {
+		if t.Contains(v) {
+			rem.Clear(v)
+			ts = append(ts, typeStrings[i])
+		}
+	}
+	if rem.bits != 0 {
+		ts = append(ts, fmt.Sprintf("rem=%s", strconv.FormatUint(uint64(rem.bits), 2)))
+	}
+	return fmt.Sprintf("Type{%s}", strings.Join(ts, ", "))
 }
 
-func (t *Type) Accepts(u Type) bool {
-	return t.bits&u.bits == u.bits
+func (t Type) Union(u Type) Type {
+	return Type{bits: t.bits | u.bits}
 }
 
-func (t *Type) Test(n uint) bool {
-	return t.bits>>n&1 != 0
+func (t Type) Subtract(u Type) Type {
+	return Type{bits: t.bits &^ u.bits}
 }
 
-func (t *Type) Set(u uint) {
-	t.bits |= 1 << u
+func (t Type) Contains(us ...Type) bool {
+	x := TypeNone
+	for _, u := range us {
+		x.Set(u)
+	}
+	return t.bits&x.bits == x.bits
 }
 
-func (t *Type) Clear(u uint) {
-	t.bits &= ^(1 << u)
+func (t Type) Within(us ...Type) bool {
+	x := TypeNone
+	for _, u := range us {
+		x.Set(u)
+	}
+	return t.bits&x.bits == t.bits
+}
+
+func (t Type) Test(u Type) bool {
+	return t.bits&u.bits != 0
+}
+
+func (t *Type) Set(u Type) {
+	t.bits |= u.bits
+}
+
+func (t *Type) Clear(u Type) {
+	t.bits &^= u.bits
 }
 
 func (t *Type) Zero() {
