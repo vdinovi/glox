@@ -1,33 +1,70 @@
 package lox
 
-//go:generate stringer -type Type  -trimprefix=Type
-type Type uint64
-
-const (
-	TypeAny Type = iota
-	TypeNil
-	TypeNumeric
-	TypeString
-	TypeBoolean
-	TypeTruthy
+import (
+	"fmt"
+	"strconv"
 )
 
-type TypeSet struct {
-	bits uint64
+//go:generate stringer -type Type  -trimprefix=Type
+
+const (
+	typeNilBit = 1 << iota
+	typeByteBit
+	typeBooleanBit
+	typeUint64Bit
+	typeInt64Bit
+	typeFloat64Bit
+	typeUtf8Bit
+	typeStringBit
+)
+
+var TypeAny = Type{bits: ^uint(0)}
+var TypeNone = Type{bits: uint(0)}
+
+var TypeNil = Type{bits: uint(typeNilBit)}
+var TypeBoolean = Type{bits: uint(typeBooleanBit)}
+var TypeNumeric = Type{bits: uint(typeUint64Bit | typeInt64Bit | typeFloat64Bit)}
+var TypeString = Type{bits: uint(typeStringBit)}
+
+type Type struct {
+	bits uint
 }
 
-func (ts *TypeSet) Test(t Type) bool {
-	return ts.bits>>uint64(t)&uint64(1) != 0
+func (t Type) String() string {
+	switch t {
+	case TypeAny:
+		return "Any"
+	case TypeNone:
+		return "None"
+	case TypeNil:
+		return "Nil"
+	case TypeBoolean:
+		return "Boolean"
+	case TypeNumeric:
+		return "Numeric"
+	case TypeString:
+		return "String"
+	default:
+		return fmt.Sprintf("Type{%s}", strconv.FormatUint(uint64(t.bits), 2))
+	}
 }
 
-func (ts *TypeSet) Set(t Type) {
-	ts.bits |= 1 << uint(t)
+func (t *Type) Accepts(u Type) bool {
+	return t.bits&u.bits == u.bits
 }
 
-func (ts *TypeSet) Clear(t Type) {
-	ts.bits &= ^(1 << uint(t))
+func (t *Type) Test(n uint) bool {
+	return t.bits>>n&1 != 0
 }
 
-func (ts *TypeSet) Zero() {
-	ts.bits = 0
+func (t *Type) Set(u uint) {
+	t.bits |= 1 << u
+}
+
+func (t *Type) Clear(u uint) {
+	t.bits &= ^(1 << u)
+}
+
+func (t *Type) Zero() {
+	t.bits = 0
 }
