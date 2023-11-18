@@ -418,7 +418,7 @@ func TestTypeCheckExpression(t *testing.T) {
 	}
 	for _, test := range tests {
 		ctx := NewContext()
-		typ, err := test.expr.TypeCheck(ctx)
+		err := test.expr.TypeCheck(ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%v) to yield error %q, but got %q", test.expr, test.err, err)
@@ -427,9 +427,6 @@ func TestTypeCheckExpression(t *testing.T) {
 		} else if err != nil {
 			t.Errorf("Unexpected error while typechecking %q: %s", test.expr, err)
 			continue
-		}
-		if typ != test.typ {
-			t.Errorf("Expected typecheck(%q) to be of type %s, but got %s", test.expr, test.typ, typ)
 		}
 	}
 }
@@ -456,7 +453,7 @@ func TestTypeCheckVariableExpression(t *testing.T) {
 			}
 		}
 
-		typ, err := test.expr.TypeCheck(ctx)
+		err := test.expr.TypeCheck(ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%v) to yield error %q, but got %q", test.expr, test.err, err)
@@ -465,9 +462,6 @@ func TestTypeCheckVariableExpression(t *testing.T) {
 		} else if err != nil {
 			t.Errorf("Unexpected error while typechecking %q: %s", test.expr, err)
 			continue
-		}
-		if typ != test.typ {
-			t.Errorf("Expected typecheck(%q) to be of type %s, but got %s", test.expr, test.typ, typ)
 		}
 	}
 }

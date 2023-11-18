@@ -31,7 +31,7 @@ func (ctx *Context) TypeCheckBlockStatement(s *BlockStatement) error {
 }
 
 func (ctx *Context) TypeCheckConditionalStatement(s *ConditionalStatement) error {
-	if _, err := s.expr.TypeCheck(ctx); err != nil {
+	if err := s.expr.TypeCheck(ctx); err != nil {
 		return err
 	}
 	if err := s.thenBranch.TypeCheck(ctx); err != nil {
@@ -46,7 +46,7 @@ func (ctx *Context) TypeCheckConditionalStatement(s *ConditionalStatement) error
 }
 
 func (ctx *Context) TypeCheckWhileStatement(s *WhileStatement) error {
-	if _, err := s.expr.TypeCheck(ctx); err != nil {
+	if err := s.expr.TypeCheck(ctx); err != nil {
 		return err
 	}
 	if err := s.body.TypeCheck(ctx); err != nil {
@@ -62,12 +62,12 @@ func (ctx *Context) TypeCheckForStatement(s *ForStatement) error {
 		}
 	}
 	if s.cond != nil {
-		if _, err := s.cond.TypeCheck(ctx); err != nil {
+		if err := s.cond.TypeCheck(ctx); err != nil {
 			return err
 		}
 	}
 	if s.incr != nil {
-		if _, err := s.incr.TypeCheck(ctx); err != nil {
+		if err := s.incr.TypeCheck(ctx); err != nil {
 			return err
 		}
 	}
@@ -80,20 +80,19 @@ func (ctx *Context) TypeCheckForStatement(s *ForStatement) error {
 }
 
 func (ctx *Context) TypeCheckPrintStatement(s *PrintStatement) error {
-	_, err := ctx.TypeCheckExpression(s.expr)
-	return err
+	return ctx.TypeCheckExpression(s.expr)
 }
 
 func (ctx *Context) TypeCheckExpressionStatement(s *ExpressionStatement) error {
-	_, err := ctx.TypeCheckExpression(s.expr)
-	return err
+	return ctx.TypeCheckExpression(s.expr)
 }
 
 func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error {
-	typ, err := ctx.TypeCheckExpression(s.expr)
+	err := ctx.TypeCheckExpression(s.expr)
 	if err != nil {
 		return err
 	}
+	typ := s.expr.Type()
 	prev, err := ctx.types.Set(s.name, typ)
 	if err != nil {
 		return err
@@ -106,43 +105,56 @@ func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error
 	return err
 }
 
-func (ctx *Context) TypeCheckExpression(e Expression) (Type, error) {
+func (ctx *Context) TypeCheckExpression(e Expression) error {
 	return e.TypeCheck(ctx)
 }
 
 func (ctx *Context) TypeCheckUnaryExpression(e *UnaryExpression) (right, result Type, err error) {
-	right, err = e.right.TypeCheck(ctx)
-	if err == nil {
-		result, err = resolveUnary(e, right)
-		return right, result, err
+	err = e.right.TypeCheck(ctx)
+	if err != nil {
+		return TypeAny, TypeAny, err
+	}
+	right = e.right.Type()
+	result, err = resolveUnary(e, right)
+	if err != nil {
+		return TypeAny, TypeAny, err
 	}
 	return right, result, err
 }
 
 func (ctx *Context) TypeCheckBinaryExpression(e *BinaryExpression) (left, right, result Type, err error) {
-	left, err = e.left.TypeCheck(ctx)
-	if err == nil {
-		right, err = e.right.TypeCheck(ctx)
-		if err == nil {
-			result, err = resolveBinary(e, left, right)
-		}
+	err = e.left.TypeCheck(ctx)
+	if err != nil {
+		return TypeAny, TypeAny, TypeAny, err
+	}
+	left = e.right.Type()
+	err = e.right.TypeCheck(ctx)
+	if err != nil {
+		return TypeAny, TypeAny, TypeAny, err
+	}
+	right = e.right.Type()
+	result, err = resolveBinary(e, left, right)
+	if err != nil {
+		return TypeAny, TypeAny, TypeAny, err
 	}
 	return left, right, result, err
 }
 
-func (ctx *Context) TypeCheckGroupingExpression(e *GroupingExpression) (inner, result Type, err error) {
-	inner, err = e.expr.TypeCheck(ctx)
+func (ctx *Context) TypeCheckGroupingExpression(e *GroupingExpression) (Type, Type, error) {
+	err := e.expr.TypeCheck(ctx)
 	if err != nil {
 		return TypeAny, TypeAny, err
 	}
-	return inner, inner, nil
+	result := e.expr.Type()
+	return result, result, nil
 }
 
 func (ctx *Context) TypeCheckAssignmentExpression(e *AssignmentExpression) (right, result Type, err error) {
-	right, err = e.right.TypeCheck(ctx)
+	err = e.right.TypeCheck(ctx)
 	if err != nil {
 		return TypeAny, TypeAny, err
 	}
+	right = e.right.Type()
 	prev, env := ctx.types.Lookup(e.name)
 	if prev == nil {
 		return TypeAny, TypeAny, NewTypeError(NewUndefinedVariableError(e.name), e.Position())

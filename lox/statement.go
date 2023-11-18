@@ -33,7 +33,7 @@ func (s *BlockStatement) Execute(e *Executor) error {
 }
 
 func (s *BlockStatement) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -77,7 +77,7 @@ func (s *ConditionalStatement) Execute(ctx *Executor) error {
 }
 
 func (s *ConditionalStatement) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -118,7 +118,7 @@ func (s *WhileStatement) Execute(ctx *Executor) error {
 }
 
 func (s *WhileStatement) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -159,7 +159,7 @@ func (s *ForStatement) Execute(ctx *Executor) error {
 }
 
 func (s *ForStatement) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -199,7 +199,7 @@ func (s *ExpressionStatement) Execute(e *Executor) error {
 }
 
 func (s *ExpressionStatement) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -236,7 +236,7 @@ func (s *PrintStatement) Execute(e *Executor) error {
 }
 
 func (s *PrintStatement) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -274,7 +274,7 @@ func (s *DeclarationStatement) Execute(ctx *Executor) error {
 }
 
 func (s *DeclarationStatement) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}

@@ -53,7 +53,7 @@ func (e *UnaryExpression) Position() Position {
 }
 
 func (e *UnaryExpression) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := e.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -68,14 +68,14 @@ func (e *UnaryExpression) Type() Type {
 	return e.typ
 }
 
-func (e *UnaryExpression) TypeCheck(ctx *Context) (Type, error) {
+func (e *UnaryExpression) TypeCheck(ctx *Context) error {
 	_, typ, err := ctx.TypeCheckUnaryExpression(e)
 	if err != nil {
-		return TypeAny, err
+		return err
 	}
 	e.typ = typ
 	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return typ, nil
+	return nil
 }
 
 func (e *UnaryExpression) Evaluate(ctx *Context) (Value, error) {
@@ -105,7 +105,7 @@ func (e *BinaryExpression) Position() Position {
 }
 
 func (e *BinaryExpression) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := e.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -120,14 +120,14 @@ func (e *BinaryExpression) Type() Type {
 	return e.typ
 }
 
-func (e *BinaryExpression) TypeCheck(ctx *Context) (Type, error) {
+func (e *BinaryExpression) TypeCheck(ctx *Context) error {
 	_, _, typ, err := ctx.TypeCheckBinaryExpression(e)
 	if err != nil {
-		return TypeAny, err
+		return err
 	}
 	e.typ = typ
 	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return typ, nil
+	return nil
 }
 
 func (e *BinaryExpression) Evaluate(ctx *Context) (Value, error) {
@@ -155,7 +155,7 @@ func (e *GroupingExpression) Position() Position {
 }
 
 func (e *GroupingExpression) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := e.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -170,14 +170,14 @@ func (e *GroupingExpression) Type() Type {
 	return e.typ
 }
 
-func (e *GroupingExpression) TypeCheck(ctx *Context) (Type, error) {
+func (e *GroupingExpression) TypeCheck(ctx *Context) error {
 	_, typ, err := ctx.TypeCheckGroupingExpression(e)
 	if err != nil {
-		return TypeAny, err
+		return err
 	}
 	e.typ = typ
 	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return typ, nil
+	return nil
 }
 
 func (e *GroupingExpression) Evaluate(ctx *Context) (Value, error) {
@@ -206,7 +206,7 @@ func (e *AssignmentExpression) Position() Position {
 }
 
 func (e *AssignmentExpression) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := e.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -221,14 +221,14 @@ func (e *AssignmentExpression) Type() Type {
 	return e.typ
 }
 
-func (e *AssignmentExpression) TypeCheck(ctx *Context) (Type, error) {
+func (e *AssignmentExpression) TypeCheck(ctx *Context) error {
 	_, typ, err := ctx.TypeCheckAssignmentExpression(e)
 	if err != nil {
-		return TypeAny, err
+		return err
 	}
 	e.typ = typ
 	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return typ, nil
+	return nil
 }
 
 func (e *AssignmentExpression) Evaluate(ctx *Context) (Value, error) {
@@ -256,7 +256,7 @@ func (e *VariableExpression) Position() Position {
 }
 
 func (e *VariableExpression) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := e.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -271,14 +271,14 @@ func (e *VariableExpression) Type() Type {
 	return e.typ
 }
 
-func (e *VariableExpression) TypeCheck(ctx *Context) (Type, error) {
+func (e *VariableExpression) TypeCheck(ctx *Context) error {
 	typ, err := ctx.TypeCheckVariableExpression(e)
 	if err != nil {
-		return TypeAny, err
+		return err
 	}
 	e.typ = typ
 	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return typ, nil
+	return nil
 }
 
 func (e *VariableExpression) Evaluate(ctx *Context) (Value, error) {
@@ -304,7 +304,7 @@ func (e *CallExpression) Position() Position {
 }
 
 func (e *CallExpression) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := e.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -319,14 +319,14 @@ func (e *CallExpression) Type() Type {
 	return e.typ
 }
 
-func (e *CallExpression) TypeCheck(ctx *Context) (Type, error) {
+func (e *CallExpression) TypeCheck(ctx *Context) error {
 	typ, err := ctx.TypeCheckCallExpression(e)
 	if err != nil {
-		return TypeAny, err
+		return err
 	}
 	e.typ = typ
 	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return typ, nil
+	return nil
 }
 
 func (e *CallExpression) Evaluate(ctx *Context) (Value, error) {
@@ -361,7 +361,7 @@ func (e *StringExpression) Position() Position {
 }
 
 func (e *StringExpression) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := e.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -376,10 +376,9 @@ func (e *StringExpression) Type() Type {
 	return TypeString
 }
 
-func (e *StringExpression) TypeCheck(*Context) (Type, error) {
-	typ := e.Type()
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return typ, nil
+func (e *StringExpression) TypeCheck(*Context) error {
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, e.Type())
+	return nil
 }
 
 func (e *StringExpression) Evaluate(ctx *Context) (Value, error) {
@@ -403,7 +402,7 @@ func (e *NumericExpression) Position() Position {
 }
 
 func (e *NumericExpression) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := e.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -418,10 +417,9 @@ func (e *NumericExpression) Type() Type {
 	return TypeNumeric
 }
 
-func (e *NumericExpression) TypeCheck(*Context) (Type, error) {
-	typ := e.Type()
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return typ, nil
+func (e *NumericExpression) TypeCheck(*Context) error {
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, e.Type())
+	return nil
 }
 
 func (e *NumericExpression) Evaluate(ctx *Context) (Value, error) {
@@ -445,7 +443,7 @@ func (e *BooleanExpression) Position() Position {
 }
 
 func (e *BooleanExpression) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := e.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -460,10 +458,9 @@ func (e *BooleanExpression) Type() Type {
 	return TypeBoolean
 }
 
-func (e *BooleanExpression) TypeCheck(*Context) (Type, error) {
-	typ := e.Type()
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return typ, nil
+func (e *BooleanExpression) TypeCheck(*Context) error {
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, e.Type())
+	return nil
 }
 
 func (e *BooleanExpression) Evaluate(ctx *Context) (Value, error) {
@@ -486,7 +483,7 @@ func (e *NilExpression) Position() Position {
 }
 
 func (e *NilExpression) String() string {
-	str, err := v.Print(&defaultPrinter)
+	str, err := e.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
@@ -501,10 +498,9 @@ func (e *NilExpression) Type() Type {
 	return TypeNil
 }
 
-func (e *NilExpression) TypeCheck(*Context) (Type, error) {
-	typ := e.Type()
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return typ, nil
+func (e *NilExpression) TypeCheck(*Context) error {
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, e.Type())
+	return nil
 }
 
 func (e *NilExpression) Evaluate(ctx *Context) (Value, error) {
