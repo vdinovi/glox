@@ -6,16 +6,16 @@ import (
 )
 
 type Runtime struct {
-	printer io.Writer
+	writer io.Writer
 }
 
-func NewRuntime(printer io.Writer) *Runtime {
+func NewRuntime(w io.Writer) *Runtime {
 	return &Runtime{
-		printer: printer,
+		writer: w,
 	}
 }
 
 func (r *Runtime) Print(s string) error {
-	_, err := fmt.Fprintln(r.printer, s)
+	_, err := fmt.Fprintln(r.writer, s)
 	return err
 }

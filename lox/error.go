@@ -1,6 +1,11 @@
 package lox
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrNotYetImplemented = errors.New("not yet implemented")
 
 // Container for all syntax-related errors
 type SyntaxError struct {

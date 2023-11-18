@@ -2,17 +2,17 @@ package lox
 
 import (
 	"fmt"
-	"strings"
 )
 
 type Program []Statement
 
 type Statement interface {
-	Position() Position
-	Equals(Statement) bool
-	TypeCheck(ctx *Context) error
-	Execute(*Executor) error
 	fmt.Stringer
+	Printable
+	Executable
+	Located
+	Typecheckable
+	Equals(Statement) bool
 }
 
 type BlockStatement struct {
@@ -33,13 +33,15 @@ func (s *BlockStatement) Execute(e *Executor) error {
 }
 
 func (s *BlockStatement) String() string {
-	var sb strings.Builder
-	sb.WriteString("{ ")
-	for _, stmt := range s.stmts {
-		fmt.Fprint(&sb, " ", stmt.String())
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
 	}
-	sb.WriteString(" } ;")
-	return sb.String()
+	return str
+}
+
+func (s *BlockStatement) Print(p Printer) (string, error) {
+	return p.Print(s)
 }
 
 func (s *BlockStatement) Equals(other Statement) bool {
@@ -75,12 +77,15 @@ func (s *ConditionalStatement) Execute(ctx *Executor) error {
 }
 
 func (s *ConditionalStatement) String() string {
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "if %s %s", s.expr, s.thenBranch)
-	if s.elseBranch != nil {
-		fmt.Fprintf(&sb, "else %s", s.elseBranch)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
 	}
-	return sb.String()
+	return str
+}
+
+func (s *ConditionalStatement) Print(p Printer) (string, error) {
+	return p.Print(s)
 }
 
 func (s *ConditionalStatement) Equals(other Statement) bool {
@@ -113,7 +118,15 @@ func (s *WhileStatement) Execute(ctx *Executor) error {
 }
 
 func (s *WhileStatement) String() string {
-	return fmt.Sprintf("while ( %s ) %s", s.expr, s.body)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (s *WhileStatement) Print(p Printer) (string, error) {
+	return p.Print(s)
 }
 
 func (s *WhileStatement) Equals(other Statement) bool {
@@ -146,24 +159,15 @@ func (s *ForStatement) Execute(ctx *Executor) error {
 }
 
 func (s *ForStatement) String() string {
-	var sb strings.Builder
-	fmt.Fprint(&sb, "for ( ")
-	if s.init != nil {
-		sb.WriteString(s.init.String())
-	} else {
-		sb.WriteString(" ;")
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
 	}
-	if s.cond != nil {
-		sb.WriteString(" ")
-		sb.WriteString(s.cond.String())
-	}
-	sb.WriteString(" ; ")
-	if s.incr != nil {
-		sb.WriteString(s.incr.String())
-	}
-	sb.WriteString(" ) ")
-	sb.WriteString(s.body.String())
-	return sb.String()
+	return str
+}
+
+func (s *ForStatement) Print(p Printer) (string, error) {
+	return p.Print(s)
 }
 
 func (s *ForStatement) Equals(other Statement) bool {
@@ -195,7 +199,15 @@ func (s *ExpressionStatement) Execute(e *Executor) error {
 }
 
 func (s *ExpressionStatement) String() string {
-	return fmt.Sprintf("%s ;", s.expr)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (s *ExpressionStatement) Print(p Printer) (string, error) {
+	return p.Print(s)
 }
 
 func (s *ExpressionStatement) Equals(other Statement) bool {
@@ -224,7 +236,15 @@ func (s *PrintStatement) Execute(e *Executor) error {
 }
 
 func (s *PrintStatement) String() string {
-	return fmt.Sprintf("print %s ;", s.expr)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (s *PrintStatement) Print(p Printer) (string, error) {
+	return p.Print(s)
 }
 
 func (s *PrintStatement) Equals(other Statement) bool {
@@ -254,7 +274,15 @@ func (s *DeclarationStatement) Execute(ctx *Executor) error {
 }
 
 func (s *DeclarationStatement) String() string {
-	return fmt.Sprintf("var %s = %s ;", s.name, s.expr)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (s *DeclarationStatement) Print(p Printer) (string, error) {
+	return p.Print(s)
 }
 
 func (s *DeclarationStatement) Equals(other Statement) bool {

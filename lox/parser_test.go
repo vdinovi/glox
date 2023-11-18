@@ -48,6 +48,10 @@ func TestParserExpressionStatement(t *testing.T) {
 		{text: "false or true;", stmts: []ExpressionStatement{{expr: bOrExpr(falseExpr())(trueExpr())()}}},
 		{text: "1 and true or nil;", stmts: []ExpressionStatement{{expr: bOrExpr(bAndExpr(oneExpr())(trueExpr())())(nilExpr())()}}},
 		{text: "1 and (true or nil);", stmts: []ExpressionStatement{{expr: bAndExpr(oneExpr())(groupExpr(bOrExpr(trueExpr())(nilExpr())())())()}}},
+		{text: "foo();", stmts: []ExpressionStatement{{expr: fooCallExpr()()}}},
+		{text: "foo(1, 2);", stmts: []ExpressionStatement{}},
+		{text: "foo()();", stmts: []ExpressionStatement{}},
+		{text: "foo(1, 2)(1, 2);", stmts: []ExpressionStatement{}},
 	}
 	for _, test := range tests {
 		tokens, err := Scan(strings.NewReader(test.text))

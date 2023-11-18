@@ -428,7 +428,48 @@ func (p *Parser) unary() (Expression, error) {
 		}
 		return &UnaryExpression{op: op, right: right, pos: token.Position}, nil
 	}
-	return p.primary()
+	return p.call()
+}
+
+func (p *Parser) call() (expr Expression, err error) {
+	expr, err = p.primary()
+	if err != nil {
+		return nil, err
+	}
+	for {
+		if lparen, ok := p.scan.match(TokenLeftParen); !ok {
+			break
+		} else {
+			expr, err = p.finishCall(lparen.Position, expr)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return expr, err
+}
+
+func (p *Parser) finishCall(pos Position, callee Expression) (Expression, error) {
+	expr := CallExpression{callee: callee, pos: pos}
+	if _, ok := p.scan.match(TokenRightParen); !ok {
+		for {
+			arg, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+			expr.args = append(expr.args, arg)
+			if _, ok := p.scan.match(TokenComma); !ok {
+				if rparen, ok := p.scan.match(TokenRightParen); !ok {
+					return nil, NewSyntaxError(
+						NewUnexpectedTokenError(TokenRightParen.String(), rparen),
+						rparen.Position,
+					)
+				}
+				break
+			}
+		}
+	}
+	return &expr, nil
 }
 
 func (p *Parser) primary() (Expression, error) {

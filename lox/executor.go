@@ -7,15 +7,21 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type Executable interface {
+	Execute(*Executor) error
+}
+
 type Executor struct {
 	runtime *Runtime
 	ctx     *Context
+	printer Printer
 }
 
 func NewExecutor(printer io.Writer) *Executor {
 	return &Executor{
 		runtime: NewRuntime(printer),
 		ctx:     NewContext(),
+		printer: &defaultPrinter,
 	}
 }
 
@@ -135,7 +141,11 @@ func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
 	if err != nil {
 		return err
 	}
-	err = x.runtime.Print(deparenthesize(val.String()))
+	str, err := val.Print(x.printer)
+	if err != nil {
+		return err
+	}
+	err = x.runtime.Print(deparenthesize(str))
 	if err != nil {
 		return NewRuntimeError(err, s.Position())
 	}

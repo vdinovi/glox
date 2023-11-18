@@ -6,6 +6,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type Evaluable interface {
+	Evaluate(*Context) (Value, error)
+}
+
 func (ctx *Context) EvaluateGroupingExpression(e *GroupingExpression) (val Value, typ Type, err error) {
 	typ = e.Type()
 	if val, err = e.expr.Evaluate(ctx); err != nil {
@@ -39,6 +43,10 @@ func (ctx *Context) EvaluateVariableExpression(e *VariableExpression) (val Value
 	}
 	val = *v
 	return val, typ, nil
+}
+
+func (ctx *Context) EvaluateCallExpression(e *CallExpression) (val Value, typ Type, err error) {
+	return nil, TypeAny, ErrNotYetImplemented
 }
 
 func (ctx *Context) EvaluateUnaryExpression(e *UnaryExpression) (val Value, typ Type, err error) {

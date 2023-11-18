@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strconv"
 )
 
 var Zero = ValueNumeric(0)
@@ -15,11 +14,15 @@ var False = ValueBoolean(false)
 
 var Nil = ValueNil(struct{}{})
 
+type Truthy interface {
+	Truthy() bool
+}
+
 type Value interface {
 	fmt.Stringer
-	Unwrap() any
-	Truthy() bool
-	Type() Type
+	Printable
+	Typed
+	Truthy
 	Equals(Value) bool
 }
 
@@ -28,8 +31,15 @@ var ErrInvalidType = errors.New("invalid type")
 type ValueString string
 
 func (v ValueString) String() string {
-	return fmt.Sprintf("\"%s\"", string(v))
-	//return string(v)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e ValueString) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (ValueString) Type() Type {
@@ -65,7 +75,15 @@ func (v ValueString) Concat(other Value) (ValueString, error) {
 type ValueNumeric float64
 
 func (v ValueNumeric) String() string {
-	return strconv.FormatFloat(float64(v), 'f', -1, 64)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e ValueNumeric) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e ValueNumeric) Type() Type {
@@ -161,10 +179,15 @@ func (v ValueNumeric) Compare(other Value) (int, error) {
 type ValueBoolean bool
 
 func (v ValueBoolean) String() string {
-	if bool(v) {
-		return "true"
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
 	}
-	return "false"
+	return str
+}
+
+func (e ValueBoolean) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e ValueBoolean) Type() Type {
@@ -191,7 +214,15 @@ func (v ValueBoolean) Equals(other Value) bool {
 type ValueNil struct{}
 
 func (v ValueNil) String() string {
-	return "nil"
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e ValueNil) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e ValueNil) Type() Type {

@@ -163,6 +163,10 @@ func (ctx *Context) TypeCheckVariableExpression(e *VariableExpression) (result T
 	return *typ, nil
 }
 
+func (ctx *Context) TypeCheckCallExpression(e *CallExpression) (result Type, err error) {
+	return TypeAny, ErrNotYetImplemented
+}
+
 func resolveUnary(e *UnaryExpression, right Type) (result Type, err error) {
 	var invalid bool
 	switch e.op.Type {

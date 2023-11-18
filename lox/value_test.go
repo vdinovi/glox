@@ -36,38 +36,6 @@ func TestValue(t *testing.T) {
 	}
 }
 
-func TestValueUnwrap(t *testing.T) {
-	var val Value
-
-	val = ValueString("str")
-	if s, ok := val.Unwrap().(string); !ok {
-		t.Errorf("Failed to downcast %s to string", val)
-	} else if s != "str" {
-		t.Errorf("Expected %s to downcast to %v, but got %v", val, "str", s)
-	}
-
-	val = ValueNumeric(1.23)
-	if n, ok := val.Unwrap().(float64); !ok {
-		t.Errorf("Failed to downcast %s to float64", val)
-	} else if n != 1.23 {
-		t.Errorf("Expected %s to downcast to %v, but got %v", val, 1.23, n)
-	}
-
-	val = ValueBoolean(true)
-	if n, ok := val.Unwrap().(bool); !ok {
-		t.Errorf("Failed to downcast %s to bool", val)
-	} else if n != true {
-		t.Errorf("Expected %s to downcast to %v, but got %v", val, true, n)
-	}
-
-	val = ValueNil(struct{}{})
-	if n, ok := val.Unwrap().(struct{}); !ok {
-		t.Errorf("Failed to downcast %s to struct{}", val)
-	} else if n != struct{}{} {
-		t.Errorf("Expected %s to downcast to %v, but got %v", val, struct{}{}, n)
-	}
-}
-
 func TestValueEquals(t *testing.T) {
 	tests := []struct {
 		eq bool

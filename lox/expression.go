@@ -32,12 +32,13 @@ type Operator struct {
 }
 
 type Expression interface {
-	Position() Position
-	Type() Type
-	Equals(Expression) bool
-	TypeCheck(*Context) (Type, error)
-	Evaluate(*Context) (Value, error)
 	fmt.Stringer
+	Printable
+	Located
+	Typecheckable
+	Evaluable
+	Typed
+	Equals(Expression) bool
 }
 
 type UnaryExpression struct {
@@ -52,7 +53,15 @@ func (e *UnaryExpression) Position() Position {
 }
 
 func (e *UnaryExpression) String() string {
-	return fmt.Sprintf("(%s %s)", e.op.Lexem, e.right)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e *UnaryExpression) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e *UnaryExpression) Type() Type {
@@ -96,7 +105,15 @@ func (e *BinaryExpression) Position() Position {
 }
 
 func (e *BinaryExpression) String() string {
-	return fmt.Sprintf("(%s %s %s)", e.op.Lexem, e.left, e.right)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e *BinaryExpression) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e *BinaryExpression) Type() Type {
@@ -138,7 +155,15 @@ func (e *GroupingExpression) Position() Position {
 }
 
 func (e *GroupingExpression) String() string {
-	return fmt.Sprintf("(group %s)", e.expr)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e *GroupingExpression) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e *GroupingExpression) Type() Type {
@@ -181,7 +206,15 @@ func (e *AssignmentExpression) Position() Position {
 }
 
 func (e *AssignmentExpression) String() string {
-	return fmt.Sprintf("(%s = %s)", e.name, e.right)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e *AssignmentExpression) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e *AssignmentExpression) Type() Type {
@@ -223,7 +256,15 @@ func (e *VariableExpression) Position() Position {
 }
 
 func (e *VariableExpression) String() string {
-	return fmt.Sprintf("Var(%s)", e.name)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e *VariableExpression) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e *VariableExpression) Type() Type {
@@ -251,6 +292,65 @@ func (e *VariableExpression) Equals(other Expression) bool {
 	return ok && e.name == variable.name
 }
 
+type CallExpression struct {
+	callee Expression
+	args   []Expression
+	pos    Position
+	typ    Type
+}
+
+func (e *CallExpression) Position() Position {
+	return e.pos
+}
+
+func (e *CallExpression) String() string {
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e *CallExpression) Print(p Printer) (string, error) {
+	return p.Print(e)
+}
+
+func (e *CallExpression) Type() Type {
+	return e.typ
+}
+
+func (e *CallExpression) TypeCheck(ctx *Context) (Type, error) {
+	typ, err := ctx.TypeCheckCallExpression(e)
+	if err != nil {
+		return TypeAny, err
+	}
+	e.typ = typ
+	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
+	return typ, nil
+}
+
+func (e *CallExpression) Evaluate(ctx *Context) (Value, error) {
+	val, _, err := ctx.EvaluateCallExpression(e)
+	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
+	return val, err
+}
+
+func (e *CallExpression) Equals(other Expression) bool {
+	call, ok := other.(*CallExpression)
+	if !ok {
+		return false
+	}
+	if len(e.args) != len(call.args) {
+		return false
+	}
+	for i, arg := range e.args {
+		if arg != call.args[i] {
+			return false
+		}
+	}
+	return e.callee == call.callee
+}
+
 type StringExpression struct {
 	value string
 	pos   Position
@@ -261,7 +361,15 @@ func (e *StringExpression) Position() Position {
 }
 
 func (e *StringExpression) String() string {
-	return fmt.Sprintf("\"%s\"", string(e.value))
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e *StringExpression) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e *StringExpression) Type() Type {
@@ -295,7 +403,15 @@ func (e *NumericExpression) Position() Position {
 }
 
 func (e *NumericExpression) String() string {
-	return fmt.Sprint(e.value)
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e *NumericExpression) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e *NumericExpression) Type() Type {
@@ -329,10 +445,15 @@ func (e *BooleanExpression) Position() Position {
 }
 
 func (e *BooleanExpression) String() string {
-	if e.value {
-		return "true"
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
 	}
-	return "false"
+	return str
+}
+
+func (e *BooleanExpression) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e *BooleanExpression) Type() Type {
@@ -365,7 +486,15 @@ func (e *NilExpression) Position() Position {
 }
 
 func (e *NilExpression) String() string {
-	return "nil"
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e *NilExpression) Print(p Printer) (string, error) {
+	return p.Print(e)
 }
 
 func (e *NilExpression) Type() Type {

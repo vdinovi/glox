@@ -64,6 +64,8 @@ var gteExpr = makeBinaryExpr(gteOp)
 var bAndExpr = makeBinaryExpr(andOp)
 var bOrExpr = makeBinaryExpr(orOp)
 
+var fooCallExpr = makeCallExpression(fooExpr())
+
 func makeNumericExpr(n float64) func() *NumericExpression {
 	return func() *NumericExpression {
 		return &NumericExpression{value: n}
@@ -115,6 +117,14 @@ func makeBinaryExpr(op Operator) func(Expression) func(Expression) func() *Binar
 func makeGroupingExpr(e Expression) func() *GroupingExpression {
 	return func() *GroupingExpression {
 		return &GroupingExpression{expr: e}
+	}
+}
+
+func makeCallExpression(callee Expression) func(args ...Expression) func() *CallExpression {
+	return func(args ...Expression) func() *CallExpression {
+		return func() *CallExpression {
+			return &CallExpression{callee: callee, args: args}
+		}
 	}
 }
 
