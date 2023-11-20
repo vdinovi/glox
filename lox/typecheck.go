@@ -4,91 +4,95 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (ctx *Context) TypeCheckProgram(stmts []Statement) error {
-	for _, stmt := range stmts {
-		log.Debug().Msgf("(typechecker) checking statement %s", stmt)
-		err := stmt.TypeCheck(ctx)
-		if err != nil {
+type Typecheckable interface {
+	Typecheck(*Context) error
+}
+
+func (ctx *Context) Typecheck(elems []Statement) error {
+	for _, elem := range elems {
+		log.Debug().Msgf("(typecheck) checking %s", elem)
+		if err := elem.Typecheck(ctx); err != nil {
+			log.Error().Msgf("(typecheck) error in %q: %s", elem, err)
 			return err
 		}
 	}
 	return nil
 }
 
-func (ctx *Context) TypeCheckBlockStatement(s *BlockStatement) error {
+func (s *BlockStatement) Typecheck(ctx *Context) error {
 	ctx.PushEnvironment()
-	log.Debug().Msgf("(typechecker) enter %s", ctx.types.String())
+	log.Debug().Msgf("(typecheck) enter %s", ctx.types.String())
 	defer func() {
 		ctx.PopEnvironment()
-		log.Debug().Msgf("(typechecker) enter %s", ctx.types.String())
+		log.Debug().Msgf("(typecheck) enter %s", ctx.types.String())
 	}()
 	for _, stmt := range s.stmts {
-		if err := stmt.TypeCheck(ctx); err != nil {
+		if err := stmt.Typecheck(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (ctx *Context) TypeCheckConditionalStatement(s *ConditionalStatement) error {
-	if err := s.expr.TypeCheck(ctx); err != nil {
+func (s *ConditionalStatement) Typecheck(ctx *Context) error {
+	if err := s.expr.Typecheck(ctx); err != nil {
 		return err
 	}
-	if err := s.thenBranch.TypeCheck(ctx); err != nil {
+	if err := s.thenBranch.Typecheck(ctx); err != nil {
 		return err
 	}
 	if s.elseBranch != nil {
-		if err := s.elseBranch.TypeCheck(ctx); err != nil {
+		if err := s.elseBranch.Typecheck(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (ctx *Context) TypeCheckWhileStatement(s *WhileStatement) error {
-	if err := s.expr.TypeCheck(ctx); err != nil {
+func (s *WhileStatement) Typecheck(ctx *Context) error {
+	if err := s.expr.Typecheck(ctx); err != nil {
 		return err
 	}
-	if err := s.body.TypeCheck(ctx); err != nil {
+	if err := s.body.Typecheck(ctx); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ctx *Context) TypeCheckForStatement(s *ForStatement) error {
+func (s *ForStatement) Typecheck(ctx *Context) error {
 	if s.init != nil {
-		if err := s.init.TypeCheck(ctx); err != nil {
+		if err := s.init.Typecheck(ctx); err != nil {
 			return err
 		}
 	}
 	if s.cond != nil {
-		if err := s.cond.TypeCheck(ctx); err != nil {
+		if err := s.cond.Typecheck(ctx); err != nil {
 			return err
 		}
 	}
 	if s.incr != nil {
-		if err := s.incr.TypeCheck(ctx); err != nil {
+		if err := s.incr.Typecheck(ctx); err != nil {
 			return err
 		}
 	}
 	if s.body != nil {
-		if err := s.body.TypeCheck(ctx); err != nil {
+		if err := s.body.Typecheck(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (ctx *Context) TypeCheckPrintStatement(s *PrintStatement) error {
-	return ctx.TypeCheckExpression(s.expr)
+func (s *PrintStatement) Typecheck(ctx *Context) error {
+	return s.expr.Typecheck(ctx)
 }
 
-func (ctx *Context) TypeCheckExpressionStatement(s *ExpressionStatement) error {
-	return ctx.TypeCheckExpression(s.expr)
+func (s *ExpressionStatement) Typecheck(ctx *Context) error {
+	return s.expr.Typecheck(ctx)
 }
 
-func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error {
-	err := ctx.TypeCheckExpression(s.expr)
+func (s *DeclarationStatement) Typecheck(ctx *Context) error {
+	err := s.expr.Typecheck(ctx)
 	if err != nil {
 		return err
 	}
@@ -98,88 +102,93 @@ func (ctx *Context) TypeCheckDeclarationStatement(s *DeclarationStatement) error
 		return err
 	}
 	if prev == nil {
-		log.Debug().Msgf("(typechecker) (%d) %s := %s", ctx.types.depth, s.name, typ)
+		log.Debug().Msgf("(typecheck) (%d) %s := %s", ctx.types.depth, s.name, typ)
 	} else {
-		log.Debug().Msgf("(typechecker) (%d) %s = %s (was %s)", ctx.types.depth, s.name, typ, prev)
+		log.Debug().Msgf("(typecheck) (%d) %s = %s (was %s)", ctx.types.depth, s.name, typ, prev)
 	}
 	return err
 }
 
-func (ctx *Context) TypeCheckExpression(e Expression) error {
-	return e.TypeCheck(ctx)
+func (e *UnaryExpression) Typecheck(ctx *Context) error {
+	if err := e.right.Typecheck(ctx); err != nil {
+		return err
+	}
+	typ, err := typecheckUnary(e, e.right.Type())
+	if err != nil {
+		return err
+	}
+	e.typ = typ
+	return nil
 }
 
-func (ctx *Context) TypeCheckUnaryExpression(e *UnaryExpression) (right, result Type, err error) {
-	err = e.right.TypeCheck(ctx)
-	if err != nil {
-		return TypeAny, TypeAny, err
+func (e *BinaryExpression) Typecheck(ctx *Context) error {
+	if err := e.left.Typecheck(ctx); err != nil {
+		return err
 	}
-	right = e.right.Type()
-	result, err = resolveUnary(e, right)
-	if err != nil {
-		return TypeAny, TypeAny, err
+	if err := e.right.Typecheck(ctx); err != nil {
+		return err
 	}
-	return right, result, err
+	typ, err := typecheckBinary(e, e.left.Type(), e.right.Type())
+	if err != nil {
+		return err
+	}
+	e.typ = typ
+	return nil
 }
 
-func (ctx *Context) TypeCheckBinaryExpression(e *BinaryExpression) (left, right, result Type, err error) {
-	err = e.left.TypeCheck(ctx)
-	if err != nil {
-		return TypeAny, TypeAny, TypeAny, err
+func (e *GroupingExpression) Typecheck(ctx *Context) error {
+	if err := e.expr.Typecheck(ctx); err != nil {
+		return err
 	}
-	left = e.right.Type()
-	err = e.right.TypeCheck(ctx)
-	if err != nil {
-		return TypeAny, TypeAny, TypeAny, err
-	}
-	right = e.right.Type()
-	result, err = resolveBinary(e, left, right)
-	if err != nil {
-		return TypeAny, TypeAny, TypeAny, err
-	}
-	return left, right, result, err
+	e.typ = e.expr.Type()
+	return nil
 }
 
-func (ctx *Context) TypeCheckGroupingExpression(e *GroupingExpression) (Type, Type, error) {
-	err := e.expr.TypeCheck(ctx)
-	if err != nil {
-		return TypeAny, TypeAny, err
+func (e *AssignmentExpression) Typecheck(ctx *Context) error {
+	if err := e.right.Typecheck(ctx); err != nil {
+		return err
 	}
-	result := e.expr.Type()
-	return result, result, nil
-}
-
-func (ctx *Context) TypeCheckAssignmentExpression(e *AssignmentExpression) (right, result Type, err error) {
-	err = e.right.TypeCheck(ctx)
-	if err != nil {
-		return TypeAny, TypeAny, err
-	}
-	right = e.right.Type()
 	prev, env := ctx.types.Lookup(e.name)
 	if prev == nil {
-		return TypeAny, TypeAny, NewTypeError(NewUndefinedVariableError(e.name), e.Position())
+		return NewTypeError(NewUndefinedVariableError(e.name), e.Position())
 	}
-	_, err = env.Set(e.name, right)
-	if err != nil {
-		return TypeAny, TypeAny, err
+	if _, err := env.Set(e.name, e.right.Type()); err != nil {
+		return err
 	}
-	log.Debug().Msgf("(typechecker) (%d) %s = %s (was %s)", ctx.types.depth, e.name, right, *prev)
-	return right, right, nil
+	log.Debug().Msgf("(typecheck) (%d) %s = %s (was %s)", ctx.types.depth, e.name, e.right.Type(), *prev)
+	return nil
 }
 
-func (ctx *Context) TypeCheckVariableExpression(e *VariableExpression) (result Type, err error) {
+func (e *VariableExpression) Typecheck(ctx *Context) error {
 	typ, _ := ctx.types.Lookup(e.name)
 	if typ == nil {
-		return TypeAny, NewTypeError(NewUndefinedVariableError(e.name), e.Position())
+		return NewTypeError(NewUndefinedVariableError(e.name), e.Position())
 	}
-	return *typ, nil
+	e.typ = *typ
+	return nil
 }
 
-func (ctx *Context) TypeCheckCallExpression(e *CallExpression) (result Type, err error) {
-	return TypeAny, ErrNotYetImplemented
+func (e *CallExpression) Typecheck(ctx *Context) error {
+	return ErrNotYetImplemented
 }
 
-func resolveUnary(e *UnaryExpression, right Type) (result Type, err error) {
+func (e *StringExpression) Typecheck(*Context) error {
+	return nil
+}
+
+func (e *NumericExpression) Typecheck(*Context) error {
+	return nil
+}
+
+func (e *BooleanExpression) Typecheck(*Context) error {
+	return nil
+}
+
+func (e *NilExpression) Typecheck(*Context) error {
+	return nil
+}
+
+func typecheckUnary(e *UnaryExpression, right Type) (result Type, err error) {
 	var invalid bool
 	switch e.op.Type {
 	case OpAdd, OpSubtract:
@@ -199,7 +208,7 @@ func resolveUnary(e *UnaryExpression, right Type) (result Type, err error) {
 	return result, err
 }
 
-func resolveBinary(e *BinaryExpression, left Type, right Type) (result Type, err error) {
+func typecheckBinary(e *BinaryExpression, left Type, right Type) (result Type, err error) {
 	var invalid bool
 	switch e.op.Type {
 	case OpAnd, OpOr:

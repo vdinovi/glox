@@ -62,7 +62,7 @@ func file(fpath string) error {
 
 	err = execute(executor, reader)
 	if err != nil {
-		return lox.FatalError{err}
+		return fatalError{err}
 	}
 	return nil
 }
@@ -93,7 +93,7 @@ func interactive() (err error) {
 		err = execute(executor, strings.NewReader(line))
 		if err == nil {
 			continue
-		} else if errors.Is(err, lox.FatalError{}) {
+		} else if errors.Is(err, fatalError{}) {
 			return err
 		} else if e := terminal.WriteError(err); e != nil {
 			return e
@@ -110,8 +110,28 @@ func execute(executor *lox.Executor, reader io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if err = executor.TypeCheckProgram(stmts); err != nil {
+	if err = executor.Typecheck(stmts); err != nil {
 		return err
 	}
-	return executor.ExecuteProgram(stmts)
+	return executor.Execute(stmts)
+}
+
+type fatalError struct {
+	Err error
+}
+
+func (e fatalError) Error() string {
+	return e.Err.Error()
+}
+
+func (e fatalError) Unwrap() error {
+	return e.Err
+}
+
+func (e fatalError) Is(target error) bool {
+	switch target.(type) {
+	case fatalError, *fatalError:
+		return true
+	}
+	return false
 }

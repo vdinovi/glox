@@ -9,9 +9,9 @@ type Program []Statement
 type Statement interface {
 	fmt.Stringer
 	Printable
-	Executable
 	Located
 	Typecheckable
+	Executable
 	Equals(Statement) bool
 }
 
@@ -24,24 +24,12 @@ func (s *BlockStatement) Position() Position {
 	return s.pos
 }
 
-func (s *BlockStatement) TypeCheck(ctx *Context) error {
-	return ctx.TypeCheckBlockStatement(s)
-}
-
-func (s *BlockStatement) Execute(e *Executor) error {
-	return e.ExecuteBlockStatement(s)
-}
-
 func (s *BlockStatement) String() string {
 	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
 	return str
-}
-
-func (s *BlockStatement) Print(p Printer) (string, error) {
-	return p.Print(s)
 }
 
 func (s *BlockStatement) Equals(other Statement) bool {
@@ -68,24 +56,12 @@ func (s *ConditionalStatement) Position() Position {
 	return s.pos
 }
 
-func (s *ConditionalStatement) TypeCheck(ctx *Context) error {
-	return ctx.TypeCheckConditionalStatement(s)
-}
-
-func (s *ConditionalStatement) Execute(ctx *Executor) error {
-	return ctx.ExecuteConditionalStatement(s)
-}
-
 func (s *ConditionalStatement) String() string {
 	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
 	return str
-}
-
-func (s *ConditionalStatement) Print(p Printer) (string, error) {
-	return p.Print(s)
 }
 
 func (s *ConditionalStatement) Equals(other Statement) bool {
@@ -109,24 +85,12 @@ func (s *WhileStatement) Position() Position {
 	return s.pos
 }
 
-func (s *WhileStatement) TypeCheck(ctx *Context) error {
-	return ctx.TypeCheckWhileStatement(s)
-}
-
-func (s *WhileStatement) Execute(ctx *Executor) error {
-	return ctx.ExecuteWhileStatement(s)
-}
-
 func (s *WhileStatement) String() string {
 	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
 	return str
-}
-
-func (s *WhileStatement) Print(p Printer) (string, error) {
-	return p.Print(s)
 }
 
 func (s *WhileStatement) Equals(other Statement) bool {
@@ -150,24 +114,12 @@ func (s *ForStatement) Position() Position {
 	return s.pos
 }
 
-func (s *ForStatement) TypeCheck(ctx *Context) error {
-	return ctx.TypeCheckForStatement(s)
-}
-
-func (s *ForStatement) Execute(ctx *Executor) error {
-	return ctx.ExecuteForStatement(s)
-}
-
 func (s *ForStatement) String() string {
 	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
 	return str
-}
-
-func (s *ForStatement) Print(p Printer) (string, error) {
-	return p.Print(s)
 }
 
 func (s *ForStatement) Equals(other Statement) bool {
@@ -190,24 +142,12 @@ func (s *ExpressionStatement) Position() Position {
 	return s.pos
 }
 
-func (s *ExpressionStatement) TypeCheck(ctx *Context) error {
-	return ctx.TypeCheckExpressionStatement(s)
-}
-
-func (s *ExpressionStatement) Execute(e *Executor) error {
-	return e.ExecuteExpressionStatement(s)
-}
-
 func (s *ExpressionStatement) String() string {
 	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
 	return str
-}
-
-func (s *ExpressionStatement) Print(p Printer) (string, error) {
-	return p.Print(s)
 }
 
 func (s *ExpressionStatement) Equals(other Statement) bool {
@@ -227,24 +167,12 @@ func (s *PrintStatement) Position() Position {
 	return s.pos
 }
 
-func (s *PrintStatement) TypeCheck(ctx *Context) error {
-	return ctx.TypeCheckPrintStatement(s)
-}
-
-func (s *PrintStatement) Execute(e *Executor) error {
-	return e.ExecutePrintStatement(s)
-}
-
 func (s *PrintStatement) String() string {
 	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
 	return str
-}
-
-func (s *PrintStatement) Print(p Printer) (string, error) {
-	return p.Print(s)
 }
 
 func (s *PrintStatement) Equals(other Statement) bool {
@@ -265,24 +193,12 @@ func (s *DeclarationStatement) Position() Position {
 	return s.pos
 }
 
-func (s *DeclarationStatement) TypeCheck(ctx *Context) error {
-	return ctx.TypeCheckDeclarationStatement(s)
-}
-
-func (s *DeclarationStatement) Execute(ctx *Executor) error {
-	return ctx.ExecuteDeclarationStatement(s)
-}
-
 func (s *DeclarationStatement) String() string {
 	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
 	}
 	return str
-}
-
-func (s *DeclarationStatement) Print(p Printer) (string, error) {
-	return p.Print(s)
 }
 
 func (s *DeclarationStatement) Equals(other Statement) bool {

@@ -6,6 +6,14 @@ import (
 	"math"
 )
 
+type Value interface {
+	fmt.Stringer
+	Printable
+	Typed
+	Truthy
+	Equals(Value) bool
+}
+
 var Zero = ValueNumeric(0)
 
 var True = ValueBoolean(true)
@@ -18,14 +26,6 @@ type Truthy interface {
 	Truthy() bool
 }
 
-type Value interface {
-	fmt.Stringer
-	Printable
-	Typed
-	Truthy
-	Equals(Value) bool
-}
-
 var ErrInvalidType = errors.New("invalid type")
 
 type ValueString string
@@ -36,10 +36,6 @@ func (v ValueString) String() string {
 		panic(err)
 	}
 	return str
-}
-
-func (e ValueString) Print(p Printer) (string, error) {
-	return p.Print(e)
 }
 
 func (ValueString) Type() Type {
@@ -80,10 +76,6 @@ func (v ValueNumeric) String() string {
 		panic(err)
 	}
 	return str
-}
-
-func (e ValueNumeric) Print(p Printer) (string, error) {
-	return p.Print(e)
 }
 
 func (e ValueNumeric) Type() Type {
@@ -186,10 +178,6 @@ func (v ValueBoolean) String() string {
 	return str
 }
 
-func (e ValueBoolean) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e ValueBoolean) Type() Type {
 	return TypeBoolean
 }
@@ -219,10 +207,6 @@ func (v ValueNil) String() string {
 		panic(err)
 	}
 	return str
-}
-
-func (e ValueNil) Print(p Printer) (string, error) {
-	return p.Print(e)
 }
 
 func (e ValueNil) Type() Type {

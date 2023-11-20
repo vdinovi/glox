@@ -7,30 +7,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type FatalError struct {
-	Err error
-}
-
-func (e FatalError) Error() string {
-	return e.Err.Error()
-}
-
-func (e FatalError) Unwrap() error {
-	return e.Err
-}
-
-func (e FatalError) Is(target error) bool {
-	switch target.(type) {
-	case FatalError, *FatalError:
-		return true
-	}
-	return false
-}
-
-type Executable interface {
-	Execute(*Executor) error
-}
-
 type Executor struct {
 	runtime *Runtime
 	ctx     *Context
@@ -45,41 +21,38 @@ func NewExecutor(printer io.Writer) *Executor {
 	}
 }
 
-func (x *Executor) TypeCheckProgram(stmts []Statement) error {
-	for _, stmt := range stmts {
-		if err := x.TypeCheck(stmt); err != nil {
-			log.Error().Msgf("(typechecker) error in statement %q: %s", stmt, err)
+type Executable interface {
+	Execute(*Executor) error
+}
+
+func (x *Executor) Execute(elems []Statement) error {
+	for _, elem := range elems {
+		log.Debug().Msgf("(execute) executing %s", elem)
+		if err := elem.Execute(x); err != nil {
+			log.Error().Msgf("(execute) error in %q: %s", elem, err)
 			return err
 		}
 	}
 	return nil
 }
 
-func (x *Executor) TypeCheck(stmt Statement) error {
-	return stmt.TypeCheck(x.ctx)
-}
-
-func (x *Executor) ExecuteProgram(stmts []Statement) error {
-	for _, stmt := range stmts {
-		if err := x.Execute(stmt); err != nil {
-			log.Error().Msgf("(executor) error in statement %q: %s", stmt, err)
+func (x *Executor) Typecheck(elems []Statement) error {
+	for _, elem := range elems {
+		log.Debug().Msgf("(typecheck) checking %s", elem)
+		if err := elem.Typecheck(x.ctx); err != nil {
+			log.Error().Msgf("(typecheck) error in %q: %s", elem, err)
 			return err
 		}
 	}
 	return nil
 }
 
-func (x *Executor) Execute(stmt Statement) error {
-	log.Debug().Msgf("(executor) executing %q", stmt)
-	return stmt.Execute(x)
-}
-
-func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
+func (s *BlockStatement) Execute(x *Executor) error {
 	x.ctx.PushEnvironment()
-	log.Debug().Msgf("(executor) enter %s", x.ctx.values.String())
+	log.Debug().Msgf("(execute) enter %s", x.ctx.values.String())
 	defer func() {
 		x.ctx.PopEnvironment()
-		log.Debug().Msgf("(executor) enter %s", x.ctx.values.String())
+		log.Debug().Msgf("(execute) enter %s", x.ctx.values.String())
 	}()
 	for _, stmt := range s.stmts {
 		if err := stmt.Execute(x); err != nil {
@@ -89,7 +62,7 @@ func (x *Executor) ExecuteBlockStatement(s *BlockStatement) error {
 	return nil
 }
 
-func (x *Executor) ExecuteConditionalStatement(s *ConditionalStatement) error {
+func (s *ConditionalStatement) Execute(x *Executor) error {
 	cond, err := s.expr.Evaluate(x.ctx)
 	if err != nil {
 		return err
@@ -106,14 +79,14 @@ func (x *Executor) ExecuteConditionalStatement(s *ConditionalStatement) error {
 	return nil
 }
 
-func (x *Executor) ExecuteWhileStatement(s *WhileStatement) error {
+func (s *WhileStatement) Execute(x *Executor) error {
 	for {
 		cond, err := s.expr.Evaluate(x.ctx)
 		if err != nil {
 			return err
 		}
 		if !cond.Truthy() {
-			log.Debug().Msg("(executor) break loop")
+			log.Debug().Msg("(execute) break loop")
 			break
 		}
 		if err := s.body.Execute(x); err != nil {
@@ -123,7 +96,7 @@ func (x *Executor) ExecuteWhileStatement(s *WhileStatement) error {
 	return nil
 }
 
-func (x *Executor) ExecuteForStatement(s *ForStatement) error {
+func (s *ForStatement) Execute(x *Executor) error {
 	if s.init != nil {
 		s.init.Execute(x)
 	}
@@ -134,7 +107,7 @@ func (x *Executor) ExecuteForStatement(s *ForStatement) error {
 				return err
 			}
 			if !cond.Truthy() {
-				log.Debug().Msg("(executor) break loop")
+				log.Debug().Msg("(execute) break loop")
 				break
 			}
 		}
@@ -151,12 +124,12 @@ func (x *Executor) ExecuteForStatement(s *ForStatement) error {
 	return nil
 }
 
-func (x *Executor) ExecuteExpressionStatement(s *ExpressionStatement) error {
+func (s *ExpressionStatement) Execute(x *Executor) error {
 	_, err := s.expr.Evaluate(x.ctx)
 	return err
 }
 
-func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
+func (s *PrintStatement) Execute(x *Executor) error {
 	val, err := s.expr.Evaluate(x.ctx)
 	if err != nil {
 		return err
@@ -172,16 +145,16 @@ func (x *Executor) ExecutePrintStatement(s *PrintStatement) error {
 	return nil
 }
 
-func (x *Executor) ExecuteDeclarationStatement(s *DeclarationStatement) error {
+func (s *DeclarationStatement) Execute(x *Executor) error {
 	val, err := s.expr.Evaluate(x.ctx)
 	if err != nil {
 		return err
 	}
 	prev, err := x.ctx.values.Set(s.name, val)
 	if prev == nil {
-		log.Debug().Msgf("(executor) (%d) %s := %s", x.ctx.values.depth, s.name, val)
+		log.Debug().Msgf("(execute) (%d) %s := %s", x.ctx.values.depth, s.name, val)
 	} else {
-		log.Debug().Msgf("(executor) (%d) %s = %s (was %s)", x.ctx.values.depth, s.name, val, *prev)
+		log.Debug().Msgf("(execute) (%d) %s = %s (was %s)", x.ctx.values.depth, s.name, val, *prev)
 	}
 	return err
 }

@@ -197,7 +197,7 @@ func (td *TestDriver) TypeCheck() {
 		td.Exec = NewExecutor(&td.Printer)
 	}
 	td.phase = parsing
-	td.Err = td.Exec.TypeCheckProgram(td.Program)
+	td.Err = td.Exec.ctx.Typecheck(td.Program)
 }
 
 func (td *TestDriver) Execute() {
@@ -211,7 +211,7 @@ func (td *TestDriver) Execute() {
 		td.Exec = NewExecutor(&td.Printer)
 	}
 	td.phase = executing
-	td.Err = td.Exec.ExecuteProgram(td.Program)
+	td.Err = td.Exec.Execute(td.Program)
 }
 
 func (td *TestDriver) Phase() string {

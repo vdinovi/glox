@@ -10,10 +10,6 @@ type Typed interface {
 	Type() Type
 }
 
-type Typecheckable interface {
-	TypeCheck(ctx *Context) error
-}
-
 const (
 	typeNilBit = 1 << iota
 	typeByteBit

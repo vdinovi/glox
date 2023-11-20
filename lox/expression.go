@@ -2,8 +2,6 @@ package lox
 
 import (
 	"fmt"
-
-	"github.com/rs/zerolog/log"
 )
 
 type OperatorType int
@@ -60,28 +58,8 @@ func (e *UnaryExpression) String() string {
 	return str
 }
 
-func (e *UnaryExpression) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e *UnaryExpression) Type() Type {
 	return e.typ
-}
-
-func (e *UnaryExpression) TypeCheck(ctx *Context) error {
-	_, typ, err := ctx.TypeCheckUnaryExpression(e)
-	if err != nil {
-		return err
-	}
-	e.typ = typ
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return nil
-}
-
-func (e *UnaryExpression) Evaluate(ctx *Context) (Value, error) {
-	val, _, err := ctx.EvaluateUnaryExpression(e)
-	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
-	return val, err
 }
 
 func (e *UnaryExpression) Equals(other Expression) bool {
@@ -112,28 +90,8 @@ func (e *BinaryExpression) String() string {
 	return str
 }
 
-func (e *BinaryExpression) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e *BinaryExpression) Type() Type {
 	return e.typ
-}
-
-func (e *BinaryExpression) TypeCheck(ctx *Context) error {
-	_, _, typ, err := ctx.TypeCheckBinaryExpression(e)
-	if err != nil {
-		return err
-	}
-	e.typ = typ
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return nil
-}
-
-func (e *BinaryExpression) Evaluate(ctx *Context) (Value, error) {
-	val, _, err := ctx.EvaluateBinaryExpression(e)
-	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
-	return val, err
 }
 
 func (e *BinaryExpression) Equals(other Expression) bool {
@@ -162,28 +120,8 @@ func (e *GroupingExpression) String() string {
 	return str
 }
 
-func (e *GroupingExpression) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e *GroupingExpression) Type() Type {
 	return e.typ
-}
-
-func (e *GroupingExpression) TypeCheck(ctx *Context) error {
-	_, typ, err := ctx.TypeCheckGroupingExpression(e)
-	if err != nil {
-		return err
-	}
-	e.typ = typ
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return nil
-}
-
-func (e *GroupingExpression) Evaluate(ctx *Context) (Value, error) {
-	val, _, err := ctx.EvaluateGroupingExpression(e)
-	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
-	return val, err
 }
 
 func (e *GroupingExpression) Equals(other Expression) bool {
@@ -213,28 +151,8 @@ func (e *AssignmentExpression) String() string {
 	return str
 }
 
-func (e *AssignmentExpression) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e *AssignmentExpression) Type() Type {
 	return e.typ
-}
-
-func (e *AssignmentExpression) TypeCheck(ctx *Context) error {
-	_, typ, err := ctx.TypeCheckAssignmentExpression(e)
-	if err != nil {
-		return err
-	}
-	e.typ = typ
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return nil
-}
-
-func (e *AssignmentExpression) Evaluate(ctx *Context) (Value, error) {
-	val, _, err := ctx.EvaluateAssignmentExpression(e)
-	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
-	return val, err
 }
 
 func (e *AssignmentExpression) Equals(other Expression) bool {
@@ -263,28 +181,8 @@ func (e *VariableExpression) String() string {
 	return str
 }
 
-func (e *VariableExpression) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e *VariableExpression) Type() Type {
 	return e.typ
-}
-
-func (e *VariableExpression) TypeCheck(ctx *Context) error {
-	typ, err := ctx.TypeCheckVariableExpression(e)
-	if err != nil {
-		return err
-	}
-	e.typ = typ
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return nil
-}
-
-func (e *VariableExpression) Evaluate(ctx *Context) (Value, error) {
-	val, _, err := ctx.EvaluateVariableExpression(e)
-	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
-	return val, err
 }
 
 func (e *VariableExpression) Equals(other Expression) bool {
@@ -311,28 +209,8 @@ func (e *CallExpression) String() string {
 	return str
 }
 
-func (e *CallExpression) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e *CallExpression) Type() Type {
 	return e.typ
-}
-
-func (e *CallExpression) TypeCheck(ctx *Context) error {
-	typ, err := ctx.TypeCheckCallExpression(e)
-	if err != nil {
-		return err
-	}
-	e.typ = typ
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, typ)
-	return nil
-}
-
-func (e *CallExpression) Evaluate(ctx *Context) (Value, error) {
-	val, _, err := ctx.EvaluateCallExpression(e)
-	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
-	return val, err
 }
 
 func (e *CallExpression) Equals(other Expression) bool {
@@ -348,7 +226,7 @@ func (e *CallExpression) Equals(other Expression) bool {
 			return false
 		}
 	}
-	return e.callee == call.callee
+	return e.callee.Equals(call.callee)
 }
 
 type StringExpression struct {
@@ -368,23 +246,8 @@ func (e *StringExpression) String() string {
 	return str
 }
 
-func (e *StringExpression) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e *StringExpression) Type() Type {
 	return TypeString
-}
-
-func (e *StringExpression) TypeCheck(*Context) error {
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, e.Type())
-	return nil
-}
-
-func (e *StringExpression) Evaluate(ctx *Context) (Value, error) {
-	val := ValueString(e.value)
-	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
-	return val, nil
 }
 
 func (e *StringExpression) Equals(other Expression) bool {
@@ -409,23 +272,8 @@ func (e *NumericExpression) String() string {
 	return str
 }
 
-func (e *NumericExpression) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e *NumericExpression) Type() Type {
 	return TypeNumeric
-}
-
-func (e *NumericExpression) TypeCheck(*Context) error {
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, e.Type())
-	return nil
-}
-
-func (e *NumericExpression) Evaluate(ctx *Context) (Value, error) {
-	val := ValueNumeric(e.value)
-	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
-	return val, nil
 }
 
 func (e *NumericExpression) Equals(other Expression) bool {
@@ -450,23 +298,8 @@ func (e *BooleanExpression) String() string {
 	return str
 }
 
-func (e *BooleanExpression) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e *BooleanExpression) Type() Type {
 	return TypeBoolean
-}
-
-func (e *BooleanExpression) TypeCheck(*Context) error {
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, e.Type())
-	return nil
-}
-
-func (e *BooleanExpression) Evaluate(ctx *Context) (Value, error) {
-	val := ValueBoolean(e.value)
-	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
-	return val, nil
 }
 
 func (e *BooleanExpression) Equals(other Expression) bool {
@@ -490,23 +323,8 @@ func (e *NilExpression) String() string {
 	return str
 }
 
-func (e *NilExpression) Print(p Printer) (string, error) {
-	return p.Print(e)
-}
-
 func (e *NilExpression) Type() Type {
 	return TypeNil
-}
-
-func (e *NilExpression) TypeCheck(*Context) error {
-	log.Debug().Msgf("(typechecker) typecheck(%s) => %s", e, e.Type())
-	return nil
-}
-
-func (e *NilExpression) Evaluate(ctx *Context) (Value, error) {
-	val := Nil
-	log.Debug().Msgf("(executor) eval(%s) => %s", e, val)
-	return val, nil
 }
 
 func (e *NilExpression) Equals(other Expression) bool {

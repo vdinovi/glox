@@ -21,7 +21,7 @@ print a = "test";
 		t.Fatalf("Unexpected error in %q: %s", src, err)
 	}
 	ctx := NewContext()
-	err = ctx.TypeCheckProgram(prog)
+	err = ctx.Typecheck(prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestTypecheckPrintStatement(t *testing.T) {
 			continue
 		}
 		ctx := NewContext()
-		err := ctx.TypeCheckPrintStatement(print)
+		err := print.Typecheck(ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", print, test.err, err)
@@ -104,7 +104,7 @@ func TestTypeCheckExpressionStatement(t *testing.T) {
 			continue
 		}
 		ctx := NewContext()
-		err := ctx.TypeCheckExpressionStatement(expr)
+		err := expr.Typecheck(ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", expr, test.err, err)
@@ -150,7 +150,7 @@ func TestTypeCheckBlockStatement(t *testing.T) {
 			continue
 		}
 		ctx := NewContext()
-		err := ctx.TypeCheckBlockStatement(block)
+		err := block.Typecheck(ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", block, test.err, err)
@@ -194,7 +194,7 @@ func TestTypeCheckConditionalStatement(t *testing.T) {
 			continue
 		}
 		ctx := NewContext()
-		err := ctx.TypeCheckConditionalStatement(cond)
+		err := cond.Typecheck(ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", cond, test.err, err)
@@ -235,7 +235,7 @@ func TestTypeCheckWhileStatement(t *testing.T) {
 			continue
 		}
 		ctx := NewContext()
-		err := ctx.TypeCheckWhileStatement(cond)
+		err := cond.Typecheck(ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", cond, test.err, err)
@@ -278,7 +278,7 @@ func TestTypeCheckForStatement(t *testing.T) {
 			continue
 		}
 		ctx := NewContext()
-		err := ctx.TypeCheckForStatement(cond)
+		err := cond.Typecheck(ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", cond, test.err, err)
@@ -418,7 +418,7 @@ func TestTypeCheckExpression(t *testing.T) {
 	}
 	for _, test := range tests {
 		ctx := NewContext()
-		err := test.expr.TypeCheck(ctx)
+		err := test.expr.Typecheck(ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%v) to yield error %q, but got %q", test.expr, test.err, err)
@@ -453,7 +453,7 @@ func TestTypeCheckVariableExpression(t *testing.T) {
 			}
 		}
 
-		err := test.expr.TypeCheck(ctx)
+		err := test.expr.Typecheck(ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%v) to yield error %q, but got %q", test.expr, test.err, err)
@@ -478,7 +478,7 @@ func BenchmarkTypecheckFixtureProgram(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ctx := NewContext()
-		err := ctx.TypeCheckProgram(program)
+		err := ctx.Typecheck(program)
 		if err != nil {
 			b.Errorf("Unexpected error typechecking fixture 'program': %s", err)
 		}
