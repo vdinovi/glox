@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -58,25 +59,46 @@ func file(fpath string) error {
 
 	executor := lox.NewExecutor(os.Stdout)
 	reader := bufio.NewReader(f)
-	return execute(executor, reader)
+
+	err = execute(executor, reader)
+	if err != nil {
+		return lox.FatalError{err}
+	}
+	return nil
 }
 
 func interactive() (err error) {
-	executor := lox.NewExecutor(os.Stdout)
-	reader := bufio.NewReader(os.Stdin)
+	terminal, err := lox.NewTerminal(os.Stdin, "(lox) ")
+	if err != nil {
+		return err
+	}
+	defer terminal.Close()
+	defer func() {
+		if err := recover(); err != nil {
+			terminal.Close()
+			panic(err)
+		}
+	}()
+
+	executor := lox.NewExecutor(terminal)
+
 	var line string
-	for err == nil {
-		fmt.Printf("> ")
-		line, err = reader.ReadString('\n')
+	for {
+		line, err = terminal.ReadLine()
 		if err == io.EOF {
 			return nil
 		} else if err != nil {
 			return err
 		}
-		line = strings.TrimRight(line, "\n")
 		err = execute(executor, strings.NewReader(line))
+		if err == nil {
+			continue
+		} else if errors.Is(err, lox.FatalError{}) {
+			return err
+		} else if e := terminal.WriteError(err); e != nil {
+			return e
+		}
 	}
-	return err
 }
 
 func execute(executor *lox.Executor, reader io.Reader) error {

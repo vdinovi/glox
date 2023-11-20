@@ -7,6 +7,26 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type FatalError struct {
+	Err error
+}
+
+func (e FatalError) Error() string {
+	return e.Err.Error()
+}
+
+func (e FatalError) Unwrap() error {
+	return e.Err
+}
+
+func (e FatalError) Is(target error) bool {
+	switch target.(type) {
+	case FatalError, *FatalError:
+		return true
+	}
+	return false
+}
+
 type Executable interface {
 	Execute(*Executor) error
 }
