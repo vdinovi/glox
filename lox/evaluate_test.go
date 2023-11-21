@@ -122,13 +122,13 @@ func TestSimpleExpression(t *testing.T) {
 		{val: ValueBoolean(false), expr: bOrExpr(nilExpr())(falseExpr())()},
 	}
 	for _, test := range tests {
-		ctx := NewContext()
+		x := NewExecutor(&PrintSpy{})
 		// _, err := test.expr.TypeCheck(ctx)
 		// if err != nil {
 		// 	t.Errorf("Unexpected error while typechecking %q: %s", test.expr, err)
 		// 	continue
 		// }
-		val, err := test.expr.Evaluate(ctx)
+		val, err := test.expr.Evaluate(x)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected evaluate(%v) to yield error %q, but got %q", test.expr, test.err, err)

@@ -20,12 +20,8 @@ func (ctx *Context) Typecheck(elems []Statement) error {
 }
 
 func (s *BlockStatement) Typecheck(ctx *Context) error {
-	ctx.PushEnvironment()
-	log.Debug().Msgf("(typecheck) enter %s", ctx.types.String())
-	defer func() {
-		ctx.PopEnvironment()
-		log.Debug().Msgf("(typecheck) enter %s", ctx.types.String())
-	}()
+	exit := ctx.Enter("typecheck")
+	defer exit()
 	for _, stmt := range s.stmts {
 		if err := stmt.Typecheck(ctx); err != nil {
 			return err
@@ -109,6 +105,29 @@ func (s *DeclarationStatement) Typecheck(ctx *Context) error {
 	return err
 }
 
+func (s *FunctionStatement) Typecheck(ctx *Context) error {
+	// TODO: Add type checking for functions
+	// ctx.PushEnvironment()
+	// log.Debug().Msgf("(typecheck) enter %s", ctx.types.String())
+	// defer func() {
+	// 	ctx.PopEnvironment()
+	// 	log.Debug().Msgf("(typecheck) enter %s", ctx.types.String())
+	// }()
+	// for _, p := range s.params {
+	// 	if _, err := ctx.types.Set(p, TypeAny); err != nil {
+	// 		return err
+	// 	}
+	// 	log.Debug().Msgf("(typecheck) (%d) %s := %s", ctx.types.depth, p, TypeAny)
+	// }
+	// for _, st := range s.body {
+	// 	if err := st.Typecheck(ctx); err != nil {
+	// 		return err
+	// 	}
+	// }
+	s.rtype = TypeAny
+	return nil
+}
+
 func (e *UnaryExpression) Typecheck(ctx *Context) error {
 	if err := e.right.Typecheck(ctx); err != nil {
 		return err
@@ -169,7 +188,29 @@ func (e *VariableExpression) Typecheck(ctx *Context) error {
 }
 
 func (e *CallExpression) Typecheck(ctx *Context) error {
-	return ErrNotYetImplemented
+	// if err := e.callee.Typecheck(ctx); err != nil {
+	// 	return err
+	// }
+	// typ := e.callee.Type()
+	// if !typ.Contains(TypeCallable) {
+	// 	return NewTypeError(NewTypeNotCallableError(typ), e.Position())
+	// }
+	// fn, _ := ctx.funcs.Lookup(typ.name)
+	// if fn == nil {
+	// 	return NewTypeError(NewUndefinedVariableError(typ.name), e.Position())
+	// }
+	// if arity, nargs := fn.Arity(), len(e.args); nargs != arity {
+	// 	return NewTypeError(NewArityMismatchError(arity, nargs), e.Position())
+	// }
+	// for i, arg := range e.args {
+	// 	if err := arg.Typecheck(ctx); err != nil {
+	// 		return err
+	// 	}
+	// 	if param := fn.Params[i]; !param.Type.Contains(arg.Type()) {
+	// 		return NewTypeError(NewInvalidArgumentTypeForParameter(arg.Type(), param), e.Position())
+	// 	}
+	// }
+	return nil
 }
 
 func (e *StringExpression) Typecheck(*Context) error {

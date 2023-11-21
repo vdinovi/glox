@@ -19,6 +19,7 @@ const (
 	typeFloat64Bit
 	typeUtf8Bit
 	typeStringBit
+	typeCallable
 )
 
 var TypeAny = Type{bits: ^uint(0)}
@@ -28,9 +29,10 @@ var TypeNil = Type{bits: uint(typeNilBit)}
 var TypeBoolean = Type{bits: uint(typeBooleanBit)}
 var TypeNumeric = Type{bits: uint(typeUint64Bit | typeInt64Bit | typeFloat64Bit)}
 var TypeString = Type{bits: uint(typeStringBit)}
+var TypeCallable = Type{bits: uint(typeCallable)}
 
-var allTypes = [4]Type{TypeNil, TypeBoolean, TypeNumeric, TypeString}
-var typeStrings = [4]string{"TypeNil", "TypeBoolean", "TypeNumeric", "TypeString"}
+var allTypes = [...]Type{TypeNil, TypeBoolean, TypeNumeric, TypeString, TypeCallable}
+var typeStrings = [...]string{"TypeNil", "TypeBoolean", "TypeNumeric", "TypeString", "TypeCallable"}
 
 type Type struct {
 	bits uint

@@ -113,6 +113,25 @@ func (s *DeclarationStatement) Print(p Printer) (str string, err error) {
 	return str, err
 }
 
+func (s *FunctionStatement) Print(p Printer) (str string, err error) {
+	switch p.(type) {
+	case *DefaultPrinter:
+		var sb strings.Builder
+		fmt.Fprintf(&sb, "fun %s(", s.name)
+		for i, p := range s.params {
+			sb.WriteString(p)
+			if i+1 < len(s.params) {
+				sb.WriteString(", ")
+			}
+		}
+		fmt.Fprintf(&sb, ") %s", s.body)
+		str = sb.String()
+	default:
+		err = UnprintableError{s}
+	}
+	return str, err
+}
+
 func (s *BlockStatement) Print(p Printer) (str string, err error) {
 	switch p.(type) {
 	case *DefaultPrinter:
@@ -274,6 +293,16 @@ func (v ValueNil) Print(p Printer) (str string, err error) {
 	switch p.(type) {
 	case *DefaultPrinter:
 		str = "nil"
+	default:
+		err = UnprintableError{v}
+	}
+	return str, err
+}
+
+func (v ValueCallable) Print(p Printer) (str string, err error) {
+	switch p.(type) {
+	case *DefaultPrinter:
+		str = fmt.Sprintf("Callable(%s)", v.name)
 	default:
 		err = UnprintableError{v}
 	}

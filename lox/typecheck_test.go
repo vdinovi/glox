@@ -72,7 +72,7 @@ func TestTypecheckPrintStatement(t *testing.T) {
 	}
 }
 
-func TestTypeCheckExpressionStatement(t *testing.T) {
+func TestTypecheckExpressionStatement(t *testing.T) {
 	tests := []struct {
 		text string
 		err  error
@@ -117,7 +117,7 @@ func TestTypeCheckExpressionStatement(t *testing.T) {
 	}
 }
 
-func TestTypeCheckBlockStatement(t *testing.T) {
+func TestTypecheckBlockStatement(t *testing.T) {
 	tests := []struct {
 		text string
 		err  error
@@ -163,7 +163,7 @@ func TestTypeCheckBlockStatement(t *testing.T) {
 	}
 }
 
-func TestTypeCheckConditionalStatement(t *testing.T) {
+func TestTypecheckConditionalStatement(t *testing.T) {
 	tests := []struct {
 		text string
 		err  error
@@ -207,7 +207,7 @@ func TestTypeCheckConditionalStatement(t *testing.T) {
 	}
 }
 
-func TestTypeCheckWhileStatement(t *testing.T) {
+func TestTypecheckWhileStatement(t *testing.T) {
 	tests := []struct {
 		text string
 		err  error
@@ -248,7 +248,7 @@ func TestTypeCheckWhileStatement(t *testing.T) {
 	}
 }
 
-func TestTypeCheckForStatement(t *testing.T) {
+func TestTypecheckForStatement(t *testing.T) {
 	tests := []struct {
 		text string
 		err  error
@@ -291,7 +291,46 @@ func TestTypeCheckForStatement(t *testing.T) {
 	}
 }
 
-func TestTypeCheckExpression(t *testing.T) {
+func TestTypecheckFunctionStatement(t *testing.T) {
+	tests := []struct {
+		text string
+		err  error
+	}{
+		{text: "fun fn(a, b) { print a; print b; print a + b; }"},
+	}
+	for _, test := range tests {
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		td.Parse()
+		if td.Err != nil {
+			t.Errorf("Unexpected error in %q while %s: %s", test.text, td.Phase(), td.Err)
+			continue
+		}
+		if len(td.Program) != 1 {
+			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+			continue
+		}
+		var fn *FunctionStatement
+		var ok bool
+		if fn, ok = td.Program[0].(*FunctionStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
+			continue
+		}
+		ctx := NewContext()
+		err := fn.Typecheck(ctx)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", fn, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Error(err)
+			continue
+		}
+	}
+}
+
+func TestTypecheckExpression(t *testing.T) {
 	tests := []struct {
 		typ  Type
 		expr Expression
@@ -431,7 +470,42 @@ func TestTypeCheckExpression(t *testing.T) {
 	}
 }
 
-func TestTypeCheckVariableExpression(t *testing.T) {
+func TestTypecheckVariableExpression(t *testing.T) {
+	tests := []struct {
+		typ      Type
+		bindings map[string]Type
+		expr     Expression
+		err      error
+	}{
+		{expr: fooExpr(), err: NewTypeError(NewUndefinedVariableError("foo"), Position{})},
+		{typ: TypeNumeric, expr: fooExpr(), bindings: map[string]Type{"foo": TypeNumeric}},
+		{typ: TypeString, expr: fooExpr(), bindings: map[string]Type{"foo": TypeString}},
+		{typ: TypeBoolean, expr: fooExpr(), bindings: map[string]Type{"foo": TypeBoolean}},
+		{typ: TypeNil, expr: fooExpr(), bindings: map[string]Type{"foo": TypeNil}},
+	}
+	for _, test := range tests {
+		ctx := NewContext()
+		for name, typ := range test.bindings {
+			_, err := ctx.types.Set(name, typ)
+			if err != nil {
+				t.Errorf("Unexpected error while setting bindings for %q: %s", test.expr, err)
+			}
+		}
+
+		err := test.expr.Typecheck(ctx)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected typecheck(%v) to yield error %q, but got %q", test.expr, test.err, err)
+			}
+			continue
+		} else if err != nil {
+			t.Errorf("Unexpected error while typechecking %q: %s", test.expr, err)
+			continue
+		}
+	}
+}
+
+func TestTypecheckFunction(t *testing.T) {
 	tests := []struct {
 		typ      Type
 		bindings map[string]Type

@@ -3,6 +3,8 @@ package lox
 import (
 	"fmt"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Environment[T fmt.Stringer] struct {
@@ -84,6 +86,15 @@ func (ctx *Context) PushEnvironment() {
 func (ctx *Context) PopEnvironment() {
 	ctx.types = ctx.types.parent
 	ctx.values = ctx.values.parent
+}
+
+func (ctx *Context) Enter(phase string) (exit func()) {
+	ctx.PushEnvironment()
+	log.Debug().Msgf("(%s) enter %s", phase, ctx.values.String())
+	return func() {
+		ctx.PopEnvironment()
+		log.Debug().Msgf("(%s) enter %s", phase, ctx.values.String())
+	}
 }
 
 type VariableRedeclarationError struct {

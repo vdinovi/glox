@@ -208,3 +208,41 @@ func (s *DeclarationStatement) Equals(other Statement) bool {
 	}
 	return s.expr.Equals(decl.expr)
 }
+
+type FunctionStatement struct {
+	name   string
+	params []string
+	body   []Statement
+	rtype  Type
+	pos    Position
+}
+
+func (s *FunctionStatement) Position() Position {
+	return s.pos
+}
+
+func (s *FunctionStatement) String() string {
+	str, err := s.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (s *FunctionStatement) Equals(other Statement) bool {
+	o, ok := other.(*FunctionStatement)
+	if !ok || s.name != o.name || len(s.params) != len(o.params) {
+		return false
+	}
+	for i, p := range s.params {
+		if p != o.params[i] {
+			return false
+		}
+	}
+	for i, st := range s.body {
+		if !st.Equals(o.body[i]) {
+			return false
+		}
+	}
+	return true
+}

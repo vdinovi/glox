@@ -49,9 +49,9 @@ func TestParserExpressionStatement(t *testing.T) {
 		{text: "1 and true or nil;", stmts: []ExpressionStatement{{expr: bOrExpr(bAndExpr(oneExpr())(trueExpr())())(nilExpr())()}}},
 		{text: "1 and (true or nil);", stmts: []ExpressionStatement{{expr: bAndExpr(oneExpr())(groupExpr(bOrExpr(trueExpr())(nilExpr())())())()}}},
 		{text: "foo();", stmts: []ExpressionStatement{{expr: fooCallExpr()()}}},
-		{text: "foo(1, 2);", stmts: []ExpressionStatement{}},
-		{text: "foo()();", stmts: []ExpressionStatement{}},
-		{text: "foo(1, 2)(1, 2);", stmts: []ExpressionStatement{}},
+		{text: "foo(1, 3.14);", stmts: []ExpressionStatement{{expr: fooCallExpr(oneExpr(), piExpr())()}}},
+		{text: "foo(foo());", stmts: []ExpressionStatement{{expr: fooCallExpr(fooCallExpr()())()}}},
+		{text: "foo()();", stmts: []ExpressionStatement{{expr: makeCallExpression(fooCallExpr()())()()}}},
 	}
 	for _, test := range tests {
 		tokens, err := Scan(strings.NewReader(test.text))
@@ -343,6 +343,51 @@ func TestParserWhileStatement(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		tokens, err := Scan(strings.NewReader(test.text))
+		if err != nil {
+			t.Errorf("Unexpected error in %q: %s", test.text, err)
+			continue
+		}
+		program, err := Parse(tokens)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Errorf("Unexpected error in %q: %s", test.text, err)
+			continue
+		}
+		if len(program) != 1 {
+			t.Errorf("Expected %q to produce 1 statement but got %d", test.text, len(program))
+		}
+		stmt := program[0]
+		if !stmt.Equals(&test.stmt) {
+			t.Errorf("Expected %q to be %q, but got %q", test.text, test.stmt.String(), stmt.String())
+		}
+	}
+}
+
+func TestParserFunctionStatement(t *testing.T) {
+	tests := []struct {
+		text string
+		stmt FunctionStatement
+		err  error
+	}{
+		{
+			text: "fun func(a, b) { print a; print b; print a + b; }",
+			stmt: FunctionStatement{
+				name:   "func",
+				params: []string{"a", "b"},
+				body: []Statement{
+					&PrintStatement{expr: makeVarExpr("a")()},
+					&PrintStatement{expr: makeVarExpr("b")()},
+					&PrintStatement{expr: bAddExpr(makeVarExpr("a")())(makeVarExpr("b")())()},
 				},
 			},
 		},

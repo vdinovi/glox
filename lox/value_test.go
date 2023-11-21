@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestValue(t *testing.T) {
+func TestValueTypeAndString(t *testing.T) {
 	tests := []struct {
 		val    Value
 		typ    Type
@@ -21,6 +21,7 @@ func TestValue(t *testing.T) {
 		{ValueBoolean(false), TypeBoolean, false, "false"},
 		{ValueBoolean(true), TypeBoolean, true, "true"},
 		{ValueNil(struct{}{}), TypeNil, false, "nil"},
+		{ValueCallable{name: "foo", fn: nil}, TypeCallable, true, "Callable(foo)"},
 	}
 	for _, test := range tests {
 		// x := NewExecutor(io.Discard)
@@ -37,6 +38,8 @@ func TestValue(t *testing.T) {
 }
 
 func TestValueEquals(t *testing.T) {
+	fnFoo := &UserFunction{name: "foo"}
+	fnBar := &UserFunction{name: "bar"}
 	tests := []struct {
 		eq bool
 		a  Value
@@ -75,6 +78,14 @@ func TestValueEquals(t *testing.T) {
 		{eq: false, a: ValueNil{}, b: ValueString("")},
 		{eq: false, a: ValueNil{}, b: ValueBoolean(true)},
 		{eq: false, a: ValueNil{}, b: ValueBoolean(false)},
+		// callable
+		{eq: true, a: ValueCallable{name: "foo", fn: fnFoo}, b: ValueCallable{name: "foo", fn: fnFoo}},
+		{eq: false, a: ValueCallable{name: "foo", fn: fnFoo}, b: ValueCallable{name: "bar", fn: fnBar}},
+		{eq: false, a: ValueCallable{name: "foo"}, b: ValueNumeric(1)},
+		{eq: false, a: ValueCallable{name: "foo"}, b: ValueString("")},
+		{eq: false, a: ValueCallable{name: "foo"}, b: ValueBoolean(true)},
+		{eq: false, a: ValueCallable{name: "foo"}, b: ValueBoolean(false)},
+		{eq: false, a: ValueCallable{name: "foo"}, b: ValueNil{}},
 	}
 	for _, test := range tests {
 		if test.eq {
@@ -223,4 +234,8 @@ func TestValueStringBinaryOps(t *testing.T) {
 			t.Errorf("Expected (%s).%s(%s) to yield value %s, but got %s", a, test.op, b, test.val, val)
 		}
 	}
+}
+
+func TestValueCallble(t *testing.T) {
+	// TODO
 }

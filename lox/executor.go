@@ -48,12 +48,8 @@ func (x *Executor) Typecheck(elems []Statement) error {
 }
 
 func (s *BlockStatement) Execute(x *Executor) error {
-	x.ctx.PushEnvironment()
-	log.Debug().Msgf("(execute) enter %s", x.ctx.values.String())
-	defer func() {
-		x.ctx.PopEnvironment()
-		log.Debug().Msgf("(execute) enter %s", x.ctx.values.String())
-	}()
+	exit := x.ctx.Enter("execute")
+	defer exit()
 	for _, stmt := range s.stmts {
 		if err := stmt.Execute(x); err != nil {
 			return err
@@ -63,7 +59,7 @@ func (s *BlockStatement) Execute(x *Executor) error {
 }
 
 func (s *ConditionalStatement) Execute(x *Executor) error {
-	cond, err := s.expr.Evaluate(x.ctx)
+	cond, err := s.expr.Evaluate(x)
 	if err != nil {
 		return err
 	}
@@ -81,7 +77,7 @@ func (s *ConditionalStatement) Execute(x *Executor) error {
 
 func (s *WhileStatement) Execute(x *Executor) error {
 	for {
-		cond, err := s.expr.Evaluate(x.ctx)
+		cond, err := s.expr.Evaluate(x)
 		if err != nil {
 			return err
 		}
@@ -102,7 +98,7 @@ func (s *ForStatement) Execute(x *Executor) error {
 	}
 	for {
 		if s.cond != nil {
-			cond, err := s.cond.Evaluate(x.ctx)
+			cond, err := s.cond.Evaluate(x)
 			if err != nil {
 				return err
 			}
@@ -115,7 +111,7 @@ func (s *ForStatement) Execute(x *Executor) error {
 			return err
 		}
 		if s.incr != nil {
-			_, err := s.incr.Evaluate(x.ctx)
+			_, err := s.incr.Evaluate(x)
 			if err != nil {
 				return err
 			}
@@ -125,12 +121,12 @@ func (s *ForStatement) Execute(x *Executor) error {
 }
 
 func (s *ExpressionStatement) Execute(x *Executor) error {
-	_, err := s.expr.Evaluate(x.ctx)
+	_, err := s.expr.Evaluate(x)
 	return err
 }
 
 func (s *PrintStatement) Execute(x *Executor) error {
-	val, err := s.expr.Evaluate(x.ctx)
+	val, err := s.expr.Evaluate(x)
 	if err != nil {
 		return err
 	}
@@ -146,7 +142,7 @@ func (s *PrintStatement) Execute(x *Executor) error {
 }
 
 func (s *DeclarationStatement) Execute(x *Executor) error {
-	val, err := s.expr.Evaluate(x.ctx)
+	val, err := s.expr.Evaluate(x)
 	if err != nil {
 		return err
 	}
@@ -157,6 +153,22 @@ func (s *DeclarationStatement) Execute(x *Executor) error {
 		log.Debug().Msgf("(execute) (%d) %s = %s (was %s)", x.ctx.values.depth, s.name, val, *prev)
 	}
 	return err
+}
+
+func (s *FunctionStatement) Execute(x *Executor) error {
+	fn := &UserFunction{
+		name:   s.name,
+		params: s.params,
+		body:   s.body,
+	}
+	val := &ValueCallable{
+		name: s.name,
+		fn:   fn,
+	}
+	if _, err := x.ctx.values.Set(fn.name, val); err != nil {
+		return err
+	}
+	return nil
 }
 
 func deparenthesize(s string) string {

@@ -7,19 +7,19 @@ import (
 )
 
 type Evaluable interface {
-	Evaluate(*Context) (Value, error)
+	Evaluate(*Executor) (Value, error)
 }
 
-func (e *GroupingExpression) Evaluate(ctx *Context) (Value, error) {
-	return e.expr.Evaluate(ctx)
+func (e *GroupingExpression) Evaluate(x *Executor) (Value, error) {
+	return e.expr.Evaluate(x)
 }
 
-func (e *AssignmentExpression) Evaluate(ctx *Context) (Value, error) {
-	val, err := e.right.Evaluate(ctx)
+func (e *AssignmentExpression) Evaluate(x *Executor) (Value, error) {
+	val, err := e.right.Evaluate(x)
 	if err != nil {
 		return nil, err
 	}
-	prev, env := ctx.values.Lookup(e.name)
+	prev, env := x.ctx.values.Lookup(e.name)
 	if prev == nil {
 		return nil, NewRuntimeError(NewUndefinedVariableError(e.name), e.Position())
 	}
@@ -30,59 +30,78 @@ func (e *AssignmentExpression) Evaluate(ctx *Context) (Value, error) {
 	return val, nil
 }
 
-func (e *VariableExpression) Evaluate(ctx *Context) (Value, error) {
-	if val, _ := ctx.values.Lookup(e.name); val != nil {
+func (e *VariableExpression) Evaluate(x *Executor) (Value, error) {
+	if val, _ := x.ctx.values.Lookup(e.name); val != nil {
 		return *val, nil
 	}
 	return nil, NewRuntimeError(NewUndefinedVariableError(e.name), e.Position())
 }
 
-func (e *CallExpression) Evaluate(ctx *Context) (Value, error) {
-	return nil, ErrNotYetImplemented
-}
-
-func (e *UnaryExpression) Evaluate(ctx *Context) (Value, error) {
-	right, err := e.right.Evaluate(ctx)
+func (e *CallExpression) Evaluate(x *Executor) (Value, error) {
+	var err error
+	callee, err := e.callee.Evaluate(x)
 	if err != nil {
 		return nil, err
 	}
-	return evaluateUnary(ctx, e, right)
+	call, ok := callee.(*ValueCallable)
+	if !ok {
+		return nil, NewRuntimeError(NewTypeNotCallableError(callee.Type()), e.Position())
+	}
+	args := make([]Value, len(e.args))
+	for i, expr := range e.args {
+		if args[i], err = expr.Evaluate(x); err != nil {
+			return nil, err
+		}
+	}
+	val, err := call.Call(x, args...)
+	if err != nil {
+		return nil, err
+	}
+	return val, nil
 }
 
-func (e *BinaryExpression) Evaluate(ctx *Context) (Value, error) {
+func (e *UnaryExpression) Evaluate(x *Executor) (Value, error) {
+	right, err := e.right.Evaluate(x)
+	if err != nil {
+		return nil, err
+	}
+	return evaluateUnary(x, e, right)
+}
+
+func (e *BinaryExpression) Evaluate(x *Executor) (Value, error) {
 	switch e.op.Type {
 	case OpAnd, OpOr:
-		return evaluateBinaryWithShortCircuit(ctx, e)
+		return evaluateBinaryWithShortCircuit(x, e)
 	}
-	left, err := e.left.Evaluate(ctx)
+	left, err := e.left.Evaluate(x)
 	if err != nil {
 		return nil, err
 	}
-	right, err := e.right.Evaluate(ctx)
+	right, err := e.right.Evaluate(x)
 	if err != nil {
 		return nil, err
 	}
-	return evaluateBinary(ctx, e, left, right)
+	return evaluateBinary(x.ctx, e, left, right)
 
 }
 
-func (e *StringExpression) Evaluate(*Context) (Value, error) {
+func (e *StringExpression) Evaluate(*Executor) (Value, error) {
 	return ValueString(e.value), nil
 }
 
-func (e *NumericExpression) Evaluate(*Context) (Value, error) {
+func (e *NumericExpression) Evaluate(*Executor) (Value, error) {
 	return ValueNumeric(e.value), nil
 }
 
-func (e *BooleanExpression) Evaluate(*Context) (Value, error) {
+func (e *BooleanExpression) Evaluate(*Executor) (Value, error) {
 	return ValueBoolean(e.value), nil
 }
 
-func (e *NilExpression) Evaluate(*Context) (Value, error) {
+func (e *NilExpression) Evaluate(*Executor) (Value, error) {
 	return Nil, nil
 }
 
-func evaluateUnary(ctx *Context, e *UnaryExpression, right Value) (val Value, err error) {
+func evaluateUnary(x *Executor, e *UnaryExpression, right Value) (val Value, err error) {
 	if e.op.Type == OpNegate {
 		return ValueBoolean(!right.Truthy()), nil
 	}
@@ -125,8 +144,8 @@ func evaluateUnary(ctx *Context, e *UnaryExpression, right Value) (val Value, er
 	return val, err
 }
 
-func evaluateBinaryWithShortCircuit(ctx *Context, e *BinaryExpression) (val Value, err error) {
-	left, err := e.left.Evaluate(ctx)
+func evaluateBinaryWithShortCircuit(x *Executor, e *BinaryExpression) (val Value, err error) {
+	left, err := e.left.Evaluate(x)
 	if err != nil {
 		return nil, err
 	}
@@ -135,12 +154,12 @@ func evaluateBinaryWithShortCircuit(ctx *Context, e *BinaryExpression) (val Valu
 	case OpAnd:
 		val, err = left, nil
 		if val.Truthy() {
-			val, err = e.right.Evaluate(ctx)
+			val, err = e.right.Evaluate(x)
 		}
 	case OpOr:
 		val, err = left, nil
 		if !left.Truthy() {
-			val, err = e.right.Evaluate(ctx)
+			val, err = e.right.Evaluate(x)
 		}
 	default:
 		invalid = true

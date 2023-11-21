@@ -222,7 +222,7 @@ func (e *CallExpression) Equals(other Expression) bool {
 		return false
 	}
 	for i, arg := range e.args {
-		if arg != call.args[i] {
+		if !arg.Equals(call.args[i]) {
 			return false
 		}
 	}

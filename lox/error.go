@@ -133,6 +133,20 @@ func NewInvalidAssignmentTargetError(name string) InvalidAssignmentTargetError {
 	return InvalidAssignmentTargetError{Name: name}
 }
 
+// Error indicating too many arguments were supplied
+type MaximumArgumentCountExceededError struct {
+	Count int
+	Max   int
+}
+
+func (e MaximumArgumentCountExceededError) Error() string {
+	return fmt.Sprintf("maximum argument count of %d exceeded with %d", e.Max, e.Count)
+}
+
+func NewMaximumArgumentCountExceededError(count, max int) MaximumArgumentCountExceededError {
+	return MaximumArgumentCountExceededError{Count: count, Max: max}
+}
+
 // Container for all type-related errors
 type TypeError struct {
 	Err      error // the wrapped error
@@ -207,6 +221,22 @@ func NewInvalidBinaryOperatorForTypeError(opType OperatorType, left, right Type)
 	}
 }
 
+// type InvalidArgumentTypeForParameter struct {
+// 	Type
+// 	Param
+// }
+
+// func (e InvalidArgumentTypeForParameter) Error() string {
+// 	return fmt.Sprintf("invalid argument type %s for parameter %s of type %s", e.Type, e.Param.Name, e.Param.Type)
+// }
+
+// func NewInvalidArgumentTypeForParameter(typ Type, param Param) InvalidArgumentTypeForParameter {
+// 	return InvalidArgumentTypeForParameter{
+// 		Type:  typ,
+// 		Param: param,
+// 	}
+// }
+
 // Container for all runtime errors
 type RuntimeError struct {
 	Err      error // the wrapped error
@@ -262,6 +292,33 @@ func NewInvalidExpressionForTypeError(expr Expression, types ...Type) InvalidExp
 	}
 }
 
+// Error indicating that the type is not callable
+type TypeNotCallableError struct {
+	Type
+}
+
+func (e TypeNotCallableError) Error() string {
+	return fmt.Sprintf("type %s is not callable", e.Type)
+}
+
+func NewTypeNotCallableError(typ Type) TypeNotCallableError {
+	return TypeNotCallableError{Type: typ}
+}
+
+// Error indicating that the type is not callable
+type ArityMismatchError struct {
+	Arity    int
+	ArgCount int
+}
+
+func (e ArityMismatchError) Error() string {
+	return fmt.Sprintf("expected %d arguments but received %d", e.Arity, e.ArgCount)
+}
+
+func NewArityMismatchError(arity int, argCount int) ArityMismatchError {
+	return ArityMismatchError{Arity: arity, ArgCount: argCount}
+}
+
 // Error indicating that the variable is undefined
 type UndefinedVariableError struct {
 	Name string
@@ -273,6 +330,19 @@ func (e UndefinedVariableError) Error() string {
 
 func NewUndefinedVariableError(name string) UndefinedVariableError {
 	return UndefinedVariableError{Name: name}
+}
+
+// Error indicating that the function is undefined
+type UndefinedFunctionError struct {
+	Name string
+}
+
+func (e UndefinedFunctionError) Error() string {
+	return fmt.Sprintf("function %s is not defined", e.Name)
+}
+
+func NewUndefinedFunctionError(name string) UndefinedFunctionError {
+	return UndefinedFunctionError{Name: name}
 }
 
 // Error indicating division by zero

@@ -42,10 +42,6 @@ func (ValueString) Type() Type {
 	return TypeString
 }
 
-func (v ValueString) Unwrap() any {
-	return string(v)
-}
-
 func (v ValueString) Truthy() bool {
 	return true
 }
@@ -80,10 +76,6 @@ func (v ValueNumeric) String() string {
 
 func (e ValueNumeric) Type() Type {
 	return TypeNumeric
-}
-
-func (v ValueNumeric) Unwrap() any {
-	return float64(v)
 }
 
 func (v ValueNumeric) Truthy() bool {
@@ -182,10 +174,6 @@ func (e ValueBoolean) Type() Type {
 	return TypeBoolean
 }
 
-func (v ValueBoolean) Unwrap() any {
-	return bool(v)
-}
-
 func (v ValueBoolean) Truthy() bool {
 	return bool(v)
 }
@@ -213,10 +201,6 @@ func (e ValueNil) Type() Type {
 	return TypeNil
 }
 
-func (v ValueNil) Unwrap() any {
-	return struct{}{}
-}
-
 func (v ValueNil) Truthy() bool {
 	return false
 }
@@ -224,4 +208,37 @@ func (v ValueNil) Truthy() bool {
 func (v ValueNil) Equals(other Value) bool {
 	_, ok := other.(ValueNil)
 	return ok
+}
+
+type ValueCallable struct {
+	name string
+	fn   Function
+}
+
+func (v ValueCallable) String() string {
+	str, err := v.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (e ValueCallable) Type() Type {
+	return TypeCallable
+}
+
+func (v ValueCallable) Truthy() bool {
+	return true
+}
+
+func (v ValueCallable) Equals(other Value) bool {
+	call, ok := other.(ValueCallable)
+	if !ok || v.name != call.name {
+		return false
+	}
+	return true
+}
+
+func (v ValueCallable) Call(x *Executor, args ...Value) (Value, error) {
+	return v.fn.Execute(x, args...)
 }

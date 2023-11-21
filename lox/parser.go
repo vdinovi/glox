@@ -47,13 +47,76 @@ func (p *Parser) done() bool {
 }
 
 func (p *Parser) declaration() (Statement, error) {
-	if var_, ok := p.scan.match(TokenVar); ok {
-		return p.varDeclaration(var_.Position)
+	if fn, ok := p.scan.match(TokenFun); ok {
+		return p.funcDeclaration(fn.Position)
+	}
+	if vr, ok := p.scan.match(TokenVar); ok {
+		return p.varDeclaration(vr.Position)
 	}
 	return p.statement()
 }
 
-func (p *Parser) varDeclaration(pos Position) (Statement, error) {
+func (p *Parser) funcDeclaration(pos Position) (*FunctionStatement, error) {
+	stmt := FunctionStatement{pos: pos}
+	id, ok := p.scan.match(TokenIdentifier)
+	if !ok {
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenIdentifier.String(), id), id.Position,
+		)
+	}
+	stmt.name = id.Lexem
+	if lparen, ok := p.scan.match(TokenLeftParen); !ok {
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenLeftParen.String(), lparen), lparen.Position,
+		)
+	}
+	for {
+		if _, ok := p.scan.match(TokenRightParen); ok {
+			break
+		}
+		id, ok := p.scan.match(TokenIdentifier)
+		if !ok {
+			return nil, NewSyntaxError(
+				NewUnexpectedTokenError(TokenIdentifier.String(), id), id.Position,
+			)
+		}
+		stmt.params = append(stmt.params, id.Lexem)
+		comma, ok := p.scan.match(TokenComma)
+		if ok {
+			continue
+		}
+		rparen, ok := p.scan.match(TokenRightParen)
+		if ok {
+			break
+		}
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenRightParen.String(), rparen), comma.Position,
+		)
+	}
+	lbrace, ok := p.scan.match(TokenLeftBrace)
+	if !ok {
+		return nil, NewSyntaxError(
+			NewUnexpectedTokenError(TokenLeftBrace.String(), lbrace), lbrace.Position,
+		)
+	}
+	for {
+		if p.done() {
+			return nil, NewSyntaxError(
+				NewUnexpectedTokenError(TokenRightBrace.String(), eofToken), lbrace.Position,
+			)
+		}
+		if _, ok := p.scan.match(TokenRightBrace); ok {
+			return &stmt, nil
+		}
+		bodyStmt, err := p.declaration()
+		if err != nil {
+			return nil, err
+		}
+		stmt.body = append(stmt.body, bodyStmt)
+	}
+}
+
+func (p *Parser) varDeclaration(pos Position) (*DeclarationStatement, error) {
 	stmt := DeclarationStatement{pos: pos}
 	if token, ok := p.scan.match(TokenIdentifier); ok {
 		stmt.name = token.Lexem
@@ -85,7 +148,7 @@ func (p *Parser) varDeclaration(pos Position) (Statement, error) {
 
 func (p *Parser) statement() (Statement, error) {
 	if if_, ok := p.scan.match(TokenIf); ok {
-		return p.ifStatement(if_.Position)
+		return p.condStatement(if_.Position)
 	}
 	if print, ok := p.scan.match(TokenPrint); ok {
 		return p.printStatement(print.Position)
@@ -102,7 +165,7 @@ func (p *Parser) statement() (Statement, error) {
 	return p.expressionStatement()
 }
 
-func (p *Parser) ifStatement(pos Position) (Statement, error) {
+func (p *Parser) condStatement(pos Position) (*ConditionalStatement, error) {
 	var err error
 	stmt := ConditionalStatement{pos: pos}
 	stmt.expr, err = p.condition()
@@ -124,7 +187,7 @@ func (p *Parser) ifStatement(pos Position) (Statement, error) {
 	return &stmt, nil
 }
 
-func (p *Parser) whileStatement(pos Position) (Statement, error) {
+func (p *Parser) whileStatement(pos Position) (*WhileStatement, error) {
 	var err error
 	stmt := WhileStatement{pos: pos}
 	stmt.expr, err = p.condition()
@@ -138,7 +201,7 @@ func (p *Parser) whileStatement(pos Position) (Statement, error) {
 	return &stmt, nil
 }
 
-func (p *Parser) forStatement(pos Position) (Statement, error) {
+func (p *Parser) forStatement(pos Position) (*ForStatement, error) {
 	var err error
 	stmt := ForStatement{pos: pos}
 	if lparen, ok := p.scan.match(TokenLeftParen); !ok {
@@ -193,7 +256,7 @@ func (p *Parser) forStatement(pos Position) (Statement, error) {
 	return &stmt, nil
 }
 
-func (p *Parser) printStatement(pos Position) (Statement, error) {
+func (p *Parser) printStatement(pos Position) (*PrintStatement, error) {
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
@@ -209,7 +272,7 @@ func (p *Parser) printStatement(pos Position) (Statement, error) {
 	return &stmt, nil
 }
 
-func (p *Parser) blockStatement(pos Position) (Statement, error) {
+func (p *Parser) blockStatement(pos Position) (*BlockStatement, error) {
 	block := BlockStatement{stmts: make([]Statement, 0), pos: pos}
 	for {
 		if _, ok := p.scan.match(TokenRightBrace); ok || p.scan.done() {
@@ -223,7 +286,7 @@ func (p *Parser) blockStatement(pos Position) (Statement, error) {
 	}
 }
 
-func (p *Parser) expressionStatement() (Statement, error) {
+func (p *Parser) expressionStatement() (*ExpressionStatement, error) {
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
@@ -449,6 +512,8 @@ func (p *Parser) call() (expr Expression, err error) {
 	return expr, err
 }
 
+const maxArguments = 255
+
 func (p *Parser) finishCall(pos Position, callee Expression) (Expression, error) {
 	expr := CallExpression{callee: callee, pos: pos}
 	if _, ok := p.scan.match(TokenRightParen); !ok {
@@ -457,6 +522,13 @@ func (p *Parser) finishCall(pos Position, callee Expression) (Expression, error)
 			if err != nil {
 				return nil, err
 			}
+			if nargs := len(expr.args); nargs >= maxArguments {
+				return nil, NewSyntaxError(
+					NewMaximumArgumentCountExceededError(nargs+1, maxArguments),
+					arg.Position(),
+				)
+			}
+
 			expr.args = append(expr.args, arg)
 			if _, ok := p.scan.match(TokenComma); !ok {
 				if rparen, ok := p.scan.match(TokenRightParen); !ok {
