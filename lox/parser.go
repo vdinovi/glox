@@ -22,23 +22,38 @@ func NewParser(tokens []Token) Parser {
 }
 
 func (p *Parser) Parse() ([]Statement, error) {
+	var firstErr error
 	log.Debug().Msgf("(parser) scanning %d tokens", len(p.scan.tokens))
-	stmts := []Statement{}
+	stmts := make([]Statement, 0)
 	for {
 		if p.skipComments(); p.done() {
 			log.Debug().Msg("(parser) done")
 			break
 		}
 		stmt, err := p.declaration()
-
 		if err != nil {
 			log.Error().Msgf("(parser) error: %s", err)
-			return nil, err
+			if firstErr == nil {
+				firstErr = err
+			}
+			p.synchronize()
 		}
 		log.Debug().Msgf("(parser) statement: %s", stmt)
 		stmts = append(stmts, stmt)
 	}
-	return stmts, nil
+	return stmts, firstErr
+}
+
+func (p *Parser) synchronize() {
+	for token := p.scan.advance(); !p.done(); token = p.scan.advance() {
+		if token.Type == TokenSemicolon {
+			return
+		}
+		switch p.scan.peek().Type {
+		case TokenClass, TokenFor, TokenFun, TokenIf, TokenPrint, TokenReturn, TokenVar, TokenWhile:
+			return
+		}
+	}
 }
 
 func (p *Parser) done() bool {

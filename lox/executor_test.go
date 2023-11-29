@@ -47,6 +47,10 @@ func TestExecutor(t *testing.T) {
 			text:   "fun makeCounter() { var i = 0; fun count() { i = i + 1; print i; }\n return count; }\n var a = makeCounter(); var b = makeCounter(); a(); b(); a(); b(); a();",
 			prints: []string{"1", "1", "2", "2", "3"},
 		},
+		{
+			text:   "fun countdown(n) { print n; if (n > 1) countdown(n-1); }\n countdown(3);",
+			prints: []string{"3", "2", "1"},
+		},
 	}
 	for _, test := range tests {
 		td := NewTestDriver(t, test.text)
