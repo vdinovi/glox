@@ -2,14 +2,26 @@ package lox
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 )
 
 type Function interface {
-	fmt.Stringer
 	Execute(*Context, string, ...Value) (Value, error)
+}
+
+type BuiltinFunction struct {
+	name string
+	exec func(...Value) (Value, error)
+}
+
+func (f *BuiltinFunction) String() string {
+	return fmt.Sprintf("BuiltinFunction(%s)", f.name)
+}
+
+func (f *BuiltinFunction) Execute(ctx *Context, _ string, args ...Value) (Value, error) {
+	log.Debug().Msgf("(%s) executing %s with %v", ctx.Phase(), f.String(), args)
+	return f.exec(args...)
 }
 
 type UserFunction struct {
@@ -20,25 +32,29 @@ type UserFunction struct {
 }
 
 func (f *UserFunction) String() string {
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "fun %s(", f.name)
-	for i, param := range f.params {
-		if i+1 == len(f.params) {
-			fmt.Fprintf(&sb, "%s) { ", param)
-		} else {
-			fmt.Fprintf(&sb, "%s, ", param)
-		}
-	}
-	for _, stmt := range f.body {
-		s, err := stmt.Print(&defaultPrinter)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Fprintf(&sb, "%s ", s)
-	}
-	fmt.Fprint(&sb, "}")
-	return sb.String()
+	return fmt.Sprintf("UserFunction(%s)", f.name)
 }
+
+// func (f *UserFunction) String() string {
+// 	var sb strings.Builder
+// 	fmt.Fprintf(&sb, "fun %s(", f.name)
+// 	for i, param := range f.params {
+// 		if i+1 == len(f.params) {
+// 			fmt.Fprintf(&sb, "%s) { ", param)
+// 		} else {
+// 			fmt.Fprintf(&sb, "%s, ", param)
+// 		}
+// 	}
+// 	for _, stmt := range f.body {
+// 		s, err := stmt.Print(&defaultPrinter)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		fmt.Fprintf(&sb, "%s ", s)
+// 	}
+// 	fmt.Fprint(&sb, "}")
+// 	return sb.String()
+// }
 
 func (f *UserFunction) Arity() int {
 	return len(f.params)
@@ -63,11 +79,7 @@ func (e ReturnErr) Error() string {
 }
 
 func (f *UserFunction) Execute(ctx *Context, name string, args ...Value) (Value, error) {
-	stringArgs := make([]string, len(args))
-	for i, arg := range args {
-		stringArgs[i] = arg.String()
-	}
-	log.Debug().Msgf("(execute) executing fn %s with (%s)", f.name, strings.Join(stringArgs, ", "))
+	log.Debug().Msgf("(%s) executing %s with %v", ctx.Phase(), f.String(), args)
 	if len(args) != len(f.params) {
 		return nil, NewArityMismatchError(f.Arity(), len(args))
 	}

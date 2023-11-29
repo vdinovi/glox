@@ -32,6 +32,9 @@ func (e *VariableExpression) Evaluate(ctx *Context) (Value, error) {
 	if val, _ := ctx.env.ResolveValue(e.name); val != nil {
 		return val, nil
 	}
+	if fn := ctx.runtime.Function(e.name); fn != nil {
+		return &ValueCallable{name: e.name, fn: fn}, nil
+	}
 	return nil, NewRuntimeError(NewUndefinedVariableError(e.name), e.Position())
 }
 
