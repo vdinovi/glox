@@ -7,12 +7,13 @@ import (
 )
 
 type Function interface {
+	fmt.Stringer
 	Execute(*Context, string, ...Value) (Value, error)
 }
 
 type BuiltinFunction struct {
 	name string
-	exec func(...Value) (Value, error)
+	exec func(*Context, ...Value) (Value, error)
 }
 
 func (f *BuiltinFunction) String() string {
@@ -21,7 +22,7 @@ func (f *BuiltinFunction) String() string {
 
 func (f *BuiltinFunction) Execute(ctx *Context, _ string, args ...Value) (Value, error) {
 	log.Debug().Msgf("(%s) executing %s with %v", ctx.Phase(), f.String(), args)
-	return f.exec(args...)
+	return f.exec(ctx, args...)
 }
 
 type UserFunction struct {

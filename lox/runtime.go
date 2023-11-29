@@ -20,10 +20,11 @@ func NewRuntime(w io.Writer) *Runtime {
 	}
 	r.defun("clock", clock)
 	r.defun("sleep", sleep)
+	r.defun("debug", debug)
 	return r
 }
 
-func (r *Runtime) defun(name string, fn func(...Value) (Value, error)) {
+func (r *Runtime) defun(name string, fn func(*Context, ...Value) (Value, error)) {
 	r.funcs[name] = &BuiltinFunction{name: name, exec: fn}
 }
 
@@ -39,14 +40,14 @@ func (r *Runtime) Print(s string) error {
 	return err
 }
 
-func clock(args ...Value) (Value, error) {
+func clock(ctx *Context, args ...Value) (Value, error) {
 	if len(args) != 0 {
 		return nil, fmt.Errorf("clock expects no arguments, but got %d", len(args))
 	}
 	return ValueNumeric(time.Now().Unix()), nil
 }
 
-func sleep(args ...Value) (Value, error) {
+func sleep(ctx *Context, args ...Value) (Value, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("sleep expects one argument, but got %d", len(args))
 	}
@@ -57,5 +58,10 @@ func sleep(args ...Value) (Value, error) {
 	secs := time.Duration(n) * time.Second
 	log.Debug().Msgf("(runtime) sleeping for %v", secs)
 	time.Sleep(secs)
+	return Nil, nil
+}
+
+func debug(ctx *Context, _ ...Value) (Value, error) {
+	fmt.Fprintf(ctx.runtime.writer, "=== DEBUG ===\n%s\n=============\n", ctx.debug())
 	return Nil, nil
 }

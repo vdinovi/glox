@@ -1,7 +1,10 @@
 package lox
 
 import (
+	"fmt"
 	"io"
+	"slices"
+	"strings"
 )
 
 type Phase string
@@ -60,4 +63,24 @@ func (ctx *Context) StartPhase(phase Phase) (restore func()) {
 	}
 	ctx.phase = phase
 	return restore
+}
+
+func (ctx *Context) debug() string {
+	var sb strings.Builder
+	sb.WriteString("Context:\n")
+	fmt.Fprintf(&sb, "\tphase: %s\n", ctx.Phase())
+	sb.WriteString("\tfuncs:\n")
+	for _, f := range ctx.funcs {
+		fmt.Fprintf(&sb, "\t\t%s\n", f.String())
+	}
+	envs := []*Env{}
+	for env := ctx.env; env != nil; env = env.parent {
+		envs = append(envs, env)
+	}
+	slices.Reverse(envs)
+	sb.WriteString("\tenv:\n")
+	for i, env := range envs {
+		fmt.Fprintf(&sb, "\t\t%s%s\n", strings.Repeat("\t", i), env.String())
+	}
+	return sb.String()
 }
