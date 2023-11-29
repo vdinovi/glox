@@ -12,16 +12,16 @@ var b = 2;
 print a + b;
 print a = "test";
 	`
-	tokens, err := Scan(strings.NewReader(src))
+	ctx := NewContext(&PrintSpy{})
+	tokens, err := Scan(ctx, strings.NewReader(src))
 	if err != nil {
 		t.Fatalf("Unexpected error in %q: %s", src, err)
 	}
-	prog, err := Parse(tokens)
+	prog, err := Parse(ctx, tokens)
 	if err != nil {
 		t.Fatalf("Unexpected error in %q: %s", src, err)
 	}
-	ctx := NewContext()
-	err = ctx.Typecheck(prog)
+	err = Typecheck(ctx, prog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,8 +58,7 @@ func TestTypecheckPrintStatement(t *testing.T) {
 			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
-		ctx := NewContext()
-		err := print.Typecheck(ctx)
+		err := print.Typecheck(td.ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", print, test.err, err)
@@ -103,8 +102,7 @@ func TestTypecheckExpressionStatement(t *testing.T) {
 			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
-		ctx := NewContext()
-		err := expr.Typecheck(ctx)
+		err := expr.Typecheck(td.ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", expr, test.err, err)
@@ -149,8 +147,7 @@ func TestTypecheckBlockStatement(t *testing.T) {
 			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
-		ctx := NewContext()
-		err := block.Typecheck(ctx)
+		err := block.Typecheck(td.ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", block, test.err, err)
@@ -193,8 +190,7 @@ func TestTypecheckConditionalStatement(t *testing.T) {
 			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
-		ctx := NewContext()
-		err := cond.Typecheck(ctx)
+		err := cond.Typecheck(td.ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", cond, test.err, err)
@@ -234,8 +230,7 @@ func TestTypecheckWhileStatement(t *testing.T) {
 			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
-		ctx := NewContext()
-		err := cond.Typecheck(ctx)
+		err := cond.Typecheck(td.ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", cond, test.err, err)
@@ -277,8 +272,7 @@ func TestTypecheckForStatement(t *testing.T) {
 			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
-		ctx := NewContext()
-		err := cond.Typecheck(ctx)
+		err := cond.Typecheck(td.ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", cond, test.err, err)
@@ -291,7 +285,7 @@ func TestTypecheckForStatement(t *testing.T) {
 	}
 }
 
-func TestTypecheckFunctionStatement(t *testing.T) {
+func TestTypecheckFunctionDefinitionStatement(t *testing.T) {
 	tests := []struct {
 		text string
 		err  error
@@ -310,14 +304,13 @@ func TestTypecheckFunctionStatement(t *testing.T) {
 			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
 			continue
 		}
-		var fn *FunctionStatement
+		var fn *FunctionDefinitionStatement
 		var ok bool
-		if fn, ok = td.Program[0].(*FunctionStatement); !ok {
+		if fn, ok = td.Program[0].(*FunctionDefinitionStatement); !ok {
 			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
-		ctx := NewContext()
-		err := fn.Typecheck(ctx)
+		err := fn.Typecheck(td.ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", fn, test.err, err)
@@ -356,8 +349,7 @@ func TestTypecheckReturnStatement(t *testing.T) {
 			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
 			continue
 		}
-		ctx := NewContext()
-		err := ret.Typecheck(ctx)
+		err := ret.Typecheck(td.ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", ret, test.err, err)
@@ -496,7 +488,7 @@ func TestTypecheckExpression(t *testing.T) {
 		{typ: TypeNumeric.Union(TypeString), expr: bOrExpr(oneExpr())(strExpr())()},
 	}
 	for _, test := range tests {
-		ctx := NewContext()
+		ctx := NewContext(&PrintSpy{})
 		err := test.expr.Typecheck(ctx)
 		if test.err != nil {
 			if err != test.err {
@@ -524,12 +516,9 @@ func TestTypecheckVariableExpression(t *testing.T) {
 		{typ: TypeNil, expr: fooExpr(), bindings: map[string]Type{"foo": TypeNil}},
 	}
 	for _, test := range tests {
-		ctx := NewContext()
+		ctx := NewContext(&PrintSpy{})
 		for name, typ := range test.bindings {
-			_, err := ctx.types.Set(name, typ)
-			if err != nil {
-				t.Errorf("Unexpected error while setting bindings for %q: %s", test.expr, err)
-			}
+			ctx.env.SetType(name, typ)
 		}
 
 		err := test.expr.Typecheck(ctx)
@@ -559,12 +548,9 @@ func TestTypecheckFunction(t *testing.T) {
 		{typ: TypeNil, expr: fooExpr(), bindings: map[string]Type{"foo": TypeNil}},
 	}
 	for _, test := range tests {
-		ctx := NewContext()
+		ctx := NewContext(&PrintSpy{})
 		for name, typ := range test.bindings {
-			_, err := ctx.types.Set(name, typ)
-			if err != nil {
-				t.Errorf("Unexpected error while setting bindings for %q: %s", test.expr, err)
-			}
+			ctx.env.SetType(name, typ)
 		}
 
 		err := test.expr.Typecheck(ctx)
@@ -581,18 +567,18 @@ func TestTypecheckFunction(t *testing.T) {
 }
 
 func BenchmarkTypecheckFixtureProgram(b *testing.B) {
-	tokens, err := Scan(strings.NewReader(fixtureProgram))
+	ctx := NewContext(&PrintSpy{})
+	tokens, err := Scan(ctx, strings.NewReader(fixtureProgram))
 	if err != nil {
 		b.Errorf("Unexpected error lexing fixture 'program': %s", err)
 	}
-	program, err := Parse(tokens)
+	program, err := Parse(ctx, tokens)
 	if err != nil {
 		b.Errorf("Unexpected error parsing fixture 'program': %s", err)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ctx := NewContext()
-		err := ctx.Typecheck(program)
+		err := Typecheck(ctx, program)
 		if err != nil {
 			b.Errorf("Unexpected error typechecking fixture 'program': %s", err)
 		}

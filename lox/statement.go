@@ -209,7 +209,7 @@ func (s *DeclarationStatement) Equals(other Statement) bool {
 	return s.expr.Equals(decl.expr)
 }
 
-type FunctionStatement struct {
+type FunctionDefinitionStatement struct {
 	name   string
 	params []string
 	body   []Statement
@@ -217,11 +217,11 @@ type FunctionStatement struct {
 	pos    Position
 }
 
-func (s *FunctionStatement) Position() Position {
+func (s *FunctionDefinitionStatement) Position() Position {
 	return s.pos
 }
 
-func (s *FunctionStatement) String() string {
+func (s *FunctionDefinitionStatement) String() string {
 	str, err := s.Print(&defaultPrinter)
 	if err != nil {
 		panic(err)
@@ -229,8 +229,8 @@ func (s *FunctionStatement) String() string {
 	return str
 }
 
-func (s *FunctionStatement) Equals(other Statement) bool {
-	o, ok := other.(*FunctionStatement)
+func (s *FunctionDefinitionStatement) Equals(other Statement) bool {
+	o, ok := other.(*FunctionDefinitionStatement)
 	if !ok || s.name != o.name || len(s.params) != len(o.params) {
 		return false
 	}

@@ -239,6 +239,6 @@ func (v ValueCallable) Equals(other Value) bool {
 	return true
 }
 
-func (v ValueCallable) Call(x *Executor, args ...Value) (Value, error) {
-	return v.fn.Execute(x, v.name, args...)
+func (v ValueCallable) Call(ctx *Context, args ...Value) (Value, error) {
+	return v.fn.Execute(ctx, v.name, args...)
 }

@@ -6,39 +6,43 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func Parse(tokens []Token) ([]Statement, error) {
-	parser := NewParser(tokens)
+func Parse(ctx *Context, tokens []Token) ([]Statement, error) {
+	restore := ctx.StartPhase(PhaseParse)
+	defer restore()
+	parser := NewParser(ctx, tokens)
 	return parser.Parse()
 }
 
 type Parser struct {
+	ctx  *Context
 	scan tokenScanner
 }
 
-func NewParser(tokens []Token) Parser {
+func NewParser(ctx *Context, tokens []Token) Parser {
 	return Parser{
+		ctx:  ctx,
 		scan: tokenScanner{tokens: tokens},
 	}
 }
 
 func (p *Parser) Parse() ([]Statement, error) {
 	var firstErr error
-	log.Debug().Msgf("(parser) scanning %d tokens", len(p.scan.tokens))
+	log.Debug().Msgf("(%s) scanning %d tokens", p.ctx.Phase(), len(p.scan.tokens))
 	stmts := make([]Statement, 0)
 	for {
 		if p.skipComments(); p.done() {
-			log.Debug().Msg("(parser) done")
+			log.Debug().Msgf("(%s) done", p.ctx.Phase())
 			break
 		}
 		stmt, err := p.declaration()
 		if err != nil {
-			log.Error().Msgf("(parser) error: %s", err)
+			log.Error().Msgf("(%s) error: %s", p.ctx.Phase(), err)
 			if firstErr == nil {
 				firstErr = err
 			}
 			p.synchronize()
 		}
-		log.Debug().Msgf("(parser) statement: %s", stmt)
+		log.Debug().Msgf("(%s) statement: %s", p.ctx.Phase(), stmt.String())
 		stmts = append(stmts, stmt)
 	}
 	return stmts, firstErr
@@ -53,6 +57,7 @@ func (p *Parser) synchronize() {
 		case TokenClass, TokenFor, TokenFun, TokenIf, TokenPrint, TokenReturn, TokenVar, TokenWhile:
 			return
 		}
+		log.Debug().Msgf("(%s) synchronize: discarding %s", p.ctx.Phase(), token)
 	}
 }
 
@@ -62,6 +67,7 @@ func (p *Parser) done() bool {
 }
 
 func (p *Parser) declaration() (Statement, error) {
+	log.Trace().Msgf("(%s) declaration", p.ctx.Phase())
 	if fn, ok := p.scan.match(TokenFun); ok {
 		return p.funcDeclaration(fn.Position)
 	}
@@ -71,8 +77,9 @@ func (p *Parser) declaration() (Statement, error) {
 	return p.statement()
 }
 
-func (p *Parser) funcDeclaration(pos Position) (*FunctionStatement, error) {
-	stmt := FunctionStatement{pos: pos}
+func (p *Parser) funcDeclaration(pos Position) (*FunctionDefinitionStatement, error) {
+	log.Trace().Msgf("(%s) func declaration", p.ctx.Phase())
+	stmt := FunctionDefinitionStatement{pos: pos}
 	id, ok := p.scan.match(TokenIdentifier)
 	if !ok {
 		return nil, NewSyntaxError(
@@ -132,6 +139,7 @@ func (p *Parser) funcDeclaration(pos Position) (*FunctionStatement, error) {
 }
 
 func (p *Parser) varDeclaration(pos Position) (*DeclarationStatement, error) {
+	log.Trace().Msgf("(%s) var declaration", p.ctx.Phase())
 	stmt := DeclarationStatement{pos: pos}
 	if token, ok := p.scan.match(TokenIdentifier); ok {
 		stmt.name = token.Lexem
@@ -162,6 +170,7 @@ func (p *Parser) varDeclaration(pos Position) (*DeclarationStatement, error) {
 }
 
 func (p *Parser) statement() (Statement, error) {
+	log.Trace().Msgf("(%s) statement", p.ctx.Phase())
 	if if_, ok := p.scan.match(TokenIf); ok {
 		return p.condStatement(if_.Position)
 	}
@@ -185,6 +194,7 @@ func (p *Parser) statement() (Statement, error) {
 }
 
 func (p *Parser) condStatement(pos Position) (*ConditionalStatement, error) {
+	log.Trace().Msgf("(%s) cond statement", p.ctx.Phase())
 	var err error
 	stmt := ConditionalStatement{pos: pos}
 	stmt.expr, err = p.condition()
@@ -207,6 +217,7 @@ func (p *Parser) condStatement(pos Position) (*ConditionalStatement, error) {
 }
 
 func (p *Parser) whileStatement(pos Position) (*WhileStatement, error) {
+	log.Trace().Msgf("(%s) while statement", p.ctx.Phase())
 	var err error
 	stmt := WhileStatement{pos: pos}
 	stmt.expr, err = p.condition()
@@ -221,6 +232,7 @@ func (p *Parser) whileStatement(pos Position) (*WhileStatement, error) {
 }
 
 func (p *Parser) forStatement(pos Position) (*ForStatement, error) {
+	log.Trace().Msgf("(%s) for statement", p.ctx.Phase())
 	var err error
 	stmt := ForStatement{pos: pos}
 	if lparen, ok := p.scan.match(TokenLeftParen); !ok {
@@ -276,6 +288,7 @@ func (p *Parser) forStatement(pos Position) (*ForStatement, error) {
 }
 
 func (p *Parser) printStatement(pos Position) (*PrintStatement, error) {
+	log.Trace().Msgf("(%s) print statement", p.ctx.Phase())
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
@@ -292,6 +305,7 @@ func (p *Parser) printStatement(pos Position) (*PrintStatement, error) {
 }
 
 func (p *Parser) blockStatement(pos Position) (*BlockStatement, error) {
+	log.Trace().Msgf("(%s) block statement", p.ctx.Phase())
 	block := BlockStatement{stmts: make([]Statement, 0), pos: pos}
 	for {
 		if _, ok := p.scan.match(TokenRightBrace); ok || p.scan.done() {
@@ -306,6 +320,7 @@ func (p *Parser) blockStatement(pos Position) (*BlockStatement, error) {
 }
 
 func (p *Parser) returnStatement(pos Position) (ret *ReturnStatement, err error) {
+	log.Trace().Msgf("(%s) return statement", p.ctx.Phase())
 	ret = &ReturnStatement{expr: &NilExpression{}, pos: pos}
 	if _, ok := p.scan.match(TokenSemicolon); !ok {
 		if ret.expr, err = p.expression(); err != nil {
@@ -321,6 +336,7 @@ func (p *Parser) returnStatement(pos Position) (ret *ReturnStatement, err error)
 }
 
 func (p *Parser) expressionStatement() (*ExpressionStatement, error) {
+	log.Trace().Msgf("(%s) expr statement", p.ctx.Phase())
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
@@ -353,11 +369,13 @@ func (p *Parser) condition() (expr Expression, err error) {
 }
 
 func (p *Parser) expression() (Expression, error) {
+	log.Trace().Msgf("(%s) expression", p.ctx.Phase())
 	expr, err := p.assignment()
 	return expr, err
 }
 
 func (p *Parser) assignment() (Expression, error) {
+	log.Trace().Msgf("(%s) assign expression", p.ctx.Phase())
 	expr, err := p.or()
 	if err != nil {
 		return nil, err
@@ -376,6 +394,7 @@ func (p *Parser) assignment() (Expression, error) {
 }
 
 func (p *Parser) or() (Expression, error) {
+	log.Trace().Msgf("(%s) or expression", p.ctx.Phase())
 	expr, err := p.and()
 	if err != nil {
 		return nil, err
@@ -399,6 +418,7 @@ func (p *Parser) or() (Expression, error) {
 }
 
 func (p *Parser) and() (Expression, error) {
+	log.Trace().Msgf("(%s) and expression", p.ctx.Phase())
 	expr, err := p.equality()
 	if err != nil {
 		return nil, err
@@ -422,6 +442,7 @@ func (p *Parser) and() (Expression, error) {
 }
 
 func (p *Parser) equality() (Expression, error) {
+	log.Trace().Msgf("(%s) equality expression", p.ctx.Phase())
 	expr, err := p.comparison()
 	if err != nil {
 		return nil, err
@@ -445,6 +466,7 @@ func (p *Parser) equality() (Expression, error) {
 }
 
 func (p *Parser) comparison() (Expression, error) {
+	log.Trace().Msgf("(%s) comp expression", p.ctx.Phase())
 	expr, err := p.term()
 	if err != nil {
 		return nil, err
@@ -468,6 +490,7 @@ func (p *Parser) comparison() (Expression, error) {
 }
 
 func (p *Parser) term() (Expression, error) {
+	log.Trace().Msgf("(%s) term expression", p.ctx.Phase())
 	expr, err := p.factor()
 	if err != nil {
 		return nil, err
@@ -491,6 +514,7 @@ func (p *Parser) term() (Expression, error) {
 }
 
 func (p *Parser) factor() (Expression, error) {
+	log.Trace().Msgf("(%s) factor expression", p.ctx.Phase())
 	expr, err := p.unary()
 	if err != nil {
 		return nil, err
@@ -514,6 +538,7 @@ func (p *Parser) factor() (Expression, error) {
 }
 
 func (p *Parser) unary() (Expression, error) {
+	log.Trace().Msgf("(%s) unary expression", p.ctx.Phase())
 	if token, ok := p.scan.match(TokenBang, TokenMinus, TokenPlus); ok {
 		op, err := token.Operator()
 		if err != nil {
@@ -529,6 +554,7 @@ func (p *Parser) unary() (Expression, error) {
 }
 
 func (p *Parser) call() (expr Expression, err error) {
+	log.Trace().Msgf("(%s) unary expression", p.ctx.Phase())
 	expr, err = p.primary()
 	if err != nil {
 		return nil, err
@@ -579,6 +605,7 @@ func (p *Parser) finishCall(pos Position, callee Expression) (Expression, error)
 }
 
 func (p *Parser) primary() (Expression, error) {
+	log.Trace().Msgf("(%s) primary expression", p.ctx.Phase())
 	if expr, err := p.literal(); err != nil {
 		return nil, err
 	} else if expr != nil {
@@ -596,6 +623,7 @@ func (p *Parser) primary() (Expression, error) {
 }
 
 func (p *Parser) literal() (Expression, error) {
+	log.Trace().Msgf("(%s) literal expression", p.ctx.Phase())
 	if token, ok := p.scan.match(TokenNumber); ok {
 		n, err := strconv.ParseFloat(token.Lexem, 64)
 		if err != nil {
@@ -627,6 +655,7 @@ func (p *Parser) skipComments() {
 }
 
 func (p *Parser) grouping() (Expression, error) {
+	log.Trace().Msgf("(%s) grouping expression", p.ctx.Phase())
 	if token, ok := p.scan.match(TokenLeftParen); ok {
 		expr, err := p.expression()
 		if err != nil {

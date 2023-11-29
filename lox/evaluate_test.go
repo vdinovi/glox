@@ -128,7 +128,7 @@ func TestSimpleExpression(t *testing.T) {
 		// 	t.Errorf("Unexpected error while typechecking %q: %s", test.expr, err)
 		// 	continue
 		// }
-		val, err := test.expr.Evaluate(x)
+		val, err := test.expr.Evaluate(x.ctx)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected evaluate(%v) to yield error %q, but got %q", test.expr, test.err, err)

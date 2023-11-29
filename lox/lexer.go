@@ -8,8 +8,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func Scan(rd io.Reader) ([]Token, error) {
-	lexer, err := NewLexer(bufio.NewReader(rd))
+func Scan(ctx *Context, rd io.Reader) ([]Token, error) {
+	restore := ctx.StartPhase(PhaseLex)
+	defer restore()
+	lexer, err := NewLexer(ctx, bufio.NewReader(rd))
 	if err != nil {
 		return nil, err
 	}
@@ -17,36 +19,40 @@ func Scan(rd io.Reader) ([]Token, error) {
 }
 
 type Lexer struct {
+	ctx  *Context
 	scan runeScanner
 }
 
-func NewLexer(rd io.RuneReader) (*Lexer, error) {
-	scanner := runeScanner{}
-	if err := scanner.fill(rd); err != nil {
+func NewLexer(ctx *Context, rd io.RuneReader) (*Lexer, error) {
+	l := &Lexer{
+		ctx:  ctx,
+		scan: runeScanner{},
+	}
+	if err := l.scan.fill(rd); err != nil {
 		return nil, err
 	}
-	return &Lexer{scan: scanner}, nil
+	return l, nil
 }
 
 func (l *Lexer) Scan() ([]Token, error) {
-	log.Debug().Msgf("(lexer) scanning %d runes", len(l.scan.runes))
+	log.Debug().Msgf("(%s) scanning %d runes", l.ctx.Phase(), len(l.scan.runes))
 	tokens := []Token{}
 	for {
 		token, err := l.next()
 		if err == nil {
-			log.Debug().Msgf("(lexer) token: %s", token)
+			log.Debug().Msgf("(%s) token: %s", l.ctx.Phase(), token)
 			tokens = append(tokens, *token)
 		} else if err == io.EOF {
 			tokens = append(tokens, eofToken)
-			log.Debug().Msgf("(lexer) token: %s", eofToken)
-			log.Debug().Msg("(lexer) done")
+			log.Debug().Msgf("(%s) token: %s", l.ctx.Phase(), eofToken)
+			log.Debug().Msgf("(%s) done", l.ctx.Phase())
 			break
 		} else {
-			log.Error().Msgf("(lexer) error: %s", err)
+			log.Error().Msgf("(%s) error: %s", l.ctx.Phase(), err)
 			return nil, err
 		}
 	}
-	log.Debug().Msgf("(lexer) produced %d tokens", len(tokens))
+	log.Debug().Msgf("(%s) produced %d tokens", l.ctx.Phase(), len(tokens))
 	return tokens, nil
 }
 

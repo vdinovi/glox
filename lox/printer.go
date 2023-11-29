@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var defaultPrinter = DefaultPrinter{}
+var defaultPrinter = CompactPrinter{}
 
 type Printable interface {
 	Print(Printer) (string, error)
@@ -24,21 +24,42 @@ type Printer interface {
 	Print(Printable) (string, error)
 }
 
-type DefaultPrinter struct{}
+type CompactPrinter struct{}
 
-func (p *DefaultPrinter) Print(elem Printable) (string, error) {
+func (p *CompactPrinter) Print(elem Printable) (string, error) {
 	return elem.Print(p)
 }
 
+// type CorrectPrinter struct {
+// 	depth int
+// }
+
+// func (p *CorrectPrinter) Print(elem Printable) (string, error) {
+// 	return elem.Print(p)
+// }
+
+// func (p *CorrectPrinter) pad(indent int) string {
+// 	return strings.Repeat("\t", p.depth+indent)
+// }
+
 func (s *ConditionalStatement) Print(p Printer) (str string, err error) {
-	switch p.(type) {
-	case *DefaultPrinter:
-		var sb strings.Builder
-		fmt.Fprintf(&sb, "if %s %s", s.expr, s.thenBranch)
-		if s.elseBranch != nil {
-			fmt.Fprintf(&sb, "else %s", s.elseBranch)
+	cond, err := s.expr.Print(p)
+	if err != nil {
+		return "", err
+	}
+	thenBranch, err := s.thenBranch.Print(p)
+	if err != nil {
+		return "", err
+	}
+	elseBranch := "<none>"
+	if s.elseBranch != nil {
+		if elseBranch, err = s.elseBranch.Print(p); err != nil {
+			return "", err
 		}
-		str = sb.String()
+	}
+	switch p.(type) {
+	case *CompactPrinter:
+		str = fmt.Sprintf("if (%s) { %s } else { %s }", cond, thenBranch, elseBranch)
 	default:
 		err = UnprintableError{s}
 	}
@@ -46,9 +67,17 @@ func (s *ConditionalStatement) Print(p Printer) (str string, err error) {
 }
 
 func (s *WhileStatement) Print(p Printer) (str string, err error) {
+	cond, err := s.expr.Print(p)
+	if err != nil {
+		return "", err
+	}
+	body, err := s.body.Print(p)
+	if err != nil {
+		return "", err
+	}
 	switch p.(type) {
-	case *DefaultPrinter:
-		str = fmt.Sprintf("while ( %s ) %s", s.expr, s.body)
+	case *CompactPrinter:
+		str = fmt.Sprintf("while (%s) { %s }", cond, body)
 	default:
 		err = UnprintableError{s}
 	}
@@ -56,26 +85,32 @@ func (s *WhileStatement) Print(p Printer) (str string, err error) {
 }
 
 func (s *ForStatement) Print(p Printer) (str string, err error) {
+	init := "<none>"
+	if s.init != nil {
+		if init, err = s.init.Print(p); err != nil {
+			return "", err
+		}
+	}
+	cond := "<none>"
+	if s.cond != nil {
+		if cond, err = s.cond.Print(p); err != nil {
+			return "", err
+		}
+	}
+	incr := "<none>"
+	if s.incr != nil {
+		if incr, err = s.incr.Print(p); err != nil {
+			return "", err
+		}
+	}
+	body, err := s.body.Print(p)
+	if err != nil {
+		return "", err
+	}
+
 	switch p.(type) {
-	case *DefaultPrinter:
-		var sb strings.Builder
-		fmt.Fprint(&sb, "for ( ")
-		if s.init != nil {
-			sb.WriteString(s.init.String())
-		} else {
-			sb.WriteString(" ;")
-		}
-		if s.cond != nil {
-			sb.WriteString(" ")
-			sb.WriteString(s.cond.String())
-		}
-		sb.WriteString(" ; ")
-		if s.incr != nil {
-			sb.WriteString(s.incr.String())
-		}
-		sb.WriteString(" ) ")
-		sb.WriteString(s.body.String())
-		str = sb.String()
+	case *CompactPrinter:
+		str = fmt.Sprintf("for (%s; %s; %s) { %s }", init, cond, incr, body)
 	default:
 		err = UnprintableError{s}
 	}
@@ -83,10 +118,13 @@ func (s *ForStatement) Print(p Printer) (str string, err error) {
 }
 
 func (s *ExpressionStatement) Print(p Printer) (str string, err error) {
+	expr, err := s.expr.Print(p)
+	if err != nil {
+		return "", err
+	}
 	switch p.(type) {
-	case *DefaultPrinter:
-		str = fmt.Sprintf("%s ;", s.expr)
-
+	case *CompactPrinter:
+		str = fmt.Sprintf("%s;", expr)
 	default:
 		err = UnprintableError{s}
 	}
@@ -94,9 +132,13 @@ func (s *ExpressionStatement) Print(p Printer) (str string, err error) {
 }
 
 func (s *PrintStatement) Print(p Printer) (str string, err error) {
+	expr, err := s.expr.Print(p)
+	if err != nil {
+		return "", err
+	}
 	switch p.(type) {
-	case *DefaultPrinter:
-		str = fmt.Sprintf("print %s ;", s.expr)
+	case *CompactPrinter:
+		str = fmt.Sprintf("print %s;", expr)
 	default:
 		err = UnprintableError{s}
 	}
@@ -104,28 +146,30 @@ func (s *PrintStatement) Print(p Printer) (str string, err error) {
 }
 
 func (s *DeclarationStatement) Print(p Printer) (str string, err error) {
+	expr, err := s.expr.Print(p)
+	if err != nil {
+		return "", err
+	}
 	switch p.(type) {
-	case *DefaultPrinter:
-		str = fmt.Sprintf("var %s = %s ;", s.name, s.expr)
+	case *CompactPrinter:
+		str = fmt.Sprintf("var %s = %s;", s.name, expr)
 	default:
 		err = UnprintableError{s}
 	}
 	return str, err
 }
 
-func (s *FunctionStatement) Print(p Printer) (str string, err error) {
-	switch p.(type) {
-	case *DefaultPrinter:
-		var sb strings.Builder
-		fmt.Fprintf(&sb, "fun %s(", s.name)
-		for i, p := range s.params {
-			sb.WriteString(p)
-			if i+1 < len(s.params) {
-				sb.WriteString(", ")
-			}
+func (s *FunctionDefinitionStatement) Print(p Printer) (str string, err error) {
+	body := make([]string, len(s.body))
+	for i, stmt := range s.body {
+		body[i], err = stmt.Print(p)
+		if err != nil {
+			return "", err
 		}
-		fmt.Fprintf(&sb, ") %s", s.body)
-		str = sb.String()
+	}
+	switch p.(type) {
+	case *CompactPrinter:
+		str = fmt.Sprintf("fun %s(%s) { %s }", s.name, strings.Join(s.params, ", "), strings.Join(body, " "))
 	default:
 		err = UnprintableError{s}
 	}
@@ -133,9 +177,13 @@ func (s *FunctionStatement) Print(p Printer) (str string, err error) {
 }
 
 func (s *ReturnStatement) Print(p Printer) (str string, err error) {
+	expr, err := s.expr.Print(p)
+	if err != nil {
+		return "", err
+	}
 	switch p.(type) {
-	case *DefaultPrinter:
-		str = fmt.Sprintf("return %s ;", s.expr)
+	case *CompactPrinter:
+		str = fmt.Sprintf("return %s;", expr)
 	default:
 		err = UnprintableError{s}
 	}
@@ -143,15 +191,16 @@ func (s *ReturnStatement) Print(p Printer) (str string, err error) {
 }
 
 func (s *BlockStatement) Print(p Printer) (str string, err error) {
-	switch p.(type) {
-	case *DefaultPrinter:
-		var sb strings.Builder
-		sb.WriteString("{ ")
-		for _, stmt := range s.stmts {
-			fmt.Fprint(&sb, " ", stmt.String())
+	body := make([]string, len(s.stmts))
+	for i, stmt := range s.stmts {
+		body[i], err = stmt.Print(p)
+		if err != nil {
+			return "", err
 		}
-		sb.WriteString(" } ;")
-		str = sb.String()
+	}
+	switch p.(type) {
+	case *CompactPrinter:
+		str = fmt.Sprintf("{ %s }", strings.Join(body, " "))
 	default:
 		err = UnprintableError{s}
 	}
@@ -160,7 +209,7 @@ func (s *BlockStatement) Print(p Printer) (str string, err error) {
 
 func (e *UnaryExpression) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = fmt.Sprintf("(%s %s)", e.op.Lexem, e.right)
 	default:
 		err = UnprintableError{e}
@@ -170,7 +219,7 @@ func (e *UnaryExpression) Print(p Printer) (str string, err error) {
 
 func (e *BinaryExpression) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = fmt.Sprintf("(%s %s %s)", e.op.Lexem, e.left, e.right)
 	default:
 		err = UnprintableError{e}
@@ -180,7 +229,7 @@ func (e *BinaryExpression) Print(p Printer) (str string, err error) {
 
 func (e *GroupingExpression) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = fmt.Sprintf("(group %s)", e.expr)
 	default:
 		err = UnprintableError{e}
@@ -190,7 +239,7 @@ func (e *GroupingExpression) Print(p Printer) (str string, err error) {
 
 func (e *AssignmentExpression) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = fmt.Sprintf("(%s = %s)", e.name, e.right)
 	default:
 		err = UnprintableError{e}
@@ -200,7 +249,7 @@ func (e *AssignmentExpression) Print(p Printer) (str string, err error) {
 
 func (e *VariableExpression) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = fmt.Sprintf("Var(%s)", e.name)
 	default:
 		err = UnprintableError{e}
@@ -210,7 +259,7 @@ func (e *VariableExpression) Print(p Printer) (str string, err error) {
 
 func (e *CallExpression) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		var args []string
 		for _, arg := range e.args {
 			args = append(args, arg.String())
@@ -223,7 +272,7 @@ func (e *CallExpression) Print(p Printer) (str string, err error) {
 }
 func (e *StringExpression) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = fmt.Sprintf("\"%s\"", string(e.value))
 	default:
 		err = UnprintableError{e}
@@ -233,7 +282,7 @@ func (e *StringExpression) Print(p Printer) (str string, err error) {
 
 func (e *NumericExpression) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = fmt.Sprint(e.value)
 	default:
 		err = UnprintableError{e}
@@ -243,7 +292,7 @@ func (e *NumericExpression) Print(p Printer) (str string, err error) {
 
 func (e *BooleanExpression) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		if e.value {
 			str = "true"
 		} else {
@@ -257,7 +306,7 @@ func (e *BooleanExpression) Print(p Printer) (str string, err error) {
 
 func (e *NilExpression) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = "nil"
 	default:
 		err = UnprintableError{e}
@@ -267,7 +316,7 @@ func (e *NilExpression) Print(p Printer) (str string, err error) {
 
 func (v ValueString) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = fmt.Sprintf("\"%s\"", string(v))
 	default:
 		err = UnprintableError{v}
@@ -277,7 +326,7 @@ func (v ValueString) Print(p Printer) (str string, err error) {
 
 func (v ValueNumeric) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = strconv.FormatFloat(float64(v), 'f', -1, 64)
 	default:
 		err = UnprintableError{v}
@@ -287,7 +336,7 @@ func (v ValueNumeric) Print(p Printer) (str string, err error) {
 
 func (v ValueBoolean) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		if bool(v) {
 			str = "true"
 		} else {
@@ -301,7 +350,7 @@ func (v ValueBoolean) Print(p Printer) (str string, err error) {
 
 func (v ValueNil) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = "nil"
 	default:
 		err = UnprintableError{v}
@@ -311,7 +360,7 @@ func (v ValueNil) Print(p Printer) (str string, err error) {
 
 func (v ValueCallable) Print(p Printer) (str string, err error) {
 	switch p.(type) {
-	case *DefaultPrinter:
+	case *CompactPrinter:
 		str = fmt.Sprintf("Callable(%s)", v.name)
 	default:
 		err = UnprintableError{v}

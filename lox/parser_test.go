@@ -54,12 +54,13 @@ func TestParserExpressionStatement(t *testing.T) {
 		{text: "foo()();", stmts: []ExpressionStatement{{expr: makeCallExpression(fooCallExpr()())()()}}},
 	}
 	for _, test := range tests {
-		tokens, err := Scan(strings.NewReader(test.text))
+		ctx := NewContext(&PrintSpy{})
+		tokens, err := Scan(ctx, strings.NewReader(test.text))
 		if err != nil {
 			t.Errorf("Unexpected error in %q: %s", test.text, err)
 			continue
 		}
-		program, err := Parse(tokens)
+		program, err := Parse(ctx, tokens)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
@@ -99,12 +100,13 @@ func TestParserPrintStatement(t *testing.T) {
 		{text: "print (1);", stmts: []PrintStatement{{expr: groupExpr(oneExpr())()}}},
 	}
 	for _, test := range tests {
-		tokens, err := Scan(strings.NewReader(test.text))
+		ctx := NewContext(&PrintSpy{})
+		tokens, err := Scan(ctx, strings.NewReader(test.text))
 		if err != nil {
 			t.Errorf("Unexpected error in %q: %s", test.text, err)
 			continue
 		}
-		program, err := Parse(tokens)
+		program, err := Parse(ctx, tokens)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
@@ -143,12 +145,13 @@ func TestParserDeclarationStatement(t *testing.T) {
 		{text: "var foo = (1);", stmts: []DeclarationStatement{{name: "foo", expr: groupExpr(oneExpr())()}}},
 	}
 	for _, test := range tests {
-		tokens, err := Scan(strings.NewReader(test.text))
+		ctx := NewContext(&PrintSpy{})
+		tokens, err := Scan(ctx, strings.NewReader(test.text))
 		if err != nil {
 			t.Errorf("Unexpected error in %q: %s", test.text, err)
 			continue
 		}
-		program, err := Parse(tokens)
+		program, err := Parse(ctx, tokens)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
@@ -181,12 +184,13 @@ func TestParserBlockStatement(t *testing.T) {
 		{text: "{1; {1;}}", stmts: []BlockStatement{{stmts: []Statement{&ExpressionStatement{expr: oneExpr()}, &BlockStatement{stmts: []Statement{&ExpressionStatement{expr: oneExpr()}}}}}}},
 	}
 	for _, test := range tests {
-		tokens, err := Scan(strings.NewReader(test.text))
+		ctx := NewContext(&PrintSpy{})
+		tokens, err := Scan(ctx, strings.NewReader(test.text))
 		if err != nil {
 			t.Errorf("Unexpected error in %q: %s", test.text, err)
 			continue
 		}
-		program, err := Parse(tokens)
+		program, err := Parse(ctx, tokens)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
@@ -281,12 +285,13 @@ func TestParserConditionalStatement(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		tokens, err := Scan(strings.NewReader(test.text))
+		ctx := NewContext(&PrintSpy{})
+		tokens, err := Scan(ctx, strings.NewReader(test.text))
 		if err != nil {
 			t.Errorf("Unexpected error in %q: %s", test.text, err)
 			continue
 		}
-		program, err := Parse(tokens)
+		program, err := Parse(ctx, tokens)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
@@ -348,12 +353,13 @@ func TestParserWhileStatement(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		tokens, err := Scan(strings.NewReader(test.text))
+		ctx := NewContext(&PrintSpy{})
+		tokens, err := Scan(ctx, strings.NewReader(test.text))
 		if err != nil {
 			t.Errorf("Unexpected error in %q: %s", test.text, err)
 			continue
 		}
-		program, err := Parse(tokens)
+		program, err := Parse(ctx, tokens)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
@@ -384,12 +390,13 @@ func TestParserReturnStatement(t *testing.T) {
 		{text: "return foo;", stmt: ReturnStatement{expr: fooExpr()}},
 	}
 	for _, test := range tests {
-		tokens, err := Scan(strings.NewReader(test.text))
+		ctx := NewContext(&PrintSpy{})
+		tokens, err := Scan(ctx, strings.NewReader(test.text))
 		if err != nil {
 			t.Errorf("Unexpected error in %q: %s", test.text, err)
 			continue
 		}
-		program, err := Parse(tokens)
+		program, err := Parse(ctx, tokens)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
@@ -409,15 +416,15 @@ func TestParserReturnStatement(t *testing.T) {
 	}
 }
 
-func TestParserFunctionStatement(t *testing.T) {
+func TestParserFunctionDefinitionStatement(t *testing.T) {
 	tests := []struct {
 		text string
-		stmt FunctionStatement
+		stmt FunctionDefinitionStatement
 		err  error
 	}{
 		{
 			text: "fun func(a, b) { print a; print b; print a + b; }",
-			stmt: FunctionStatement{
+			stmt: FunctionDefinitionStatement{
 				name:   "func",
 				params: []string{"a", "b"},
 				body: []Statement{
@@ -429,11 +436,11 @@ func TestParserFunctionStatement(t *testing.T) {
 		},
 		{
 			text: "fun addOne(a) { fun addTwo(b) { return a + b; }\n return addTwo; }",
-			stmt: FunctionStatement{
+			stmt: FunctionDefinitionStatement{
 				name:   "addOne",
 				params: []string{"a"},
 				body: []Statement{
-					&FunctionStatement{
+					&FunctionDefinitionStatement{
 						name:   "addTwo",
 						params: []string{"b"},
 						body: []Statement{
@@ -446,12 +453,13 @@ func TestParserFunctionStatement(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		tokens, err := Scan(strings.NewReader(test.text))
+		ctx := NewContext(&PrintSpy{})
+		tokens, err := Scan(ctx, strings.NewReader(test.text))
 		if err != nil {
 			t.Errorf("Unexpected error in %q: %s", test.text, err)
 			continue
 		}
-		program, err := Parse(tokens)
+		program, err := Parse(ctx, tokens)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
@@ -520,12 +528,13 @@ func TestParserForStatement(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		tokens, err := Scan(strings.NewReader(test.text))
+		ctx := NewContext(&PrintSpy{})
+		tokens, err := Scan(ctx, strings.NewReader(test.text))
 		if err != nil {
 			t.Errorf("Unexpected error in %q: %s", test.text, err)
 			continue
 		}
-		program, err := Parse(tokens)
+		program, err := Parse(ctx, tokens)
 		if test.err != nil {
 			if err != test.err {
 				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
@@ -554,7 +563,8 @@ func TestParserProgram(t *testing.T) {
 		t.Fatalf("Failed to deserialize tokens")
 	}
 
-	parser := NewParser(tokens)
+	ctx := NewContext(&PrintSpy{})
+	parser := NewParser(ctx, tokens)
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
@@ -566,13 +576,14 @@ func TestParserProgram(t *testing.T) {
 }
 
 func BenchmarkParserFixturePrograms(b *testing.B) {
-	tokens, err := Scan(strings.NewReader(fixtureProgram))
+	ctx := NewContext(&PrintSpy{})
+	tokens, err := Scan(ctx, strings.NewReader(fixtureProgram))
 	if err != nil {
 		b.Errorf("Unexpected error lexing fixture 'program': %s", err)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := Parse(tokens)
+		_, err := Parse(ctx, tokens)
 		if err != nil {
 			b.Errorf("Unexpected error parsing fixture 'program': %s", err)
 		}

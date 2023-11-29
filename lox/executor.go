@@ -9,116 +9,103 @@ import (
 )
 
 type Executor struct {
-	runtime *Runtime
-	ctx     *Context
-	printer Printer
+	ctx *Context
 }
 
-func NewExecutor(printer io.Writer) *Executor {
+func NewExecutor(w io.Writer) *Executor {
 	return &Executor{
-		runtime: NewRuntime(printer),
-		ctx:     NewContext(),
-		printer: &defaultPrinter,
+		ctx: NewContext(w),
 	}
 }
 
 type Executable interface {
-	Execute(*Executor) error
+	Execute(*Context) error
 }
 
-func (x *Executor) Execute(elems []Statement) error {
+func Execute(ctx *Context, elems []Statement) error {
+	restore := ctx.StartPhase(PhaseExecute)
+	defer restore()
 	for _, elem := range elems {
-		log.Debug().Msgf("(execute) executing %s", elem)
-		if err := elem.Execute(x); err != nil {
+		log.Debug().Msgf("(%s) executing %s", ctx.Phase(), elem)
+		if err := elem.Execute(ctx); err != nil {
 			if ret, ok := err.(ReturnErr); ok {
 				err = NewRuntimeError(
 					fmt.Errorf("out of place return statement"),
 					ret.Position(),
 				)
 			}
-			log.Error().Msgf("(execute) error in %q: %s", elem, err)
+			log.Error().Msgf("(%s) error in %q: %s", ctx.Phase(), elem, err)
 			return err
 		}
 	}
 	return nil
 }
 
-func (x *Executor) Typecheck(elems []Statement) error {
-	for _, elem := range elems {
-		log.Debug().Msgf("(typecheck) checking %s", elem)
-		if err := elem.Typecheck(x.ctx); err != nil {
-			log.Error().Msgf("(typecheck) error in %q: %s", elem, err)
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *BlockStatement) Execute(x *Executor) error {
-	exit := executeEnterEnv(x.ctx, "<block>")
+func (s *BlockStatement) Execute(ctx *Context) error {
+	exit := debugEnterEnv(ctx, "<block>")
 	defer exit()
 	for _, stmt := range s.stmts {
-		if err := stmt.Execute(x); err != nil {
+		if err := stmt.Execute(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *ConditionalStatement) Execute(x *Executor) error {
-	cond, err := s.expr.Evaluate(x)
+func (s *ConditionalStatement) Execute(ctx *Context) error {
+	cond, err := s.expr.Evaluate(ctx)
 	if err != nil {
 		return err
 	}
 	if cond.Truthy() {
-		if err := s.thenBranch.Execute(x); err != nil {
+		if err := s.thenBranch.Execute(ctx); err != nil {
 			return err
 		}
 	} else if s.elseBranch != nil {
-		if err := s.elseBranch.Execute(x); err != nil {
+		if err := s.elseBranch.Execute(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *WhileStatement) Execute(x *Executor) error {
+func (s *WhileStatement) Execute(ctx *Context) error {
 	for {
-		cond, err := s.expr.Evaluate(x)
+		cond, err := s.expr.Evaluate(ctx)
 		if err != nil {
 			return err
 		}
 		if !cond.Truthy() {
-			log.Debug().Msg("(execute) break loop")
+			log.Debug().Msgf("(%s) break loop", ctx.Phase())
 			break
 		}
-		if err := s.body.Execute(x); err != nil {
+		if err := s.body.Execute(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (s *ForStatement) Execute(x *Executor) error {
+func (s *ForStatement) Execute(ctx *Context) error {
 	if s.init != nil {
-		s.init.Execute(x)
+		s.init.Execute(ctx)
 	}
 	for {
 		if s.cond != nil {
-			cond, err := s.cond.Evaluate(x)
+			cond, err := s.cond.Evaluate(ctx)
 			if err != nil {
 				return err
 			}
 			if !cond.Truthy() {
-				log.Debug().Msg("(execute) break loop")
+				log.Debug().Msgf("(%s) break loop", ctx.Phase())
 				break
 			}
 		}
-		if err := s.body.Execute(x); err != nil {
+		if err := s.body.Execute(ctx); err != nil {
 			return err
 		}
 		if s.incr != nil {
-			_, err := s.incr.Evaluate(x)
+			_, err := s.incr.Evaluate(ctx)
 			if err != nil {
 				return err
 			}
@@ -127,66 +114,53 @@ func (s *ForStatement) Execute(x *Executor) error {
 	return nil
 }
 
-func (s *ExpressionStatement) Execute(x *Executor) error {
-	_, err := s.expr.Evaluate(x)
+func (s *ExpressionStatement) Execute(ctx *Context) error {
+	_, err := s.expr.Evaluate(ctx)
 	return err
 }
 
-func (s *PrintStatement) Execute(x *Executor) error {
-	val, err := s.expr.Evaluate(x)
+func (s *PrintStatement) Execute(ctx *Context) error {
+	val, err := s.expr.Evaluate(ctx)
 	if err != nil {
 		return err
 	}
-	str, err := val.Print(x.printer)
+	str, err := val.Print(ctx.printer)
 	if err != nil {
 		return err
 	}
-	err = x.runtime.Print(deparenthesize(str))
+	err = ctx.runtime.Print(deparenthesize(str))
 	if err != nil {
 		return NewRuntimeError(err, s.Position())
 	}
 	return nil
 }
 
-func (s *DeclarationStatement) Execute(x *Executor) error {
-	val, err := s.expr.Evaluate(x)
+func (s *DeclarationStatement) Execute(ctx *Context) error {
+	val, err := s.expr.Evaluate(ctx)
 	if err != nil {
 		return err
 	}
-	prev, err := x.ctx.values.Set(s.name, val)
-	if prev == nil {
-		log.Debug().Msgf("(execute) Env(%s) %s := %s", x.ctx.values.name, s.name, val)
-	} else {
-		log.Debug().Msgf("(execute) Env(%s) %s = %s (was %s)", x.ctx.values.name, s.name, val, *prev)
-	}
-	return err
+	return debugSetValue(ctx.Phase(), ctx.env, s.name, val)
 }
 
-func (s *FunctionStatement) Execute(x *Executor) error {
+func (s *FunctionDefinitionStatement) Execute(ctx *Context) error {
 	fn := &UserFunction{
-		name:    s.name,
-		params:  s.params,
-		body:    s.body,
-		context: x.ctx.Copy(),
+		name:   s.name,
+		params: s.params,
+		body:   s.body,
+		env:    ctx.env,
 	}
+	ctx.funcs = append(ctx.funcs, fn)
+	log.Debug().Msgf("(%s) created user func %s(...) { ... }", ctx.Phase(), s.name)
 	val := &ValueCallable{
 		name: s.name,
 		fn:   fn,
 	}
-	prev, err := x.ctx.values.Set(fn.name, val)
-	if err != nil {
-		return err
-	}
-	if prev == nil {
-		log.Debug().Msgf("(execute) Env(%s) %s := %s", x.ctx.values.name, s.name, val)
-	} else {
-		log.Debug().Msgf("(execute) Env(%s) %s = %s (was %s)", x.ctx.values.name, s.name, val, *prev)
-	}
-	return nil
+	return debugSetValue(ctx.Phase(), ctx.env, fn.name, val)
 }
 
-func (s *ReturnStatement) Execute(x *Executor) error {
-	val, err := s.expr.Evaluate(x)
+func (s *ReturnStatement) Execute(ctx *Context) error {
+	val, err := s.expr.Evaluate(ctx)
 	if err != nil {
 		return err
 	}
@@ -195,14 +169,4 @@ func (s *ReturnStatement) Execute(x *Executor) error {
 
 func deparenthesize(s string) string {
 	return strings.Trim(s, "\"")
-}
-
-func executeEnterEnv(ctx *Context, name string) (exit func()) {
-	ctx.PushEnvironment(name)
-	log.Debug().Msgf("(execute) ENTER %s", ctx.values.String())
-	return func() {
-		log.Debug().Msgf("(execute) EXIT %s", ctx.values.String())
-		ctx.PopEnvironment()
-		log.Debug().Msgf("(execute) ENTER %s", ctx.values.String())
-	}
 }

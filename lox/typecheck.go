@@ -8,11 +8,13 @@ type Typecheckable interface {
 	Typecheck(*Context) error
 }
 
-func (ctx *Context) Typecheck(elems []Statement) error {
+func Typecheck(ctx *Context, elems []Statement) error {
+	restore := ctx.StartPhase(PhaseTypecheck)
+	defer restore()
 	for _, elem := range elems {
-		log.Debug().Msgf("(typecheck) checking %s", elem)
+		log.Debug().Msgf("(%s) checking %s", ctx.Phase(), elem)
 		if err := elem.Typecheck(ctx); err != nil {
-			log.Error().Msgf("(typecheck) error in %q: %s", elem, err)
+			log.Error().Msgf("(%s) error in %q: %s", ctx.Phase(), elem, err)
 			return err
 		}
 	}
@@ -20,7 +22,7 @@ func (ctx *Context) Typecheck(elems []Statement) error {
 }
 
 func (s *BlockStatement) Typecheck(ctx *Context) error {
-	exit := typecheckEnterEnv(ctx, "<block>")
+	exit := debugEnterEnv(ctx, "<block>")
 	defer exit()
 	for _, stmt := range s.stmts {
 		if err := stmt.Typecheck(ctx); err != nil {
@@ -92,20 +94,10 @@ func (s *DeclarationStatement) Typecheck(ctx *Context) error {
 	if err != nil {
 		return err
 	}
-	typ := s.expr.Type()
-	prev, err := ctx.types.Set(s.name, typ)
-	if err != nil {
-		return err
-	}
-	if prev == nil {
-		log.Debug().Msgf("(typecheck) Env(%s) %s := %s", ctx.types.name, s.name, typ)
-	} else {
-		log.Debug().Msgf("(typecheck) Env(%s) %s = %s (was %s)", ctx.types.name, s.name, typ, prev)
-	}
-	return err
+	return debugSetType(ctx.Phase(), ctx.env, s.name, s.expr.Type())
 }
 
-func (s *FunctionStatement) Typecheck(ctx *Context) error {
+func (s *FunctionDefinitionStatement) Typecheck(ctx *Context) error {
 	// TODO: Typecheck function statement
 	// ctx.PushEnvironment()
 	// log.Debug().Msgf("(typecheck) enter %s", ctx.types.String())
@@ -175,23 +167,19 @@ func (e *AssignmentExpression) Typecheck(ctx *Context) error {
 	if err := e.right.Typecheck(ctx); err != nil {
 		return err
 	}
-	prev, env := ctx.types.Lookup(e.name)
-	if prev == nil {
+	prev, env := ctx.env.ResolveType(e.name)
+	if prev == TypeNone {
 		return NewTypeError(NewUndefinedVariableError(e.name), e.Position())
 	}
-	if _, err := env.Set(e.name, e.right.Type()); err != nil {
-		return err
-	}
-	log.Debug().Msgf("(typecheck) Env(%s) %s = %s (was %s)", ctx.types.name, e.name, e.right.Type(), *prev)
-	return nil
+	return debugSetType(ctx.Phase(), env, e.name, e.right.Type())
 }
 
 func (e *VariableExpression) Typecheck(ctx *Context) error {
-	typ, _ := ctx.types.Lookup(e.name)
-	if typ == nil {
+	typ, _ := ctx.env.ResolveType(e.name)
+	if typ == TypeNone {
 		return NewTypeError(NewUndefinedVariableError(e.name), e.Position())
 	}
-	e.typ = *typ
+	e.typ = typ
 	return nil
 }
 
@@ -297,14 +285,4 @@ func typecheckBinary(e *BinaryExpression, left Type, right Type) (result Type, e
 	s := result.String()
 	_ = s
 	return result, err
-}
-
-func typecheckEnterEnv(ctx *Context, name string) (exit func()) {
-	ctx.PushEnvironment(name)
-	log.Debug().Msgf("(typecheck) ENTER %s", ctx.types.String())
-	return func() {
-		log.Debug().Msgf("(typecheck) EXIT %s", ctx.types.String())
-		ctx.PopEnvironment()
-		log.Debug().Msgf("(typecheck) ENTER %s", ctx.types.String())
-	}
 }

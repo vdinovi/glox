@@ -34,16 +34,12 @@ func main() {
 }
 
 func process(r io.Reader, w io.Writer) error {
-	lexer, err := lox.NewLexer(bufio.NewReader(r))
+	ctx := lox.NewContext(w)
+	tokens, err := lox.Scan(ctx, bufio.NewReader(r))
 	if err != nil {
 		return err
 	}
-	tokens, err := lexer.Scan()
-	if err != nil {
-		return err
-	}
-	parser := lox.NewParser(tokens)
-	program, err := parser.Parse()
+	program, err := lox.Parse(ctx, tokens)
 	if err != nil {
 		return err
 	}

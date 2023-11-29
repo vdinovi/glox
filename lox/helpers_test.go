@@ -128,51 +128,53 @@ func makeCallExpression(callee Expression) func(args ...Expression) func() *Call
 	}
 }
 
-type testDriverPhase int
-
-const (
-	initializing = iota
-	lexing
-	parsing
-	typechecking
-	executing
-)
-
 type TestDriver struct {
 	Text    string
 	Tokens  []Token
 	Program []Statement
 	Printer PrintSpy
-	Exec    *Executor
+	ctx     *Context
 	Err     error
 	t       *testing.T
-	phase   testDriverPhase
+	phase   Phase
 }
 
 func NewTestDriver(t *testing.T, text string) *TestDriver {
-	return &TestDriver{
-		Text: text,
-		t:    t,
+	td := &TestDriver{
+		phase: PhaseInit,
+		Text:  text,
+		t:     t,
 	}
+	td.ctx = NewContext(&td.Printer)
+	return td
+}
+
+func (td *TestDriver) Phase() Phase {
+	return td.phase
 }
 
 func (td *TestDriver) Fatal() {
 	td.t.Helper()
 	if td.Err != nil {
-		td.t.Fatalf("Unexpected error while %s: %s", td.Phase(), td.Err)
+		td.unexpectedError(td.Err)
 	}
 }
 
 func (td *TestDriver) Error() {
 	td.t.Helper()
 	if td.Err != nil {
-		td.t.Errorf("Unexpected error while %s: %s", td.Phase(), td.Err)
+		td.unexpectedError(td.Err)
 	}
 }
 
+func (td *TestDriver) unexpectedError(err error) {
+	td.t.Helper()
+	td.t.Errorf("Unexpected error in phase %s: %s", td.Phase(), err)
+}
+
 func (td *TestDriver) Lex() {
-	td.phase = lexing
-	td.Tokens, td.Err = Scan(strings.NewReader(td.Text))
+	td.phase = PhaseLex
+	td.Tokens, td.Err = Scan(td.ctx, strings.NewReader(td.Text))
 }
 
 func (td *TestDriver) Parse() {
@@ -182,8 +184,8 @@ func (td *TestDriver) Parse() {
 	if len(td.Tokens) < 1 {
 		td.Err = fmt.Errorf("no tokens to parse (ensure Lex has been called)")
 	}
-	td.phase = parsing
-	td.Program, td.Err = Parse(td.Tokens)
+	td.phase = PhaseParse
+	td.Program, td.Err = Parse(td.ctx, td.Tokens)
 }
 
 func (td *TestDriver) TypeCheck() {
@@ -193,11 +195,8 @@ func (td *TestDriver) TypeCheck() {
 	if len(td.Program) < 1 {
 		td.Err = fmt.Errorf("no program to typecheck (ensure Parse has been called)")
 	}
-	if td.Exec == nil {
-		td.Exec = NewExecutor(&td.Printer)
-	}
-	td.phase = parsing
-	td.Err = td.Exec.ctx.Typecheck(td.Program)
+	td.phase = PhaseTypecheck
+	td.Err = Typecheck(td.ctx, td.Program)
 }
 
 func (td *TestDriver) Execute() {
@@ -207,27 +206,8 @@ func (td *TestDriver) Execute() {
 	if len(td.Program) < 1 {
 		td.Err = fmt.Errorf("no program to execute (ensure Parse has been called)")
 	}
-	if td.Exec == nil {
-		td.Exec = NewExecutor(&td.Printer)
-	}
-	td.phase = executing
-	td.Err = td.Exec.Execute(td.Program)
-}
-
-func (td *TestDriver) Phase() string {
-	switch td.phase {
-	case initializing:
-		return "initializing"
-	case lexing:
-		return "lexing"
-	case parsing:
-		return "parsing"
-	case typechecking:
-		return "typechecking"
-	case executing:
-		return "executing"
-	}
-	panic(td.phase)
+	td.phase = PhaseExecute
+	td.Err = Execute(td.ctx, td.Program)
 }
 
 type PrintSpy struct {

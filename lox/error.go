@@ -358,3 +358,15 @@ func (e DivideByZeroError) Error() string {
 func NewDivideByZeroError(num, denom ValueNumeric) DivideByZeroError {
 	return DivideByZeroError{Numerator: num, Denominator: denom}
 }
+
+type VariableRedeclarationError struct {
+	Name string
+}
+
+func (e VariableRedeclarationError) Error() string {
+	return fmt.Sprintf("variable %s already declared", e.Name)
+}
+
+func NewVariableRedeclarationError(name string) VariableRedeclarationError {
+	return VariableRedeclarationError{Name: name}
+}

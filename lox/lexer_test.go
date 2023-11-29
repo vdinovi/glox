@@ -95,7 +95,8 @@ func TestLexerExpression(t *testing.T) {
 		tokenDefault(TokenRightParen),
 		tokenDefault(TokenEOF),
 	}
-	lexer, err := NewLexer(strings.NewReader(input))
+	ctx := NewContext(&PrintSpy{})
+	lexer, err := NewLexer(ctx, strings.NewReader(input))
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
@@ -195,7 +196,8 @@ func TestLexerFixtureProgram(t *testing.T) {
 		t.Fatalf("Failed to deserialize tokens")
 	}
 
-	lexer, err := NewLexer(strings.NewReader(fixtureProgram))
+	ctx := NewContext(&PrintSpy{})
+	lexer, err := NewLexer(ctx, strings.NewReader(fixtureProgram))
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
 	}
@@ -216,7 +218,8 @@ func TestLexerFixtureProgram(t *testing.T) {
 
 func BenchmarkLexerFixtureProgram(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, err := Scan(strings.NewReader(fixtureProgram))
+		ctx := NewContext(&PrintSpy{})
+		_, err := Scan(ctx, strings.NewReader(fixtureProgram))
 		if err != nil {
 			b.Errorf("Unexpected error lexing fixture 'program': %s", err)
 		}

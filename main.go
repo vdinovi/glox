@@ -50,17 +50,18 @@ func setup() error {
 }
 
 func file(fpath string) error {
-	log.Debug().Msgf("(main) executing %s", fpath)
+	ctx := lox.NewContext(os.Stdout)
+
+	log.Debug().Msgf("(%s) executing %s", ctx.Phase(), fpath)
 	f, err := os.Open(fpath)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	executor := lox.NewExecutor(os.Stdout)
 	reader := bufio.NewReader(f)
 
-	err = execute(executor, reader)
+	err = execute(ctx, reader)
 	if err != nil {
 		return fatalError{err}
 	}
@@ -80,7 +81,7 @@ func interactive() (err error) {
 		}
 	}()
 
-	executor := lox.NewExecutor(terminal)
+	ctx := lox.NewContext(terminal)
 
 	var line string
 	for {
@@ -90,7 +91,7 @@ func interactive() (err error) {
 		} else if err != nil {
 			return err
 		}
-		err = execute(executor, strings.NewReader(line))
+		err = execute(ctx, strings.NewReader(line))
 		if err == nil {
 			continue
 		} else if errors.Is(err, fatalError{}) {
@@ -101,19 +102,19 @@ func interactive() (err error) {
 	}
 }
 
-func execute(executor *lox.Executor, reader io.Reader) error {
-	tokens, err := lox.Scan(bufio.NewReader(reader))
+func execute(ctx *lox.Context, reader io.Reader) error {
+	tokens, err := lox.Scan(ctx, bufio.NewReader(reader))
 	if err != nil {
 		return err
 	}
-	stmts, err := lox.Parse(tokens)
+	stmts, err := lox.Parse(ctx, tokens)
 	if err != nil {
 		return err
 	}
-	if err = executor.Typecheck(stmts); err != nil {
+	if err = lox.Typecheck(ctx, stmts); err != nil {
 		return err
 	}
-	return executor.Execute(stmts)
+	return lox.Execute(ctx, stmts)
 }
 
 type fatalError struct {
