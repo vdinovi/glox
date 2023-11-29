@@ -26,7 +26,7 @@ func (e *AssignmentExpression) Evaluate(x *Executor) (Value, error) {
 	if _, err = env.Set(e.name, val); err != nil {
 		return nil, err
 	}
-	log.Debug().Msgf("(evaluate) (%d) %s = %s (prev %s)", env.depth, e.name, val, *prev)
+	log.Debug().Msgf("(evaluate) Env(%s) %s = %s (prev %s)", env.name, e.name, val, *prev)
 	return val, nil
 }
 
@@ -46,6 +46,9 @@ func (e *CallExpression) Evaluate(x *Executor) (Value, error) {
 	call, ok := callee.(*ValueCallable)
 	if !ok {
 		return nil, NewRuntimeError(NewTypeNotCallableError(callee.Type()), e.Position())
+	}
+	if variable, ok := e.callee.(*VariableExpression); ok {
+		call.name = variable.name
 	}
 	args := make([]Value, len(e.args))
 	for i, expr := range e.args {

@@ -246,3 +246,32 @@ func (s *FunctionStatement) Equals(other Statement) bool {
 	}
 	return true
 }
+
+type ReturnStatement struct {
+	expr Expression
+	typ  Type
+	pos  Position
+}
+
+func (s *ReturnStatement) Position() Position {
+	return s.pos
+}
+
+func (s *ReturnStatement) String() string {
+	str, err := s.Print(&defaultPrinter)
+	if err != nil {
+		panic(err)
+	}
+	return str
+}
+
+func (s *ReturnStatement) Equals(other Statement) bool {
+	ret, ok := other.(*ReturnStatement)
+	if !ok {
+		return false
+	}
+	if !s.expr.Equals(ret.expr) {
+		return false
+	}
+	return true
+}

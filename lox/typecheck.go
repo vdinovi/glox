@@ -20,7 +20,7 @@ func (ctx *Context) Typecheck(elems []Statement) error {
 }
 
 func (s *BlockStatement) Typecheck(ctx *Context) error {
-	exit := ctx.Enter("typecheck")
+	exit := typecheckEnterEnv(ctx, "<block>")
 	defer exit()
 	for _, stmt := range s.stmts {
 		if err := stmt.Typecheck(ctx); err != nil {
@@ -98,15 +98,15 @@ func (s *DeclarationStatement) Typecheck(ctx *Context) error {
 		return err
 	}
 	if prev == nil {
-		log.Debug().Msgf("(typecheck) (%d) %s := %s", ctx.types.depth, s.name, typ)
+		log.Debug().Msgf("(typecheck) Env(%s) %s := %s", ctx.types.name, s.name, typ)
 	} else {
-		log.Debug().Msgf("(typecheck) (%d) %s = %s (was %s)", ctx.types.depth, s.name, typ, prev)
+		log.Debug().Msgf("(typecheck) Env(%s) %s = %s (was %s)", ctx.types.name, s.name, typ, prev)
 	}
 	return err
 }
 
 func (s *FunctionStatement) Typecheck(ctx *Context) error {
-	// TODO: Add type checking for functions
+	// TODO: Typecheck function statement
 	// ctx.PushEnvironment()
 	// log.Debug().Msgf("(typecheck) enter %s", ctx.types.String())
 	// defer func() {
@@ -125,6 +125,14 @@ func (s *FunctionStatement) Typecheck(ctx *Context) error {
 	// 	}
 	// }
 	s.rtype = TypeAny
+	return nil
+}
+
+func (s *ReturnStatement) Typecheck(ctx *Context) error {
+	if err := s.expr.Typecheck(ctx); err != nil {
+		return err
+	}
+	s.typ = s.expr.Type()
 	return nil
 }
 
@@ -174,7 +182,7 @@ func (e *AssignmentExpression) Typecheck(ctx *Context) error {
 	if _, err := env.Set(e.name, e.right.Type()); err != nil {
 		return err
 	}
-	log.Debug().Msgf("(typecheck) (%d) %s = %s (was %s)", ctx.types.depth, e.name, e.right.Type(), *prev)
+	log.Debug().Msgf("(typecheck) Env(%s) %s = %s (was %s)", ctx.types.name, e.name, e.right.Type(), *prev)
 	return nil
 }
 
@@ -188,6 +196,7 @@ func (e *VariableExpression) Typecheck(ctx *Context) error {
 }
 
 func (e *CallExpression) Typecheck(ctx *Context) error {
+	// TODO: Typecheck call expression
 	// if err := e.callee.Typecheck(ctx); err != nil {
 	// 	return err
 	// }
@@ -210,6 +219,7 @@ func (e *CallExpression) Typecheck(ctx *Context) error {
 	// 		return NewTypeError(NewInvalidArgumentTypeForParameter(arg.Type(), param), e.Position())
 	// 	}
 	// }
+	e.typ = TypeAny
 	return nil
 }
 
@@ -287,4 +297,14 @@ func typecheckBinary(e *BinaryExpression, left Type, right Type) (result Type, e
 	s := result.String()
 	_ = s
 	return result, err
+}
+
+func typecheckEnterEnv(ctx *Context, name string) (exit func()) {
+	ctx.PushEnvironment(name)
+	log.Debug().Msgf("(typecheck) ENTER %s", ctx.types.String())
+	return func() {
+		log.Debug().Msgf("(typecheck) EXIT %s", ctx.types.String())
+		ctx.PopEnvironment()
+		log.Debug().Msgf("(typecheck) ENTER %s", ctx.types.String())
+	}
 }

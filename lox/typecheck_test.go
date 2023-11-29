@@ -330,6 +330,46 @@ func TestTypecheckFunctionStatement(t *testing.T) {
 	}
 }
 
+func TestTypecheckReturnStatement(t *testing.T) {
+	tests := []struct {
+		text string
+		err  error
+	}{
+		{text: "return;"},
+		{text: "return 1;"},
+	}
+	for _, test := range tests {
+		td := NewTestDriver(t, test.text)
+		td.Lex()
+		td.Parse()
+		if td.Err != nil {
+			t.Errorf("Unexpected error in %q while %s: %s", test.text, td.Phase(), td.Err)
+			continue
+		}
+		if len(td.Program) != 1 {
+			t.Errorf("Expected %q to generate %d statements but got %d", test.text, 1, len(td.Program))
+			continue
+		}
+		var ret *ReturnStatement
+		var ok bool
+		if ret, ok = td.Program[0].(*ReturnStatement); !ok {
+			t.Errorf("%q yielded unexpected statment %v", test.text, td.Program[0])
+			continue
+		}
+		ctx := NewContext()
+		err := ret.Typecheck(ctx)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected typecheck(%s) to produce error %q, but got %q", ret, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Error(err)
+			continue
+		}
+	}
+}
+
 func TestTypecheckExpression(t *testing.T) {
 	tests := []struct {
 		typ  Type

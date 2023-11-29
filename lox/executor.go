@@ -1,6 +1,7 @@
 package lox
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -29,6 +30,12 @@ func (x *Executor) Execute(elems []Statement) error {
 	for _, elem := range elems {
 		log.Debug().Msgf("(execute) executing %s", elem)
 		if err := elem.Execute(x); err != nil {
+			if ret, ok := err.(ReturnErr); ok {
+				err = NewRuntimeError(
+					fmt.Errorf("out of place return statement"),
+					ret.Position(),
+				)
+			}
 			log.Error().Msgf("(execute) error in %q: %s", elem, err)
 			return err
 		}
@@ -48,7 +55,7 @@ func (x *Executor) Typecheck(elems []Statement) error {
 }
 
 func (s *BlockStatement) Execute(x *Executor) error {
-	exit := x.ctx.Enter("execute")
+	exit := executeEnterEnv(x.ctx, "<block>")
 	defer exit()
 	for _, stmt := range s.stmts {
 		if err := stmt.Execute(x); err != nil {
@@ -148,29 +155,54 @@ func (s *DeclarationStatement) Execute(x *Executor) error {
 	}
 	prev, err := x.ctx.values.Set(s.name, val)
 	if prev == nil {
-		log.Debug().Msgf("(execute) (%d) %s := %s", x.ctx.values.depth, s.name, val)
+		log.Debug().Msgf("(execute) Env(%s) %s := %s", x.ctx.values.name, s.name, val)
 	} else {
-		log.Debug().Msgf("(execute) (%d) %s = %s (was %s)", x.ctx.values.depth, s.name, val, *prev)
+		log.Debug().Msgf("(execute) Env(%s) %s = %s (was %s)", x.ctx.values.name, s.name, val, *prev)
 	}
 	return err
 }
 
 func (s *FunctionStatement) Execute(x *Executor) error {
 	fn := &UserFunction{
-		name:   s.name,
-		params: s.params,
-		body:   s.body,
+		name:    s.name,
+		params:  s.params,
+		body:    s.body,
+		context: x.ctx.Copy(),
 	}
 	val := &ValueCallable{
 		name: s.name,
 		fn:   fn,
 	}
-	if _, err := x.ctx.values.Set(fn.name, val); err != nil {
+	prev, err := x.ctx.values.Set(fn.name, val)
+	if err != nil {
 		return err
+	}
+	if prev == nil {
+		log.Debug().Msgf("(execute) Env(%s) %s := %s", x.ctx.values.name, s.name, val)
+	} else {
+		log.Debug().Msgf("(execute) Env(%s) %s = %s (was %s)", x.ctx.values.name, s.name, val, *prev)
 	}
 	return nil
 }
 
+func (s *ReturnStatement) Execute(x *Executor) error {
+	val, err := s.expr.Evaluate(x)
+	if err != nil {
+		return err
+	}
+	return ReturnErr{val: val, pos: s.Position()}
+}
+
 func deparenthesize(s string) string {
 	return strings.Trim(s, "\"")
+}
+
+func executeEnterEnv(ctx *Context, name string) (exit func()) {
+	ctx.PushEnvironment(name)
+	log.Debug().Msgf("(execute) ENTER %s", ctx.values.String())
+	return func() {
+		log.Debug().Msgf("(execute) EXIT %s", ctx.values.String())
+		ctx.PopEnvironment()
+		log.Debug().Msgf("(execute) ENTER %s", ctx.values.String())
+	}
 }

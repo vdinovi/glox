@@ -3,25 +3,22 @@ package lox
 import (
 	"fmt"
 	"strings"
-
-	"github.com/rs/zerolog/log"
 )
 
 type Environment[T fmt.Stringer] struct {
+	name     string
 	parent   *Environment[T]
 	bindings map[string]T
-	depth    int
 }
 
-func NewEnvironment[T fmt.Stringer](parent *Environment[T]) *Environment[T] {
-	depth := 0
+func NewEnvironment[T fmt.Stringer](name string, parent *Environment[T]) *Environment[T] {
 	if parent != nil {
-		depth = parent.depth + 1
+		name = fmt.Sprintf("%s:%s", parent.name, name)
 	}
 	return &Environment[T]{
+		name:     name,
 		parent:   parent,
 		bindings: make(map[string]T),
-		depth:    depth,
 	}
 }
 
@@ -57,13 +54,13 @@ func (env *Environment[T]) Set(key string, val T) (prev *T, err error) {
 }
 
 func (env *Environment[T]) String() string {
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "Environment(%d){", env.depth)
+	bindings := make([]string, len(env.bindings))
+	i := 0
 	for key, val := range env.bindings {
-		fmt.Fprintf(&sb, " %s=%s,", key, val)
+		bindings[i] = fmt.Sprintf("%s=%s", key, val)
+		i += 1
 	}
-	sb.WriteString(" }")
-	return sb.String()
+	return fmt.Sprintf("Env(%s){%s}", env.name, strings.Join(bindings, ","))
 }
 
 type Context struct {
@@ -73,28 +70,26 @@ type Context struct {
 
 func NewContext() *Context {
 	return &Context{
-		values: NewEnvironment[Value](nil),
-		types:  NewEnvironment[Type](nil),
+		values: NewEnvironment[Value]("root", nil),
+		types:  NewEnvironment[Type]("root", nil),
 	}
 }
 
-func (ctx *Context) PushEnvironment() {
-	ctx.types = NewEnvironment(ctx.types)
-	ctx.values = NewEnvironment(ctx.values)
+func (ctx *Context) Copy() *Context {
+	return &Context{
+		values: ctx.values,
+		types:  ctx.types,
+	}
+}
+
+func (ctx *Context) PushEnvironment(name string) {
+	ctx.types = NewEnvironment(name, ctx.types)
+	ctx.values = NewEnvironment(name, ctx.values)
 }
 
 func (ctx *Context) PopEnvironment() {
 	ctx.types = ctx.types.parent
 	ctx.values = ctx.values.parent
-}
-
-func (ctx *Context) Enter(phase string) (exit func()) {
-	ctx.PushEnvironment()
-	log.Debug().Msgf("(%s) enter %s", phase, ctx.values.String())
-	return func() {
-		ctx.PopEnvironment()
-		log.Debug().Msgf("(%s) enter %s", phase, ctx.values.String())
-	}
 }
 
 type VariableRedeclarationError struct {

@@ -162,6 +162,10 @@ func (p *Parser) statement() (Statement, error) {
 	if lbrace, ok := p.scan.match(TokenLeftBrace); ok {
 		return p.blockStatement(lbrace.Position)
 	}
+	if ret, ok := p.scan.match(TokenReturn); ok {
+		return p.returnStatement(ret.Position)
+	}
+
 	return p.expressionStatement()
 }
 
@@ -284,6 +288,21 @@ func (p *Parser) blockStatement(pos Position) (*BlockStatement, error) {
 		}
 		block.stmts = append(block.stmts, stmt)
 	}
+}
+
+func (p *Parser) returnStatement(pos Position) (ret *ReturnStatement, err error) {
+	ret = &ReturnStatement{expr: &NilExpression{}, pos: pos}
+	if _, ok := p.scan.match(TokenSemicolon); !ok {
+		if ret.expr, err = p.expression(); err != nil {
+			return nil, err
+		}
+		if token, ok := p.scan.match(TokenSemicolon); !ok {
+			return nil, NewSyntaxError(
+				NewUnexpectedTokenError(TokenSemicolon.String(), token), token.Position,
+			)
+		}
+	}
+	return ret, nil
 }
 
 func (p *Parser) expressionStatement() (*ExpressionStatement, error) {

@@ -40,6 +40,13 @@ func TestExecutor(t *testing.T) {
 		{text: "var x = 1; true and (x = 2); print x;", prints: []string{"2"}},
 		{text: "fun func(a, b) { print a; print b; print a + b; }\n func(1, 2);", prints: []string{"1", "2", "3"}},
 		{text: "var a = 1; fun func(a) { a = a + 1; print a; }\n func(a); print(a);", prints: []string{"2", "1"}},
+		{text: "var a = 0; fun func(b) { return b; }\n a = func(1); print a;", prints: []string{"1"}},
+		// {text: "return 1;"}, // out of place return
+		{text: "fun addOne(a) { fun addTwo(b) { return a + b; }\n return addTwo; }\n var a = addOne(1); print a(2); print a(3);", prints: []string{"3", "4"}},
+		{
+			text:   "fun makeCounter() { var i = 0; fun count() { i = i + 1; print i; }\n return count; }\n var a = makeCounter(); var b = makeCounter(); a(); b(); a(); b(); a();",
+			prints: []string{"1", "1", "2", "2", "3"},
+		},
 	}
 	for _, test := range tests {
 		td := NewTestDriver(t, test.text)

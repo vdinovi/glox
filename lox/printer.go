@@ -132,6 +132,16 @@ func (s *FunctionStatement) Print(p Printer) (str string, err error) {
 	return str, err
 }
 
+func (s *ReturnStatement) Print(p Printer) (str string, err error) {
+	switch p.(type) {
+	case *DefaultPrinter:
+		str = fmt.Sprintf("return %s ;", s.expr)
+	default:
+		err = UnprintableError{s}
+	}
+	return str, err
+}
+
 func (s *BlockStatement) Print(p Printer) (str string, err error) {
 	switch p.(type) {
 	case *DefaultPrinter:

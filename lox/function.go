@@ -9,13 +9,15 @@ import (
 
 type Function interface {
 	fmt.Stringer
-	Execute(*Executor, ...Value) (Value, error)
+	Execute(*Executor, string, ...Value) (Value, error)
+	Context() *Context
 }
 
 type UserFunction struct {
-	name   string
-	params []string
-	body   []Statement
+	name    string
+	params  []string
+	body    []Statement
+	context *Context
 }
 
 func (f *UserFunction) String() string {
@@ -43,21 +45,54 @@ func (f *UserFunction) Arity() int {
 	return len(f.params)
 }
 
-func (f *UserFunction) Execute(x *Executor, args ...Value) (Value, error) {
+func (f *UserFunction) Context() *Context {
+	return f.context
+}
+
+// Hijacking the err return for return handling
+type ReturnErr struct {
+	val Value
+	pos Position
+}
+
+func (e ReturnErr) Value() Value {
+	return e.val
+}
+
+func (e ReturnErr) Position() Position {
+	return e.pos
+}
+
+func (e ReturnErr) Error() string {
+	return "return"
+}
+
+func (f *UserFunction) Execute(x *Executor, name string, args ...Value) (Value, error) {
 	log.Debug().Msgf("(execute) executing fn %s with %v", f.name, args)
 	if len(args) != len(f.params) {
 		return nil, NewArityMismatchError(f.Arity(), len(args))
 	}
-	exit := x.ctx.Enter("execute")
-	defer exit()
+	prevCtx := x.ctx
+	x = &Executor{
+		printer: x.printer,
+		runtime: x.runtime,
+		ctx:     f.context,
+	}
+	exit := executeEnterEnv(x.ctx, name)
+	defer func() {
+		exit()
+		log.Debug().Msgf("(execute) ENTER %s", prevCtx.values.String())
+	}()
 	for i, arg := range args {
 		if _, err := x.ctx.values.Set(f.params[i], arg); err != nil {
 			return nil, err
 		}
 	}
 	for _, s := range f.body {
-		// TODO: return value from return statement
 		if err := s.Execute(x); err != nil {
+			if ret, ok := err.(ReturnErr); ok {
+				return ret.val, nil
+			}
 			return nil, err
 		}
 	}

@@ -373,6 +373,42 @@ func TestParserWhileStatement(t *testing.T) {
 	}
 }
 
+func TestParserReturnStatement(t *testing.T) {
+	tests := []struct {
+		text string
+		stmt ReturnStatement
+		err  error
+	}{
+		{text: "return;", stmt: ReturnStatement{expr: nilExpr()}},
+		{text: "return 1;", stmt: ReturnStatement{expr: oneExpr()}},
+		{text: "return foo;", stmt: ReturnStatement{expr: fooExpr()}},
+	}
+	for _, test := range tests {
+		tokens, err := Scan(strings.NewReader(test.text))
+		if err != nil {
+			t.Errorf("Unexpected error in %q: %s", test.text, err)
+			continue
+		}
+		program, err := Parse(tokens)
+		if test.err != nil {
+			if err != test.err {
+				t.Errorf("Expected %q to produce error %q, but got %q", test.text, test.err, err)
+				continue
+			}
+		} else if err != nil {
+			t.Errorf("Unexpected error in %q: %s", test.text, err)
+			continue
+		}
+		if len(program) != 1 {
+			t.Errorf("Expected %q to produce 1 statement but got %d", test.text, len(program))
+		}
+		stmt := program[0]
+		if !stmt.Equals(&test.stmt) {
+			t.Errorf("Expected %q to be %q, but got %q", test.text, test.stmt.String(), stmt.String())
+		}
+	}
+}
+
 func TestParserFunctionStatement(t *testing.T) {
 	tests := []struct {
 		text string
@@ -388,6 +424,23 @@ func TestParserFunctionStatement(t *testing.T) {
 					&PrintStatement{expr: makeVarExpr("a")()},
 					&PrintStatement{expr: makeVarExpr("b")()},
 					&PrintStatement{expr: bAddExpr(makeVarExpr("a")())(makeVarExpr("b")())()},
+				},
+			},
+		},
+		{
+			text: "fun addOne(a) { fun addTwo(b) { return a + b; }\n return addTwo; }",
+			stmt: FunctionStatement{
+				name:   "addOne",
+				params: []string{"a"},
+				body: []Statement{
+					&FunctionStatement{
+						name:   "addTwo",
+						params: []string{"b"},
+						body: []Statement{
+							&ReturnStatement{expr: bAddExpr(makeVarExpr("a")())(makeVarExpr("b")())()},
+						},
+					},
+					&ReturnStatement{expr: makeVarExpr("addTwo")()},
 				},
 			},
 		},
