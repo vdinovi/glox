@@ -6,10 +6,6 @@ import (
 	"strings"
 )
 
-type Typed interface {
-	Type() Type
-}
-
 const (
 	typeNilBit = 1 << iota
 	typeByteBit

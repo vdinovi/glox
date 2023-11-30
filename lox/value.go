@@ -9,8 +9,8 @@ import (
 type Value interface {
 	fmt.Stringer
 	Printable
-	Typed
-	Truthy
+	Truthy() bool
+	Type() Type
 	Equals(Value) bool
 }
 
@@ -21,10 +21,6 @@ var True = ValueBoolean(true)
 var False = ValueBoolean(false)
 
 var Nil = ValueNil(struct{}{})
-
-type Truthy interface {
-	Truthy() bool
-}
 
 var ErrInvalidType = errors.New("invalid type")
 

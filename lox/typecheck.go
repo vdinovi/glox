@@ -4,10 +4,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Typecheckable interface {
-	Typecheck(*Context) error
-}
-
 func Typecheck(ctx *Context, elems []Statement) error {
 	restore := ctx.StartPhase(PhaseTypecheck)
 	defer restore()

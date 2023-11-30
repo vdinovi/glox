@@ -1,18 +1,15 @@
 package lox
 
-import (
-	"fmt"
-)
-
 type Program []Statement
 
 type Statement interface {
-	fmt.Stringer
-	Printable
-	Located
-	Typecheckable
-	Executable
+	String() string
+	Print(Printer) (string, error)
+	Position() Position
 	Equals(Statement) bool
+	Execute(*Context) error
+	Typecheck(*Context) error
+	Resolve(*Context) error
 }
 
 type BlockStatement struct {

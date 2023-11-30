@@ -18,10 +18,6 @@ func NewExecutor(w io.Writer) *Executor {
 	}
 }
 
-type Executable interface {
-	Execute(*Context) error
-}
-
 func Execute(ctx *Context, elems []Statement) error {
 	restore := ctx.StartPhase(PhaseExecute)
 	defer restore()
@@ -57,11 +53,14 @@ func (s *ConditionalStatement) Execute(ctx *Context) error {
 	if err != nil {
 		return err
 	}
+	log.Debug().Msgf("(%s) start conditional", ctx.Phase())
 	if cond.Truthy() {
+		log.Debug().Msgf("(%s) took then branch", ctx.Phase())
 		if err := s.thenBranch.Execute(ctx); err != nil {
 			return err
 		}
 	} else if s.elseBranch != nil {
+		log.Debug().Msgf("(%s) took else branch", ctx.Phase())
 		if err := s.elseBranch.Execute(ctx); err != nil {
 			return err
 		}
@@ -70,13 +69,14 @@ func (s *ConditionalStatement) Execute(ctx *Context) error {
 }
 
 func (s *WhileStatement) Execute(ctx *Context) error {
+	log.Debug().Msgf("(%s) start for loop", ctx.Phase())
 	for {
 		cond, err := s.expr.Evaluate(ctx)
 		if err != nil {
 			return err
 		}
 		if !cond.Truthy() {
-			log.Debug().Msgf("(%s) break loop", ctx.Phase())
+			log.Debug().Msgf("(%s) break while loop", ctx.Phase())
 			break
 		}
 		if err := s.body.Execute(ctx); err != nil {
@@ -90,6 +90,7 @@ func (s *ForStatement) Execute(ctx *Context) error {
 	if s.init != nil {
 		s.init.Execute(ctx)
 	}
+	log.Debug().Msgf("(%s) start for loop", ctx.Phase())
 	for {
 		if s.cond != nil {
 			cond, err := s.cond.Evaluate(ctx)
@@ -97,7 +98,7 @@ func (s *ForStatement) Execute(ctx *Context) error {
 				return err
 			}
 			if !cond.Truthy() {
-				log.Debug().Msgf("(%s) break loop", ctx.Phase())
+				log.Debug().Msgf("(%s) break for loop", ctx.Phase())
 				break
 			}
 		}
@@ -124,6 +125,7 @@ func (s *PrintStatement) Execute(ctx *Context) error {
 	if err != nil {
 		return err
 	}
+	log.Debug().Msgf("(%s) printing %s -> %s", ctx.Phase(), s.expr, val)
 	str, err := val.Print(ctx.printer)
 	if err != nil {
 		return err

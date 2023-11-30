@@ -3,7 +3,6 @@ package lox
 import (
 	"fmt"
 	"io"
-	"slices"
 	"strings"
 )
 
@@ -13,6 +12,7 @@ const (
 	PhaseInit      Phase = "init"
 	PhaseLex       Phase = "lex"
 	PhaseParse     Phase = "parse"
+	PhaseResolve   Phase = "resolve"
 	PhaseTypecheck Phase = "typecheck"
 	PhaseExecute   Phase = "execute"
 )
@@ -77,7 +77,6 @@ func (ctx *Context) debug() string {
 	for env := ctx.env; env != nil; env = env.parent {
 		envs = append(envs, env)
 	}
-	slices.Reverse(envs)
 	sb.WriteString("\tenv:\n")
 	for i, env := range envs {
 		fmt.Fprintf(&sb, "\t\t%s%s\n", strings.Repeat("\t", i), env.String())

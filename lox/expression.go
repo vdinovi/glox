@@ -1,9 +1,5 @@
 package lox
 
-import (
-	"fmt"
-)
-
 type OperatorType int
 
 //go:generate stringer -type OperatorType -trimprefix=Op
@@ -30,13 +26,14 @@ type Operator struct {
 }
 
 type Expression interface {
-	fmt.Stringer
-	Printable
-	Located
-	Typecheckable
-	Evaluable
-	Typed
+	String() string
+	Print(Printer) (string, error)
 	Equals(Expression) bool
+	Type() Type
+	Evaluate(*Context) (Value, error)
+	Position() Position
+	Typecheck(*Context) error
+	Resolve(*Context) error
 }
 
 type UnaryExpression struct {

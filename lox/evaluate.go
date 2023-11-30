@@ -6,10 +6,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type Evaluable interface {
-	Evaluate(*Context) (Value, error)
-}
-
 func (e *GroupingExpression) Evaluate(ctx *Context) (Value, error) {
 	return e.expr.Evaluate(ctx)
 }

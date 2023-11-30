@@ -4,10 +4,6 @@ import (
 	"fmt"
 )
 
-type Located interface {
-	Position() Position
-}
-
 //go:generate stringer -type TokenType -trimprefix=Token
 type TokenType int
 
